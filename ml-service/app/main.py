@@ -11,12 +11,21 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from . import dropout, vision
+from .flags import flag_enabled
 
 app = FastAPI(title="MentorMind ML Service", version="0.4.0")
 
 INSTANCE_NAME = os.getenv("INSTANCE_NAME", "ml-local")
 
-MAX_IMAGE_BYTES = 8 * 1024 * 1024
+MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", str(8 * 1024 * 1024)))
+
+
+def require_flag(key: str) -> None:
+    """Live kill switch: flips off from the admin console, no redeploy."""
+    if not flag_enabled(key):
+        raise HTTPException(
+            status_code=403, detail=f"The '{key}' feature is currently disabled."
+        )
 
 
 @app.get("/healthz")
@@ -51,6 +60,7 @@ class EngagementFeatures(BaseModel):
 @app.post("/v1/predict/dropout-risk")
 def predict_dropout(features: EngagementFeatures):
     """Score a student's dropout risk from engagement features."""
+    require_flag("dropout_risk")
     model = dropout.get_model()
     if model is None:
         raise HTTPException(
@@ -77,6 +87,7 @@ async def _read_image(file: UploadFile):
 @app.post("/v1/proctor/check")
 async def proctor_check(image: UploadFile = File(...)):
     """Webcam-frame proctoring: exactly one face is 'ok'."""
+    require_flag("proctoring")
     frame = await _read_image(image)
     return vision.proctor_check(frame)
 
@@ -88,6 +99,7 @@ async def omr_grade(
     num_options: int = Form(4),
 ):
     """Grade a grid-layout bubble sheet against an answer key."""
+    require_flag("omr_grading")
     try:
         key = json.loads(answer_key)
         assert isinstance(key, list) and all(isinstance(i, int) for i in key)
@@ -107,6 +119,7 @@ async def omr_grade(
 @app.post("/v1/ocr/extract")
 async def ocr_extract(image: UploadFile = File(...)):
     """Extract printed/handwritten text from a page photo."""
+    require_flag("ocr")
     if not vision.ocr_available():
         raise HTTPException(
             status_code=503,

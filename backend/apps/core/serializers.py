@@ -3,6 +3,8 @@ from rest_framework import serializers
 from apps.accounts.serializers import UserSerializer
 from .models import Course, Enrollment, Lesson, Quiz, QuizAttempt, QuizQuestion
 
+LESSON_LOCKED_MESSAGE = "Enroll in this course to unlock this lesson's content."
+
 
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
@@ -38,10 +40,10 @@ class LessonSerializer(serializers.ModelSerializer):
                 )
             )
             if not is_enrolled:
-                rep["content"] = "Enroll in this course to unlock this lesson's content."
+                rep["content"] = LESSON_LOCKED_MESSAGE
                 rep["video_url"] = None
         else:
-            rep["content"] = "Enroll in this course to unlock this lesson's content."
+            rep["content"] = LESSON_LOCKED_MESSAGE
             rep["video_url"] = None
         return rep
 

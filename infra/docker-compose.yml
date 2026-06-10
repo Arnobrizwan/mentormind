@@ -107,6 +107,7 @@ services:
     build: ../ml-service
     environment:
       INSTANCE_NAME: ml-1
+      FLAGS_URL: http://nginx/api/v1/flags/
     ports:
       - "9000:9000"
 

@@ -10,6 +10,7 @@ import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth';
 import { authInterceptor } from './core/auth-interceptor';
+import { SiteConfig } from './core/site-config';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,5 +19,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     // Restore the JWT session before the router activates any guarded route.
     provideAppInitializer(() => inject(AuthService).restore()),
+    // Bootstrap branding + flags from the settings engine (dynamic-first).
+    provideAppInitializer(() => inject(SiteConfig).load()),
   ],
 };

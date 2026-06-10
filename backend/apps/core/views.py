@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from . import services
 from .models import Course, Enrollment, Lesson, Quiz, QuizAttempt, QuizQuestion
-from .permissions import IsInstructor, IsEnrolledStudentOrInstructor
+from .permissions import IsEnrolledStudentOrInstructor, IsInstructor, is_instructor
 from .serializers import (
     CourseSerializer,
     EnrollmentSerializer,
@@ -70,15 +70,8 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if not user or not user.is_authenticated:
-            return Course.objects.filter(is_published=True).select_related("instructor")
-
         # Instructors can see all published courses + their own drafts
-        if (
-            user.groups.filter(name="Instructors").exists()
-            or user.is_staff
-            or user.is_superuser
-        ):
+        if is_instructor(user):
             return (
                 Course.objects.filter(
                     models.Q(is_published=True) | models.Q(instructor=user)
@@ -91,18 +84,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         # Cache list of published courses only when no filters or user drafts are requested
-        user = request.user
-        is_instructor = (
-            user
-            and user.is_authenticated
-            and (
-                user.groups.filter(name="Instructors").exists()
-                or user.is_staff
-                or user.is_superuser
-            )
-        )
-
-        if not request.query_params and not is_instructor:
+        if not request.query_params and not is_instructor(request.user):
             courses = services.get_published_courses()
             page = self.paginate_queryset(courses)
             if page is not None:
@@ -173,7 +155,16 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def recommended(self, request):
-        """Personalised course picks via enrollment co-occurrence."""
+        """Personalised course picks via enrollment co-occurrence.
+        Flag-gated: flip 'recommendations' off in the admin console to
+        disable the feature live (absent flag means enabled)."""
+        from apps.flags.services import flag_enabled
+
+        if not flag_enabled("recommendations", default=True):
+            return Response(
+                {"detail": "Recommendations are currently disabled."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         courses = services.get_recommendations(request.user)
         serializer = self.get_serializer(courses, many=True)
         return Response(serializer.data)
@@ -217,7 +208,7 @@ class LessonViewSet(viewsets.ModelViewSet):
         queryset = Lesson.objects.select_related("course")
 
         # If user is instructor/staff, show draft and published
-        if user.is_staff or user.is_superuser or user.groups.filter(name="Instructors").exists():
+        if is_instructor(user):
             return queryset
 
         # Standard students only see published lessons in enrolled/published courses

@@ -18,6 +18,9 @@ spec:
           image: mentormind-ml-service:latest
           ports:
             - containerPort: 9000
+          env:
+            - name: FLAGS_URL
+              value: http://api:8000/api/v1/flags/
           readinessProbe:
             httpGet:
               path: /healthz

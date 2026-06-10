@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 
 import { LearningApi } from './core/api';
 import { AuthService } from './core/auth';
+import { SiteConfig } from './core/site-config';
 
 @Component({
   selector: 'app-root',
@@ -12,6 +13,7 @@ import { AuthService } from './core/auth';
 })
 export class App {
   protected readonly auth = inject(AuthService);
+  protected readonly config = inject(SiteConfig);
   private readonly api = inject(LearningApi);
   private readonly router = inject(Router);
 

@@ -2,7 +2,7 @@
   <header class="topbar">
     <a routerLink="/" class="brand">
       <span class="brand__mark" aria-hidden="true">▤</span>
-      MentorMind <span class="brand__sub">/ Instructor Studio</span>
+      {{ config.siteName() }} <span class="brand__sub">/ Instructor Studio</span>
     </a>
     <div class="topbar__right">
       @if (auth.user(); as user) {

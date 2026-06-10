@@ -2,7 +2,7 @@
   <header class="topbar">
     <a routerLink="/" class="brand">
       <span class="brand__cursor blink" aria-hidden="true">█</span>
-      mentormind<span class="brand__path">:~/ops$</span> admin-console
+      {{ config.siteName().toLowerCase() }}<span class="brand__path">:~/ops$</span> admin-console
     </a>
     <div class="topbar__right">
       @if (auth.user(); as user) {

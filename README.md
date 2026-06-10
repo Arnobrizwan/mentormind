@@ -31,9 +31,12 @@ client ──► nginx (LB :8080) ──► api-1 / api-2 (Django + DRF + gunico
 
 ## Dynamic-first, no hardcode
 
-- `settings_engine` — every site setting is a DB row, Redis-cached, invalidated on save
-- `flags` — feature flags toggle whole modules live from the admin panel
-- All connection strings, hosts and instance identity come from environment variables
+- `settings_engine` — every site setting is a DB row, Redis-cached, invalidated on save;
+  all three Angular apps bootstrap branding from `/api/v1/settings/public/`
+- `flags` — feature flags toggle whole modules live (chat, recommendations, and every
+  ml-service endpoint check them; the ML service polls `/api/v1/flags/` via FLAGS_URL)
+- All connection strings, hosts, instance identity, JWT lifetimes and page sizes come
+  from environment variables
 
 ## Quick start (no Docker)
 

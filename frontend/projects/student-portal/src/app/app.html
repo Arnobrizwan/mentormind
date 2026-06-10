@@ -1,8 +1,12 @@
 <div class="frame">
   <header class="masthead">
-    <p class="masthead__ticker mono-label">MentorMind · Student Portal · Learn from real mentors</p>
+    <p class="masthead__ticker mono-label">
+      {{ config.siteName() }} · Student Portal · {{ config.tagline() }}
+    </p>
     <div class="masthead__row">
-      <a routerLink="/" class="wordmark">Mentor<em>Mind</em></a>
+      <a routerLink="/" class="wordmark">
+        {{ config.brandParts()[0] }}<em>{{ config.brandParts()[1] }}</em>
+      </a>
       <nav class="nav">
         <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Catalog</a>
         @if (auth.isLoggedIn()) {
@@ -26,7 +30,7 @@
   <footer class="colophon">
     <hr class="hairline" />
     <div class="colophon__row">
-      <span class="mono-label">MentorMind — an open academy</span>
+      <span class="mono-label">{{ config.siteName() }} — an open academy</span>
       <a routerLink="/system" class="mono-label colophon__link">System status →</a>
     </div>
   </footer>

@@ -9,6 +9,7 @@ from apps.flags.services import flag_enabled
 from apps.settings_engine.models import SiteSetting
 from apps.settings_engine.services import get_public_settings, get_setting
 from .models import Course, Enrollment, Lesson, Quiz, QuizAttempt, QuizQuestion
+from .serializers import LESSON_LOCKED_MESSAGE
 from .services import get_course_detail, get_published_courses
 
 User = get_user_model()
@@ -207,7 +208,7 @@ class LearningEngineTests(TestCase):
 
         # Student is not enrolled, content should be censored
         lesson_data = res.json()["lessons"][0]
-        self.assertEqual(lesson_data["content"], "Enroll in this course to unlock this lesson's content.")
+        self.assertEqual(lesson_data["content"], LESSON_LOCKED_MESSAGE)
         self.assertIsNone(lesson_data["video_url"])
 
         # Instructor views course details, content should be visible
@@ -539,3 +540,20 @@ class ManagementApiTests(TestCase):
         self.assertEqual(get_public_settings()["site-name"], "MentorMind")
 
         self.assertEqual(self.as_student.get("/api/v1/settings/manage/").status_code, 403)
+
+
+class RecommendationFlagTests(TestCase):
+    def test_flag_off_disables_recommendations(self):
+        from apps.flags.models import FeatureFlag
+
+        cache.clear()
+        user = User.objects.create_user(email="flag-rec@mentormind.dev", password="pass-123456")
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        # absent flag -> enabled (fail open)
+        self.assertEqual(client.get("/api/v1/courses/recommended/").status_code, 200)
+
+        FeatureFlag.objects.create(key="recommendations", enabled=False)
+        cache.clear()
+        self.assertEqual(client.get("/api/v1/courses/recommended/").status_code, 403)

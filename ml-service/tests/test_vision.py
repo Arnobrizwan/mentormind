@@ -138,3 +138,36 @@ class TestDropoutRisk:
         })
         assert res.json()["risk"] == "low"
         assert res.json()["probability"] < 0.2
+
+
+class TestFlagGating:
+    def test_fail_open_without_flags_url(self):
+        from app import flags
+        assert flags.flag_enabled("proctoring") is True
+
+    def test_disabled_flag_blocks_endpoint(self, monkeypatch):
+        from app import flags
+        monkeypatch.setattr(flags, "FLAGS_URL", "http://stub")
+        monkeypatch.setitem(flags._cache, "flags", {"proctoring": False})
+        monkeypatch.setitem(flags._cache, "at", 10**12)  # cache forever for the test
+
+        blank = np.full((60, 60, 3), 128, dtype=np.uint8)
+        res = client.post(
+            "/v1/proctor/check",
+            files={"image": ("f.png", encode_png(blank), "image/png")},
+        )
+        assert res.status_code == 403
+        assert "disabled" in res.json()["detail"]
+
+    def test_missing_flag_stays_enabled(self, monkeypatch):
+        from app import flags
+        monkeypatch.setattr(flags, "FLAGS_URL", "http://stub")
+        monkeypatch.setitem(flags._cache, "flags", {"chat": True})
+        monkeypatch.setitem(flags._cache, "at", 10**12)
+
+        blank = np.full((60, 60, 3), 128, dtype=np.uint8)
+        res = client.post(
+            "/v1/proctor/check",
+            files={"image": ("f.png", encode_png(blank), "image/png")},
+        )
+        assert res.status_code == 200

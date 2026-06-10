@@ -1,22 +1,28 @@
 from rest_framework import permissions
 
+# The role is a DB-backed Django group; only its name lives in code, and
+# only here. Everything else imports this.
+INSTRUCTOR_GROUP = "Instructors"
+
+
+def is_instructor(user) -> bool:
+    """Instructor-or-better: member of the instructor group, staff, or superuser."""
+    return bool(
+        user
+        and user.is_authenticated
+        and (
+            user.is_staff
+            or user.is_superuser
+            or user.groups.filter(name=INSTRUCTOR_GROUP).exists()
+        )
+    )
+
 
 class IsInstructor(permissions.BasePermission):
-    """Allows write/update access only to instructors (users in the 'Instructors'
-
-    group), staff members, or superusers.
-    """
+    """Allows write/update access only to instructors, staff, or superusers."""
 
     def has_permission(self, request, view):
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and (
-                request.user.groups.filter(name="Instructors").exists()
-                or request.user.is_staff
-                or request.user.is_superuser
-            )
-        )
+        return is_instructor(request.user)
 
 
 class IsEnrolledStudentOrInstructor(permissions.BasePermission):
