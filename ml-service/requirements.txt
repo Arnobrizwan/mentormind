@@ -8,3 +8,8 @@ numpy
 pillow
 python-multipart
 pytesseract
+# Past-paper training pipeline (Cambridge OCR -> aligned dataset)
+mistralai
+sqlalchemy[asyncio]
+aiosqlite
+greenlet

@@ -2,18 +2,30 @@
 
 Phase 4: OpenCV vision endpoints (proctoring, OMR grading, OCR).
 Phase 5: dropout-risk model trained by the DVC/MLflow pipeline.
+Plus: the Cambridge past-paper OCR + alignment training pipeline.
 """
 
 import json
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from . import dropout, vision
 from .flags import flag_enabled
+from .pastpapers import api as pastpapers_api
+from .pastpapers.models import init_db
 
-app = FastAPI(title="MentorMind ML Service", version="0.4.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    await init_db()
+    yield
+
+
+app = FastAPI(title="MentorMind ML Service", version="0.5.0", lifespan=lifespan)
+app.include_router(pastpapers_api.router)
 
 INSTANCE_NAME = os.getenv("INSTANCE_NAME", "ml-local")
 
