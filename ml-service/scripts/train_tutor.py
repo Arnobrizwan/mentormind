@@ -34,23 +34,26 @@ ADAPTER_OUT = ROOT / "models" / "tutor-lora"
 DEFAULT_BASE = "unsloth/Qwen2.5-3B-Instruct"
 
 
+def _read_jsonl(path: Path) -> list[dict]:
+    # Split on "\n" only — str.splitlines() also breaks on Unicode line
+    # separators (U+2028/U+2029) that the corpus contains verbatim, which
+    # would tear a single JSON record into two unparseable halves.
+    return [json.loads(line) for line in path.read_text().split("\n") if line.strip()]
+
+
 def load_dataset(extra: list[str]) -> list[dict]:
     if not DATASET.exists():
         raise SystemExit(
             f"No dataset at {DATASET}. Run scripts/export_dataset.py first."
         )
-    rows = [json.loads(line) for line in DATASET.read_text().splitlines() if line.strip()]
+    rows = _read_jsonl(DATASET)
     if not rows:
         raise SystemExit("Dataset is empty — run the pipeline on more papers.")
     for path in extra:
         extra_path = Path(path)
         if not extra_path.exists():
             continue
-        added = [
-            json.loads(line)
-            for line in extra_path.read_text().splitlines()
-            if line.strip()
-        ]
+        added = _read_jsonl(extra_path)
         print(f"merged {len(added)} examples from {extra_path.name}")
         rows.extend(added)
     return rows
