@@ -2,8 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-const DEFAULT_NAME = 'MentorMind';
-const DEFAULT_TAGLINE = 'Learn from real mentors';
+const DEFAULT_NAME = 'MentorMinds';
+const DEFAULT_TAGLINE = 'the AI tutor that never sleeps';
 
 /** Boot-time site configuration: public settings + feature flags from the
  * settings engine. Everything has a hardcoded fallback so the app still
