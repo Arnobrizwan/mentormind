@@ -34,7 +34,7 @@ ADAPTER_OUT = ROOT / "models" / "tutor-lora"
 DEFAULT_BASE = "unsloth/Qwen2.5-3B-Instruct"
 
 
-def load_dataset() -> list[dict]:
+def load_dataset(extra: list[str]) -> list[dict]:
     if not DATASET.exists():
         raise SystemExit(
             f"No dataset at {DATASET}. Run scripts/export_dataset.py first."
@@ -42,6 +42,17 @@ def load_dataset() -> list[dict]:
     rows = [json.loads(line) for line in DATASET.read_text().splitlines() if line.strip()]
     if not rows:
         raise SystemExit("Dataset is empty — run the pipeline on more papers.")
+    for path in extra:
+        extra_path = Path(path)
+        if not extra_path.exists():
+            continue
+        added = [
+            json.loads(line)
+            for line in extra_path.read_text().splitlines()
+            if line.strip()
+        ]
+        print(f"merged {len(added)} examples from {extra_path.name}")
+        rows.extend(added)
     return rows
 
 
@@ -179,9 +190,15 @@ def main() -> int:
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--max-seq", type=int, default=2048)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--extra",
+        nargs="*",
+        default=[str(ROOT / "data" / "supplementary.jsonl")],
+        help="Extra chat-format JSONL files to merge (skipped when missing)",
+    )
     args = parser.parse_args()
 
-    rows = load_dataset()
+    rows = load_dataset(args.extra)
     stats = dataset_stats(rows)
 
     device = None if args.dry_run else detect_device()

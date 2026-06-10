@@ -19,6 +19,37 @@ export interface SiteSetting {
   updated_at: string;
 }
 
+export interface Badge {
+  id: number;
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  rule: string;
+  threshold: number;
+  order: number;
+  rule_choices: { value: string; label: string }[];
+}
+
+export interface LeaderboardRow {
+  rank: number;
+  student: string;
+  points: number;
+}
+
+/** Mirror of Badge.Rule on the backend — the counting rules are code,
+ * only their thresholds/labels are data. */
+export const BADGE_RULES: { value: string; label: string }[] = [
+  { value: 'points_total', label: 'Total points' },
+  { value: 'quizzes_taken', label: 'Quizzes taken' },
+  { value: 'perfect_quizzes', label: 'Perfect quiz scores' },
+  { value: 'lessons_completed', label: 'Lessons completed' },
+  { value: 'streak_days', label: 'Day streak' },
+  { value: 'enrollments', label: 'Courses enrolled' },
+  { value: 'chat_messages', label: 'Chat messages sent' },
+  { value: 'tutor_questions', label: 'AI tutor questions asked' },
+];
+
 export interface ComponentStatus {
   status: string;
   detail?: string;
@@ -71,5 +102,27 @@ export class AdminApi {
 
   deleteSetting(id: number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`/api/v1/settings/manage/${id}/`));
+  }
+
+  badges(): Promise<Badge[]> {
+    return firstValueFrom(this.http.get<Badge[]>('/api/v1/engagement/badges/manage/'));
+  }
+
+  createBadge(data: Partial<Badge>): Promise<Badge> {
+    return firstValueFrom(this.http.post<Badge>('/api/v1/engagement/badges/manage/', data));
+  }
+
+  updateBadge(id: number, data: Partial<Badge>): Promise<Badge> {
+    return firstValueFrom(
+      this.http.patch<Badge>(`/api/v1/engagement/badges/manage/${id}/`, data),
+    );
+  }
+
+  deleteBadge(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`/api/v1/engagement/badges/manage/${id}/`));
+  }
+
+  leaderboard(): Promise<LeaderboardRow[]> {
+    return firstValueFrom(this.http.get<LeaderboardRow[]>('/api/v1/engagement/leaderboard/'));
   }
 }

@@ -26,11 +26,14 @@ interface CourseRef {
           <span class="mono-label">🔥 {{ eng.streak }}-day streak</span>
           <span class="mono-label">★ {{ eng.points_total }} pts</span>
           @if (!eng.daily_login_claimed) {
-            <button class="btn btn--accent claim-btn" (click)="claimDaily()">
-              Claim today's +5 pts
+            <button class="btn btn--accent claim-btn" (click)="claimDaily()" [disabled]="claiming()">
+              Claim today's +{{ eng.daily_login_points }} pts
             </button>
           } @else {
             <span class="stamp">Daily reward claimed</span>
+          }
+          @if (claimBurst(); as burst) {
+            <span class="claim-burst" aria-live="polite">+{{ burst }} pts!</span>
           }
         </div>
       }
@@ -62,9 +65,32 @@ interface CourseRef {
               <span class="mono-label">
                 {{ badge.earned ? 'earned' : badge.progress + '/' + badge.threshold }}
               </span>
+              @if (!badge.earned) {
+                <span class="badge__meter">
+                  <span
+                    class="badge__meter-fill"
+                    [style.width.%]="meterWidth(badge.progress, badge.threshold)"
+                  ></span>
+                </span>
+              }
             </div>
           }
         </div>
+      </section>
+    }
+
+    @if (engagement.leaderboard().length > 0) {
+      <section class="leaderboard rise" style="animation-delay: 150ms">
+        <h2>This week's leaderboard</h2>
+        <ol class="leaderboard__list">
+          @for (row of engagement.leaderboard(); track row.rank) {
+            <li class="leaderboard__row" [class.leaderboard__row--top]="row.rank === 1">
+              <span class="leaderboard__rank">{{ medal(row.rank) }}</span>
+              <span class="leaderboard__name">{{ row.student }}</span>
+              <span class="mono-label">★ {{ row.points }} pts</span>
+            </li>
+          }
+        </ol>
       </section>
     }
 
@@ -189,6 +215,82 @@ interface CourseRef {
     .badge__name {
       font-size: 0.74rem;
       font-weight: 700;
+    }
+
+    .badge__meter {
+      width: 100%;
+      height: 5px;
+      margin-top: 0.35rem;
+      border-radius: 3px;
+      background: var(--line);
+      overflow: hidden;
+    }
+
+    .badge__meter-fill {
+      display: block;
+      height: 100%;
+      border-radius: 3px;
+      background: var(--accent);
+      transition: width 600ms ease;
+    }
+
+    .claim-burst {
+      font-weight: 800;
+      color: var(--accent);
+      animation: burst-pop 1.8s ease forwards;
+    }
+
+    @keyframes burst-pop {
+      0% { opacity: 0; transform: translateY(6px) scale(0.8); }
+      18% { opacity: 1; transform: translateY(0) scale(1.15); }
+      30% { transform: scale(1); }
+      80% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-8px); }
+    }
+
+    .leaderboard {
+      margin-bottom: 2.2rem;
+
+      h2 {
+        font-size: 1.5rem;
+        margin-bottom: 0.9rem;
+      }
+    }
+
+    .leaderboard__list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-width: 460px;
+    }
+
+    .leaderboard__row {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.55rem 0.8rem;
+      border-bottom: 1px dashed var(--line);
+    }
+
+    .leaderboard__row--top {
+      background: var(--card);
+      border: 1.5px solid var(--accent);
+      border-radius: 10px;
+    }
+
+    .leaderboard__rank {
+      width: 2.2rem;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .leaderboard__name {
+      flex: 1;
+      font-weight: 600;
+      font-size: 0.92rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .desk h1 {
@@ -362,6 +464,7 @@ export class DashboardPage {
         this.api.refreshEnrollments(),
         this.api.listCourses(),
         this.engagement.refresh(),
+        this.engagement.refreshLeaderboard(),
       ]);
       this.courseRefs.set(courses.map((c) => ({ course: c.id, slug: c.slug })));
     } finally {
@@ -376,8 +479,31 @@ export class DashboardPage {
     return 'Good evening';
   }
 
+  protected readonly claiming = signal(false);
+  protected readonly claimBurst = signal<number | null>(null);
+
   protected async claimDaily(): Promise<void> {
-    await this.engagement.claimDailyLogin();
+    if (this.claiming()) return;
+    this.claiming.set(true);
+    try {
+      const result = await this.engagement.claimDailyLogin();
+      if (result.claimed) {
+        this.claimBurst.set(result.points);
+        setTimeout(() => this.claimBurst.set(null), 1800);
+        void this.engagement.refreshLeaderboard();
+      }
+    } finally {
+      this.claiming.set(false);
+    }
+  }
+
+  protected meterWidth(progress: number, threshold: number): number {
+    if (threshold <= 0) return 0;
+    return Math.min(100, Math.round((progress / threshold) * 100));
+  }
+
+  protected medal(rank: number): string {
+    return rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
   }
 
   protected firstName(): string {

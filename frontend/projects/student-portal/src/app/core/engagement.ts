@@ -17,8 +17,15 @@ export interface EngagementMe {
   points_total: number;
   streak: number;
   daily_login_claimed: boolean;
+  daily_login_points: number;
   badges: BadgeEntry[];
   recent_events: { action: string; points: number; at: string }[];
+}
+
+export interface LeaderboardRow {
+  rank: number;
+  student: string;
+  points: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -26,12 +33,21 @@ export class EngagementApi {
   private readonly http = inject(HttpClient);
 
   readonly me = signal<EngagementMe | null>(null);
+  readonly leaderboard = signal<LeaderboardRow[]>([]);
 
   async refresh(): Promise<void> {
     this.me.set(
       await firstValueFrom(this.http.get<EngagementMe>('/api/v1/engagement/me/')).catch(
         () => null,
       ),
+    );
+  }
+
+  async refreshLeaderboard(): Promise<void> {
+    this.leaderboard.set(
+      await firstValueFrom(
+        this.http.get<LeaderboardRow[]>('/api/v1/engagement/leaderboard/'),
+      ).catch(() => []),
     );
   }
 

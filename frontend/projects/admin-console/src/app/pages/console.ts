@@ -1,7 +1,15 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 
-import { AdminApi, FeatureFlag, SiteSetting, SystemStatus } from '../core/api';
+import {
+  AdminApi,
+  BADGE_RULES,
+  Badge,
+  FeatureFlag,
+  LeaderboardRow,
+  SiteSetting,
+  SystemStatus,
+} from '../core/api';
 import { AuthService } from '../core/auth';
 
 const POLL_MS = 5000;
@@ -132,6 +140,79 @@ const POLL_MS = 5000;
             <button class="btn btn--sm" type="submit" [disabled]="busy()">add</button>
           </form>
         </section>
+
+        <!-- gamification badges -->
+        <section class="bay boot-in" style="animation-delay: 240ms">
+          <div class="deck-head">
+            <h2>gamification_badges</h2>
+            <span class="label">{{ badges().length }} defined</span>
+          </div>
+
+          @for (badge of badges(); track badge.id) {
+            <div class="row">
+              <span class="badge-icon">{{ badge.icon }}</span>
+              <div class="row__body">
+                <strong>{{ badge.name }}</strong>
+                <span class="label">{{ ruleLabel(badge.rule) }} ≥</span>
+              </div>
+              <input
+                class="value-input value-input--num"
+                type="number"
+                min="1"
+                [value]="badge.threshold"
+                (change)="saveBadgeThreshold(badge, $any($event.target).value)"
+                [disabled]="busy()"
+                [attr.aria-label]="'threshold for ' + badge.name"
+              />
+              <button class="btn btn--alarm btn--sm" (click)="removeBadge(badge)" [disabled]="busy()">rm</button>
+            </div>
+          }
+
+          <form class="adder" (submit)="addBadge($event)">
+            <label class="field" style="width: 4.5rem">
+              <span class="label">icon</span>
+              <input type="text" placeholder="🏅" [value]="badgeIcon()" (input)="badgeIcon.set($any($event.target).value)" />
+            </label>
+            <label class="field" style="flex: 1">
+              <span class="label">name</span>
+              <input type="text" required placeholder="Quiz Champion" [value]="badgeName()" (input)="badgeName.set($any($event.target).value)" />
+            </label>
+            <label class="field">
+              <span class="label">rule</span>
+              <select [value]="badgeRule()" (change)="badgeRule.set($any($event.target).value)">
+                @for (rule of badgeRules; track rule.value) {
+                  <option [value]="rule.value">{{ rule.label }}</option>
+                }
+              </select>
+            </label>
+            <label class="field" style="width: 6rem">
+              <span class="label">threshold</span>
+              <input type="number" required min="1" [value]="badgeThreshold()" (input)="badgeThreshold.set($any($event.target).value)" />
+            </label>
+            <button class="btn btn--sm" type="submit" [disabled]="busy()">add</button>
+          </form>
+        </section>
+
+        <!-- weekly leaderboard -->
+        <section class="bay boot-in" style="animation-delay: 320ms">
+          <div class="deck-head">
+            <h2>weekly_leaderboard</h2>
+            <button class="btn btn--sm" (click)="refreshLeaderboard()" [disabled]="busy()">refresh</button>
+          </div>
+
+          @if (leaderboard().length === 0) {
+            <p class="label">no points scored in the past 7 days.</p>
+          }
+          @for (row of leaderboard(); track row.rank) {
+            <div class="row">
+              <span class="rank" [class.rank--top]="row.rank === 1">#{{ row.rank }}</span>
+              <div class="row__body">
+                <strong>{{ row.student }}</strong>
+              </div>
+              <span class="label">★ {{ row.points }} pts</span>
+            </div>
+          }
+        </section>
       </div>
     }
   `,
@@ -251,6 +332,32 @@ const POLL_MS = 5000;
       padding-bottom: 0.55rem;
     }
 
+    .badge-icon {
+      font-size: 1.3rem;
+      width: 1.8rem;
+      text-align: center;
+    }
+
+    .value-input--num { width: 5.5rem; }
+
+    .rank {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      width: 2.4rem;
+
+      &.rank--top { color: var(--phosphor); }
+    }
+
+    .field select {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid var(--line-strong);
+      border-radius: 4px;
+      background: var(--void);
+      color: var(--amber);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
     @media (max-width: 920px) {
       .decks { grid-template-columns: 1fr; }
     }
@@ -273,6 +380,14 @@ export class ConsolePage {
   protected readonly settingValue = signal('');
   protected readonly settingPublic = signal(true);
 
+  protected readonly badges = signal<Badge[]>([]);
+  protected readonly leaderboard = signal<LeaderboardRow[]>([]);
+  protected readonly badgeRules = BADGE_RULES;
+  protected readonly badgeIcon = signal('');
+  protected readonly badgeName = signal('');
+  protected readonly badgeRule = signal(BADGE_RULES[0].value);
+  protected readonly badgeThreshold = signal('');
+
   constructor() {
     void this.bootstrap();
     const timer = setInterval(() => void this.pollSystem(), POLL_MS);
@@ -282,9 +397,16 @@ export class ConsolePage {
   private async bootstrap(): Promise<void> {
     await this.pollSystem();
     try {
-      const [flags, settings] = await Promise.all([this.api.flags(), this.api.settings()]);
+      const [flags, settings, badges, leaderboard] = await Promise.all([
+        this.api.flags(),
+        this.api.settings(),
+        this.api.badges(),
+        this.api.leaderboard().catch(() => []),
+      ]);
       this.flags.set(flags);
       this.settings.set(settings);
+      this.badges.set(badges);
+      this.leaderboard.set(leaderboard);
     } catch (err) {
       if (err instanceof HttpErrorResponse && err.status === 403) {
         this.forbidden.set(true);
@@ -317,6 +439,7 @@ export class ConsolePage {
       await action();
       this.flags.set(await this.api.flags());
       this.settings.set(await this.api.settings());
+      this.badges.set(await this.api.badges());
     } catch (err) {
       this.error.set(
         err instanceof HttpErrorResponse && typeof err.error?.detail === 'string'
@@ -386,5 +509,53 @@ export class ConsolePage {
 
   protected removeSetting(setting: SiteSetting): void {
     void this.run(() => this.api.deleteSetting(setting.id), `could not delete ${setting.key}.`);
+  }
+
+  protected ruleLabel(rule: string): string {
+    return BADGE_RULES.find((r) => r.value === rule)?.label ?? rule;
+  }
+
+  protected saveBadgeThreshold(badge: Badge, raw: string): void {
+    const threshold = Number(raw);
+    if (!Number.isInteger(threshold) || threshold < 1) return;
+    void this.run(
+      () => this.api.updateBadge(badge.id, { threshold }),
+      `could not update ${badge.name}.`,
+    );
+  }
+
+  protected addBadge(event: Event): void {
+    event.preventDefault();
+    const name = this.badgeName().trim();
+    const threshold = Number(this.badgeThreshold());
+    if (!name || !Number.isInteger(threshold) || threshold < 1) return;
+    const key = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    void this.run(async () => {
+      await this.api.createBadge({
+        key,
+        name,
+        icon: this.badgeIcon().trim() || '🏅',
+        rule: this.badgeRule(),
+        threshold,
+        description: '',
+      });
+      this.badgeIcon.set('');
+      this.badgeName.set('');
+      this.badgeThreshold.set('');
+    }, 'could not create the badge.');
+  }
+
+  protected removeBadge(badge: Badge): void {
+    void this.run(() => this.api.deleteBadge(badge.id), `could not delete ${badge.name}.`);
+  }
+
+  protected refreshLeaderboard(): void {
+    void this.api
+      .leaderboard()
+      .then((rows) => this.leaderboard.set(rows))
+      .catch(() => this.error.set('could not load the leaderboard.'));
   }
 }

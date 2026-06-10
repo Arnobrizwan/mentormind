@@ -1,10 +1,12 @@
+from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import services
-from .models import PointsEvent
+from .models import Badge, PointsEvent
+from .serializers import BadgeSerializer
 
 
 class MyEngagementView(APIView):
@@ -23,6 +25,7 @@ class MyEngagementView(APIView):
                 "points_total": services.total_points(user),
                 "streak": services.current_streak(user),
                 "daily_login_claimed": services.daily_login_claimed(user),
+                "daily_login_points": services.point_value("daily_login"),
                 "badges": services.badge_progress(user),
                 "recent_events": recent,
             }
@@ -48,6 +51,15 @@ class WeeklyLeaderboardView(APIView):
 
     def get(self, request):
         return Response(services.weekly_leaderboard())
+
+
+class BadgeViewSet(viewsets.ModelViewSet):
+    """Staff CRUD for badge definitions — rules and thresholds are DB
+    rows, so the admin console tunes gamification live."""
+
+    queryset = Badge.objects.all()
+    serializer_class = BadgeSerializer
+    permission_classes = [IsAdminUser]
 
 
 class PointsHistoryView(APIView):
