@@ -98,6 +98,8 @@ def pipeline_env(tmp_path, monkeypatch):
     (papers / "9709_s23_qp_12.pdf").write_bytes(b"%PDF-1.4 qp")
     (papers / "9709_s23_ms_12.pdf").write_bytes(b"%PDF-1.4 ms")
     (papers / "README.txt").write_text("ignore me")
+    # Confine the discover path guard to this fixture's temp folder.
+    monkeypatch.setenv("PASTPAPERS_ROOT", str(papers))
 
     async def fake_ocr(self, file_path):
         return QP_MARKDOWN if "_qp_" in file_path else MS_MARKDOWN

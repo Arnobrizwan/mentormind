@@ -3,12 +3,17 @@ MentorMind settings — everything configurable comes from the environment.
 No hardcoded hosts, credentials, or instance identity.
 """
 
+import sys
 from datetime import timedelta
 from pathlib import Path
 
 import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Test runs and offline management commands don't serve traffic, so the
+# production secret/host guards below don't apply to them.
+_RUNNING_TESTS = "test" in sys.argv or "pytest" in sys.modules
 
 env = environ.Env(
     DEBUG=(bool, False),
@@ -20,9 +25,18 @@ env = environ.Env(
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
-SECRET_KEY = env("SECRET_KEY", default="dev-only-insecure-key-change-me")
+_INSECURE_KEY = "dev-only-insecure-key-change-me"
+SECRET_KEY = env("SECRET_KEY", default=_INSECURE_KEY)
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+
+# Fail fast: never boot a non-debug server process with the shipped fallback
+# key or a wildcard host. Tests and offline commands are exempt.
+if not DEBUG and not _RUNNING_TESTS:
+    if SECRET_KEY == _INSECURE_KEY:
+        raise RuntimeError("SECRET_KEY must be set to a unique value when DEBUG is off.")
+    if ALLOWED_HOSTS == ["*"]:
+        raise RuntimeError("ALLOWED_HOSTS must be set explicitly when DEBUG is off.")
 
 # Which API instance is serving — surfaced via the X-Served-By header
 # so the load balancer round-robin is visible to clients.
@@ -41,6 +55,7 @@ INSTALLED_APPS = [
     # third-party
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
     "corsheaders",
     "django_filters",
@@ -94,11 +109,18 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 # --- Databases: primary for writes, optional read replica -----------------
+# CONN_MAX_AGE keeps connections warm across requests (persistent pooling);
+# health checks drop any that the DB closed under us.
+_CONN_MAX_AGE = env.int("DB_CONN_MAX_AGE", default=600)
 DATABASES = {
     "default": env.db_url("DATABASE_URL", default=f"sqlite:///{BASE_DIR}/db.sqlite3"),
 }
+DATABASES["default"]["CONN_MAX_AGE"] = _CONN_MAX_AGE
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 if env("REPLICA_URL"):
     DATABASES["replica"] = env.db_url_config(env("REPLICA_URL"))
+    DATABASES["replica"]["CONN_MAX_AGE"] = _CONN_MAX_AGE
+    DATABASES["replica"]["CONN_HEALTH_CHECKS"] = True
     DATABASE_ROUTERS = ["config.db_router.ReadReplicaRouter"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -154,13 +176,27 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": env.int("API_PAGE_SIZE", default=20),
+    # Per-IP / per-user rate limits — back-pressure against scraping and
+    # brute force. Tune via env without a redeploy.
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        # Throttles off under the test runner so accumulated cache state can't
+        # make assertions flaky; live in every real process.
+        "anon": None if _RUNNING_TESTS else env("THROTTLE_ANON", default="60/min"),
+        "user": None if _RUNNING_TESTS else env("THROTTLE_USER", default="240/min"),
+    },
 }
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=env.int("JWT_ACCESS_MINUTES", default=30)),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=env.int("JWT_REFRESH_DAYS", default=7)),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": False,
+    # Invalidate the old refresh token on rotation so a stolen one can't be
+    # replayed after the legitimate user refreshes.
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 SPECTACULAR_SETTINGS = {
@@ -207,7 +243,26 @@ if env("R2_ENDPOINT_URL", default=""):
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": env.int("PASSWORD_MIN_LENGTH", default=10)},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# --- Transport & cookie hardening -----------------------------------------
+# Applied whenever DEBUG is off (any real deployment). All overridable by env
+# so a TLS-terminating proxy or a non-HTTPS internal hop can opt out.
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+if not DEBUG and not _RUNNING_TESTS:
+    SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

@@ -42,6 +42,16 @@ MAX_CANDIDATES = int(os.getenv("TUTOR_MAX_CANDIDATES", "5000"))
 CUSTOM_LLM_TIMEOUT = float(os.getenv("CUSTOM_LLM_TIMEOUT", "90"))
 
 
+def _allowed_llm_url(url: str) -> bool:
+    """Only http(s) and never a credentialed URL — a defence-in-depth check
+    on the operator-set CUSTOM_LLM_URL so a misconfig can't turn the tutor
+    into an SSRF primitive against arbitrary schemes."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    return parsed.scheme in ("http", "https") and bool(parsed.hostname) and "@" not in parsed.netloc
+
+
 def _tokens(text: str) -> set[str]:
     return {t for t in TOKEN_RE.findall(text.lower()) if t not in STOPWORDS}
 
@@ -102,7 +112,7 @@ def _generate_answer(question: str, subject: str, level: str, context: str) -> s
         return local
 
     url = os.getenv("CUSTOM_LLM_URL", "")
-    if not url:
+    if not url or not _allowed_llm_url(url):
         return None
     payload = {
         "model": os.getenv("CUSTOM_LLM_MODEL", "mentormind-tutor"),

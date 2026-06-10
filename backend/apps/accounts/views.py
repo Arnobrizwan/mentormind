@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth import get_user_model
 from rest_framework import generics, permissions, status
 from rest_framework.parsers import MultiPartParser
@@ -12,10 +14,30 @@ User = get_user_model()
 
 DEFAULT_AVATAR_MB = 5
 
+# Magic-byte signatures — the Content-Type header is client-controlled and
+# trivially spoofed, so we sniff the actual file header instead.
+_IMAGE_SIGNATURES = {
+    b"\xff\xd8\xff": "jpg",
+    b"\x89PNG\r\n\x1a\n": "png",
+    b"GIF87a": "gif",
+    b"GIF89a": "gif",
+    b"RIFF": "webp",  # RIFF....WEBP — verified below
+}
+
 
 def max_avatar_mb() -> int:
     configured = get_setting("avatar-max-mb")
     return configured if isinstance(configured, int) and configured > 0 else DEFAULT_AVATAR_MB
+
+
+def sniff_image_type(header: bytes) -> str | None:
+    """Return a safe extension when `header` is a real raster image, else None."""
+    for signature, ext in _IMAGE_SIGNATURES.items():
+        if header.startswith(signature):
+            if ext == "webp" and header[8:12] != b"WEBP":
+                continue
+            return ext
+    return None
 
 
 class RegisterView(generics.CreateAPIView):
@@ -51,14 +73,20 @@ class AvatarUploadView(APIView):
                 {"error": f"Avatar must be {limit_mb} MB or smaller."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not (file.content_type or "").startswith("image/"):
+        header = file.read(16)
+        file.seek(0)
+        ext = sniff_image_type(header)
+        if ext is None:
             return Response(
-                {"error": "Avatar must be an image."},
+                {"error": "Avatar must be a JPEG, PNG, GIF or WebP image."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         user = request.user
-        user.avatar.save(file.name, file, save=False)
+        # Generate our own name — never trust the client filename (path
+        # traversal / overwrite). Storage keys it under the user id.
+        safe_name = f"avatars/{user.id}-{uuid.uuid4().hex}.{ext}"
+        user.avatar.save(safe_name, file, save=False)
         user.avatar_url = user.avatar.url
         user.save(update_fields=["avatar", "avatar_url"])
         return Response(UserSerializer(user, context={"request": request}).data)
