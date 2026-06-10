@@ -144,3 +144,58 @@ class TestPipelineEndpoints:
         with TestClient(app) as client:
             res = client.post("/api/pipeline/discover", json={"folder": "/nope/missing"})
             assert res.status_code == 400
+
+
+class TestTutorAnswering:
+    """The custom tutor serving path: corpus retrieval, no third-party AI."""
+
+    def _seed_corpus(self, client):
+        client.post("/api/pipeline/discover", json={"folder": self.folder})
+        client.post("/api/pipeline/process-next")
+
+    def test_strong_match_returns_real_mark_scheme(self, pipeline_env):
+        self.folder = str(pipeline_env)
+        with TestClient(app) as client:
+            self._seed_corpus(client)
+            res = client.post("/v1/tutor/answer", json={
+                "question": "Solve the equation 2x + 3 = 11 showing all working",
+                "subject": "Math", "level": "A-Level",
+            })
+            assert res.status_code == 200
+            body = res.json()
+            assert body["matched"] is True
+            assert "$x = 4$" in body["answer"]          # the actual mark scheme
+            assert "mark-scheme" in body["answer"].lower()
+            assert body["source"]["subject_code"] == "9709"
+            assert body["source"]["question_number"] == 1
+
+    def test_related_question_gets_method_guidance(self, pipeline_env):
+        self.folder = str(pipeline_env)
+        with TestClient(app) as client:
+            self._seed_corpus(client)
+            res = client.post("/v1/tutor/answer", json={
+                "question": "A ball is thrown vertically upward, how high does it go?",
+            })
+            body = res.json()
+            assert res.status_code == 200
+            # grounded in the nearest real mark scheme either way
+            assert "u^2 / 2g" in body["answer"]
+            assert body["source"]["question_number"] == 2
+
+    def test_unknown_question_admits_gap(self, pipeline_env):
+        self.folder = str(pipeline_env)
+        with TestClient(app) as client:
+            self._seed_corpus(client)
+            res = client.post("/v1/tutor/answer", json={
+                "question": "Describe the economic causes of the French Revolution",
+            })
+            body = res.json()
+            assert body["matched"] is False
+            assert body["source"] is None
+            assert "corpus" in body["answer"]
+
+    def test_empty_question_rejected(self, pipeline_env):
+        self.folder = str(pipeline_env)
+        with TestClient(app) as client:
+            res = client.post("/v1/tutor/answer", json={"question": "  "})
+            assert res.status_code == 400

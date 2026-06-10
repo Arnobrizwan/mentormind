@@ -8,5 +8,6 @@ data:
   ALLOWED_HOSTS: "*"
   REDIS_URL: redis://redis:6379/0
   ML_SERVICE_URL: http://ml-service:9000
+  TUTOR_MODEL_URL: http://ml-service:9000/v1/tutor/answer
   # Point REPLICA_URL at a read replica (e.g. Neon) to activate the
   # read/write splitting router; omit to run single-database.

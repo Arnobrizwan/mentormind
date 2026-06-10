@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from . import dropout, vision
 from .flags import flag_enabled
+from .pastpapers import answering
 from .pastpapers import api as pastpapers_api
 from .pastpapers.models import init_db
 
@@ -139,3 +140,22 @@ async def ocr_extract(image: UploadFile = File(...)):
         )
     page = await _read_image(image)
     return vision.ocr_extract(page)
+
+
+class TutorAnswerRequest(BaseModel):
+    question: str
+    subject: str = ""
+    level: str = ""
+    history: list[dict] = []
+
+
+@app.post("/v1/tutor/answer")
+async def tutor_answer(request: TutorAnswerRequest):
+    """Custom tutor serving: real mark-scheme answers from the aligned
+    past-paper corpus, with an optional self-hosted fine-tuned model for
+    questions outside it. The Django tutor app points TUTOR_MODEL_URL here."""
+    require_flag("ai_tutor")
+    question = request.question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="question is required.")
+    return await answering.answer_question(question, request.subject, request.level)

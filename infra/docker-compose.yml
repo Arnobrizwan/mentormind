@@ -16,6 +16,7 @@ x-backend-env: &backend-env
   REPLICA_URL: postgres://mentormind:${DB_PASSWORD:-mentormind}@postgres-replica:5432/mentormind
   REDIS_URL: redis://redis:6379/0
   ML_SERVICE_URL: http://ml-service:9000
+  TUTOR_MODEL_URL: http://ml-service:9000/v1/tutor/answer
 
 services:
   postgres-primary:

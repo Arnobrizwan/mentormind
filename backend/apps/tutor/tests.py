@@ -136,3 +136,71 @@ class TutorTests(TestCase):
 
         quota = self.client_student.get("/api/v1/tutor/sessions/quota/")
         self.assertIsNone(quota.json()["limit"])
+
+
+class CustomModelProviderTests(TestCase):
+    """The TUTOR_MODEL_URL path — replies come from your own model server."""
+
+    def setUp(self):
+        cache.clear()
+        self.student = User.objects.create_user(
+            email="custom-model@mentormind.dev", password="pass-123456"
+        )
+        self.client_student = APIClient()
+        self.client_student.force_authenticate(user=self.student)
+
+    def test_custom_server_answer_with_source_attribution(self):
+        import os
+        from unittest import mock
+
+        from apps.tutor import services
+
+        fake_response = {
+            "answer": "**Step 1:** $2x = 8$ (M1)\n**Step 2:** $x = 4$ (A1)",
+            "matched": True,
+            "source": {
+                "subject_code": "9709", "year": 2023, "session": "s",
+                "variant": "12", "question_number": 1,
+            },
+        }
+        session_id = self.client_student.post(
+            "/api/v1/tutor/sessions/", {"subject": "Math", "level": "A-Level"},
+            format="json",
+        ).json()["id"]
+
+        with mock.patch.dict(os.environ, {"TUTOR_MODEL_URL": "http://ml/v1/tutor/answer"}):
+            with mock.patch.object(services, "_post_json", return_value=fake_response) as post:
+                res = self.client_student.post(
+                    f"/api/v1/tutor/sessions/{session_id}/messages/",
+                    {"content": "Solve 2x + 3 = 11"},
+                    format="json",
+                )
+        self.assertEqual(res.status_code, 201)
+        content = res.json()["assistant_message"]["content"]
+        self.assertIn("$x = 4$", content)
+        self.assertIn("Source: Cambridge 9709", content)
+        payload = post.call_args.args[1]
+        self.assertEqual(payload["question"], "Solve 2x + 3 = 11")
+        self.assertEqual(payload["subject"], "Math")
+
+    def test_unreachable_server_does_not_burn_quota(self):
+        import os
+        from unittest import mock
+
+        from apps.tutor import services
+
+        session_id = self.client_student.post(
+            "/api/v1/tutor/sessions/", {}, format="json"
+        ).json()["id"]
+
+        with mock.patch.dict(os.environ, {"TUTOR_MODEL_URL": "http://down/answer"}):
+            with mock.patch.object(
+                services, "_post_json", side_effect=OSError("connection refused")
+            ):
+                res = self.client_student.post(
+                    f"/api/v1/tutor/sessions/{session_id}/messages/",
+                    {"content": "hello"},
+                    format="json",
+                )
+        self.assertEqual(res.status_code, 502)
+        self.assertEqual(TutorMessage.objects.filter(session_id=session_id).count(), 0)
