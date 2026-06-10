@@ -54,6 +54,8 @@ INSTALLED_APPS = [
     "apps.flags",
     "apps.notifications",
     "apps.chat",
+    "apps.engagement",
+    "apps.tutor",
 ]
 
 MIDDLEWARE = [

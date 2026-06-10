@@ -54,3 +54,41 @@ class AvatarUploadView(APIView):
         user.avatar_url = user.avatar.url
         user.save(update_fields=["avatar", "avatar_url"])
         return Response(UserSerializer(user, context={"request": request}).data)
+
+
+class SubscribeView(APIView):
+    """Simulated premium checkout — instantly activates the plan.
+    Plan durations come from settings rows (premium-monthly-days /
+    premium-yearly-days) with 30/365 defaults."""
+
+    def post(self, request):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.settings_engine.services import get_setting
+
+        from .models import Subscription
+
+        plan = request.data.get("plan")
+        if plan not in (Subscription.Plan.MONTHLY, Subscription.Plan.YEARLY):
+            return Response(
+                {"error": "plan must be 'monthly' or 'yearly'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        default_days = 30 if plan == Subscription.Plan.MONTHLY else 365
+        days = get_setting(f"premium-{plan}-days")
+        if not isinstance(days, int):
+            days = default_days
+
+        Subscription.objects.update_or_create(
+            user=request.user,
+            defaults={
+                "plan": plan,
+                "is_active": True,
+                "expires_at": timezone.now() + timedelta(days=days),
+            },
+        )
+        request.user.refresh_from_db()
+        return Response(UserSerializer(request.user, context={"request": request}).data)

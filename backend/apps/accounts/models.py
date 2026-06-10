@@ -41,3 +41,33 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    @property
+    def is_premium(self):
+        from django.utils import timezone
+
+        subscription = getattr(self, "subscription", None)
+        return bool(
+            subscription
+            and subscription.is_active
+            and subscription.expires_at > timezone.now()
+        )
+
+
+class Subscription(models.Model):
+    """Premium plan state. Payment is simulated (this is a demo platform) —
+    the subscribe endpoint activates it instantly; swapping in a real
+    processor only changes how this row gets written."""
+
+    class Plan(models.TextChoices):
+        MONTHLY = "monthly", "Monthly"
+        YEARLY = "yearly", "Yearly"
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="subscription")
+    plan = models.CharField(max_length=20, choices=Plan.choices)
+    is_active = models.BooleanField(default=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.user.email} ({self.plan})"

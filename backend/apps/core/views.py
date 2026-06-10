@@ -425,3 +425,87 @@ class QuizQuestionViewSet(viewsets.ModelViewSet):
         if quiz.course.instructor != user and not user.is_staff:
             raise PermissionDenied("You are not the instructor of this course.")
         serializer.save()
+
+
+class SearchView(APIView):
+    """Title/description search across published courses and lessons."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        query = str(request.query_params.get("q", "")).strip()
+        if len(query) < 2:
+            return Response({"query": query, "courses": [], "lessons": []})
+
+        courses = Course.objects.filter(
+            models.Q(title__icontains=query) | models.Q(description__icontains=query),
+            is_published=True,
+        ).select_related("instructor")[:20]
+
+        lessons = Lesson.objects.filter(
+            title__icontains=query,
+            is_published=True,
+            course__is_published=True,
+        ).select_related("course")[:20]
+
+        return Response(
+            {
+                "query": query,
+                "courses": [
+                    {
+                        "slug": c.slug,
+                        "title": c.title,
+                        "instructor": c.instructor.display_name or "",
+                    }
+                    for c in courses
+                ],
+                "lessons": [
+                    {
+                        "id": l.id,
+                        "title": l.title,
+                        "course_slug": l.course.slug,
+                        "course_title": l.course.title,
+                    }
+                    for l in lessons
+                ],
+            }
+        )
+
+
+class AdminStatsView(APIView):
+    """Headline numbers for the admin console dashboard."""
+
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+
+        from apps.accounts.models import Subscription
+        from apps.engagement.models import PointsEvent
+        from apps.tutor.models import TutorSession
+
+        UserModel = get_user_model()
+        today = timezone.localdate()
+        now = timezone.now()
+
+        return Response(
+            {
+                "users_total": UserModel.objects.count(),
+                "premium_users": Subscription.objects.filter(
+                    is_active=True, expires_at__gt=now
+                ).count(),
+                "courses_total": Course.objects.count(),
+                "courses_published": Course.objects.filter(is_published=True).count(),
+                "enrollments_total": Enrollment.objects.count(),
+                "quiz_attempts_today": QuizAttempt.objects.filter(
+                    completed_at__date=today
+                ).count(),
+                "tutor_sessions_today": TutorSession.objects.filter(
+                    created_at__date=today
+                ).count(),
+                "points_awarded_today": PointsEvent.objects.filter(
+                    created_at__date=today
+                ).count(),
+            }
+        )

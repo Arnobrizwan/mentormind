@@ -32,6 +32,30 @@ class UserSerializer(serializers.ModelSerializer):
             "avatar_url",
             "roles",
             "is_staff",
+            "is_premium",
+            "subscription",
             "date_joined",
         )
-        read_only_fields = ("id", "email", "avatar", "roles", "is_staff", "date_joined")
+        read_only_fields = (
+            "id",
+            "email",
+            "avatar",
+            "roles",
+            "is_staff",
+            "is_premium",
+            "subscription",
+            "date_joined",
+        )
+
+    is_premium = serializers.BooleanField(read_only=True)
+    subscription = serializers.SerializerMethodField()
+
+    def get_subscription(self, obj):
+        subscription = getattr(obj, "subscription", None)
+        if not subscription:
+            return None
+        return {
+            "plan": subscription.plan,
+            "is_active": subscription.is_active,
+            "expires_at": subscription.expires_at,
+        }

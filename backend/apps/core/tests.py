@@ -557,3 +557,59 @@ class RecommendationFlagTests(TestCase):
         FeatureFlag.objects.create(key="recommendations", enabled=False)
         cache.clear()
         self.assertEqual(client.get("/api/v1/courses/recommended/").status_code, 403)
+
+
+class SearchTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        instructor = User.objects.create_user(
+            email="search-teach@mentormind.dev", password="pass-123456"
+        )
+        course = Course.objects.create(
+            title="Quantum Mechanics", slug="quantum-mech", description="waves and particles",
+            instructor=instructor, is_published=True,
+        )
+        Lesson.objects.create(
+            course=course, title="Wave functions explained", content="c",
+            order=1, is_published=True,
+        )
+        Course.objects.create(
+            title="Hidden Draft", slug="hidden-draft", description="quantum secrets",
+            instructor=instructor, is_published=False,
+        )
+
+    def test_search_finds_published_only(self):
+        res = APIClient().get("/api/v1/search/?q=quantum")
+        self.assertEqual(res.status_code, 200)
+        slugs = [c["slug"] for c in res.json()["courses"]]
+        self.assertIn("quantum-mech", slugs)
+        self.assertNotIn("hidden-draft", slugs)
+
+    def test_search_matches_lessons(self):
+        res = APIClient().get("/api/v1/search/?q=wave")
+        self.assertEqual(res.json()["lessons"][0]["title"], "Wave functions explained")
+
+    def test_short_query_returns_empty(self):
+        res = APIClient().get("/api/v1/search/?q=a")
+        self.assertEqual(res.json()["courses"], [])
+
+
+class AdminStatsTests(TestCase):
+    def test_stats_staff_only(self):
+        admin = User.objects.create_user(
+            email="stats-admin@mentormind.dev", password="pass-123456", is_staff=True
+        )
+        student = User.objects.create_user(
+            email="stats-user@mentormind.dev", password="pass-123456"
+        )
+        as_admin = APIClient()
+        as_admin.force_authenticate(user=admin)
+        as_student = APIClient()
+        as_student.force_authenticate(user=student)
+
+        res = as_admin.get("/api/v1/admin/stats/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["users_total"], 2)
+        self.assertIn("premium_users", res.json())
+
+        self.assertEqual(as_student.get("/api/v1/admin/stats/").status_code, 403)
