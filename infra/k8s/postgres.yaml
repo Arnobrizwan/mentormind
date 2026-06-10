@@ -1,0 +1,58 @@
+# Single-primary Postgres for cluster demos. In the free-tier cloud
+# deployment this is replaced by managed Neon (primary + read replica) —
+# the app only sees DATABASE_URL / REPLICA_URL either way.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: mentormind
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          env:
+            - name: POSTGRES_USER
+              value: mentormind
+            - name: POSTGRES_PASSWORD
+              value: mentormind
+            - name: POSTGRES_DB
+              value: mentormind
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "mentormind"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: mentormind
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432

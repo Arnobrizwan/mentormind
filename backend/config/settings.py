@@ -28,6 +28,9 @@ ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 # so the load balancer round-robin is visible to clients.
 INSTANCE_NAME = env("INSTANCE_NAME")
 
+# ML microservice base URL (probed by /api/v1/system/)
+ML_SERVICE_URL = env("ML_SERVICE_URL", default="")
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

@@ -313,3 +313,79 @@ class EnrollmentViewSet(viewsets.ReadOnlyModelViewSet):
 
         serializer = self.get_serializer(enrollment)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class SystemStatusView(APIView):
+    """Aggregate live status of every architectural component — feeds the
+    /system page. Public by design: this project is a system-design showcase."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        components = {}
+
+        def probe(name, fn):
+            import time
+
+            start = time.monotonic()
+            try:
+                fn()
+                components[name] = {"status": "ok"}
+            except Exception as exc:
+                components[name] = {"status": "error", "detail": str(exc)[:160]}
+            components[name]["latency_ms"] = round((time.monotonic() - start) * 1000, 1)
+
+        def check_db(alias):
+            def _check():
+                with connections[alias].cursor() as cursor:
+                    cursor.execute("SELECT 1")
+
+            return _check
+
+        probe("database_primary", check_db("default"))
+        if "replica" in connections:
+            probe("database_replica", check_db("replica"))
+        else:
+            components["database_replica"] = {"status": "not_configured"}
+
+        def check_cache():
+            cache.set("system_ping", "pong", 5)
+            assert cache.get("system_ping") == "pong"
+
+        probe("cache", check_cache)
+
+        if settings.CELERY_TASK_ALWAYS_EAGER:
+            components["celery"] = {"status": "eager_mode"}
+        else:
+            def check_celery():
+                from config.celery import app as celery_app
+
+                with celery_app.connection_for_read() as conn:
+                    conn.ensure_connection(max_retries=1, timeout=2)
+
+            probe("celery_broker", check_celery)
+
+        ml_url = getattr(settings, "ML_SERVICE_URL", "")
+        if ml_url:
+            def check_ml():
+                import urllib.request
+
+                with urllib.request.urlopen(f"{ml_url.rstrip('/')}/healthz", timeout=2) as res:
+                    assert res.status == 200
+
+            probe("ml_service", check_ml)
+        else:
+            components["ml_service"] = {"status": "not_configured"}
+
+        healthy = all(
+            c["status"] in ("ok", "eager_mode", "not_configured")
+            for c in components.values()
+        )
+        return Response(
+            {
+                "instance": settings.INSTANCE_NAME,
+                "healthy": healthy,
+                "components": components,
+            },
+            status=200 if healthy else 503,
+        )

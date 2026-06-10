@@ -424,3 +424,16 @@ class RecommendationTests(TestCase):
 
     def test_requires_auth(self):
         self.assertEqual(APIClient().get("/api/v1/courses/recommended/").status_code, 401)
+
+
+class SystemStatusTests(TestCase):
+    def test_system_status_is_public_and_healthy(self):
+        res = self.client.get("/api/v1/system/")
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertTrue(body["healthy"])
+        self.assertEqual(body["components"]["database_primary"]["status"], "ok")
+        self.assertEqual(body["components"]["cache"]["status"], "ok")
+        self.assertEqual(body["components"]["database_replica"]["status"], "not_configured")
+        self.assertEqual(body["components"]["ml_service"]["status"], "not_configured")
+        self.assertIn("latency_ms", body["components"]["database_primary"])

@@ -12,6 +12,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/auth-page').then((m) => m.AuthPage),
   },
   {
+    path: 'system',
+    loadComponent: () => import('./pages/system').then((m) => m.SystemPage),
+  },
+  {
     path: 'dashboard',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/dashboard').then((m) => m.DashboardPage),

@@ -7,6 +7,7 @@ from .views import (
     HealthView,
     LessonViewSet,
     QuizViewSet,
+    SystemStatusView,
 )
 
 router = DefaultRouter()
@@ -17,5 +18,6 @@ router.register("enrollments", EnrollmentViewSet, basename="enrollment")
 
 urlpatterns = [
     path("health/", HealthView.as_view(), name="health"),
+    path("system/", SystemStatusView.as_view(), name="system-status"),
     path("", include(router.urls)),
 ]

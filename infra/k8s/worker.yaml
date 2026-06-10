@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: mentormind
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: mentormind-backend:latest
+          command: ["celery", "-A", "config", "worker", "--loglevel=info"]
+          envFrom:
+            - configMapRef:
+                name: backend-config
+            - secretRef:
+                name: backend-secrets
+          env:
+            - name: INSTANCE_NAME
+              value: worker
+          resources:
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              memory: 512Mi

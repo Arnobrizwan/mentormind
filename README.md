@@ -72,4 +72,4 @@ docs/         architecture notes
 3. ✅ Infra showcase — nginx micro-cache, Redis leaderboard (sorted sets), R2/S3 uploads (avatars + course covers), Channels websocket chat, notifications with Celery email mirror
 4. ✅ ML features — OpenCV proctoring (face count), grid OMR bubble-sheet grading, Tesseract OCR, co-occurrence course recommendations
 5. ✅ MLOps — DVC pipeline (prepare→train→evaluate→drift), MLflow registry hooks, GitHub Actions train/deploy with drift gate, portable numpy-only model artifact served by ml-service
-6. Kubernetes, load tests (k6), `/system` live status page
+6. ✅ Kubernetes manifests (kustomize: api×2 + HPA, worker, ml-service, ingress), k6 load tests (read-path + student journey), `/system` live status page

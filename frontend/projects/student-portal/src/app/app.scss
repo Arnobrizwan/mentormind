@@ -94,3 +94,11 @@
   padding-top: 1rem;
   flex-wrap: wrap;
 }
+
+.colophon__link {
+  text-decoration: none;
+
+  &:hover {
+    color: var(--accent);
+  }
+}
