@@ -1,4 +1,9 @@
 <div class="frame">
+  @if (!connectivity.online()) {
+    <div class="offline-banner" role="status">
+      <span aria-hidden="true">📡</span> You're offline — cached courses and your AI tutor still work.
+    </div>
+  }
   <header class="masthead">
     <p class="masthead__ticker mono-label">
       {{ config.siteName() }} · Student Portal · {{ config.tagline() }}
