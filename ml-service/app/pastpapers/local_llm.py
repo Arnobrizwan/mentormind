@@ -26,6 +26,8 @@ ADAPTER_DIR = Path(
 )
 BASE_MODEL = os.getenv("LOCAL_LLM_BASE", "Qwen/Qwen2.5-0.5B-Instruct")
 MAX_NEW_TOKENS = int(os.getenv("LOCAL_LLM_MAX_TOKENS", "512"))
+TEMPERATURE = float(os.getenv("LOCAL_LLM_TEMPERATURE", "0.2"))
+TOP_P = float(os.getenv("LOCAL_LLM_TOP_P", "0.9"))
 
 _lock = threading.Lock()
 _pipeline = None
@@ -111,8 +113,8 @@ def generate(question: str, system_prompt: str, context: str = "") -> str | None
             **inputs,
             max_new_tokens=MAX_NEW_TOKENS,
             do_sample=True,
-            temperature=0.2,
-            top_p=0.9,
+            temperature=TEMPERATURE,
+            top_p=TOP_P,
             pad_token_id=tokenizer.eos_token_id,
         )
     text = tokenizer.decode(

@@ -32,6 +32,14 @@ Without `REDIS_URL`, `CELERY_TASK_ALWAYS_EAGER=True` so the app works on a
 laptop with zero services. In Compose/K8s, Redis is the broker and a dedicated
 worker container consumes tasks.
 
+## Runtime configuration (dynamic knobs)
+
+Three layers, by change cadence:
+
+- **Feature flags** (`flags` app, `/api/v1/flags/`): live kill switches — `ai_tutor`, `proctoring`, `omr_grading`, `ocr`, `dropout_risk`. The ML service polls them (`FLAGS_URL`, fail-open).
+- **Site settings** (`settings_engine` app, `/api/v1/settings/public/`): live business tuning via admin console, no redeploy. Known keys: `site-name`, `tagline`, `tutor-daily-limit`, `premium-{monthly,yearly}-days`, `points-<action>`, `quiz-pass-threshold`, `avatar-max-mb`, `search-min-query-chars`, `search-result-limit`. All have hardcoded fallbacks, so the apps run with an empty table.
+- **Environment variables** (restart to apply): secrets and operational tuning. Backend: `COURSE_CACHE_TTL`, `LEADERBOARD_CACHE_TTL`, `API_PAGE_SIZE`, `JWT_*`. ML service: `DROPOUT_HIGH_THRESHOLD`, `DROPOUT_MEDIUM_THRESHOLD`, `OMR_FILL_THRESHOLD`, `PROCTOR_SCALE_FACTOR`, `PROCTOR_MIN_NEIGHBORS`, `PROCTOR_MIN_FACE_PX`, `TUTOR_STRONG_MATCH`, `TUTOR_WEAK_MATCH`, `TUTOR_MAX_CANDIDATES`, `CUSTOM_LLM_TIMEOUT`, `LOCAL_LLM_TEMPERATURE`, `LOCAL_LLM_TOP_P`, `LOCAL_LLM_MAX_TOKENS`, `MAX_IMAGE_BYTES`.
+
 ## Free-tier deployment mapping (cloud mode)
 
 | Component | Local (Compose) | Cloud (free) |

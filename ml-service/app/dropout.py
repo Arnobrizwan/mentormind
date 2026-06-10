@@ -16,6 +16,10 @@ import numpy as np
 MODEL_DIR = Path(os.getenv("MODEL_DIR", str(Path(__file__).resolve().parent.parent / "models")))
 ARTIFACT_PATH = MODEL_DIR / "dropout_risk.json"
 
+# Risk-bucket cutoffs — tunable per institution without a redeploy.
+HIGH_THRESHOLD = float(os.getenv("DROPOUT_HIGH_THRESHOLD", "0.66"))
+MEDIUM_THRESHOLD = float(os.getenv("DROPOUT_MEDIUM_THRESHOLD", "0.33"))
+
 
 class DropoutModel:
     def __init__(self, artifact: dict):
@@ -32,9 +36,9 @@ class DropoutModel:
 
     @staticmethod
     def bucket(probability: float) -> str:
-        if probability >= 0.66:
+        if probability >= HIGH_THRESHOLD:
             return "high"
-        if probability >= 0.33:
+        if probability >= MEDIUM_THRESHOLD:
             return "medium"
         return "low"
 

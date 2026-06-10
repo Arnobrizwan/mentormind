@@ -33,11 +33,13 @@ STOPWORDS = frozenset(
     "find show state give which what how why your you".split()
 )
 
-STRONG_MATCH = 0.45
-WEAK_MATCH = 0.18
-MAX_CANDIDATES = 5000  # corpus rows scanned per query — plenty for CAIE scale
+# Retrieval/LLM knobs — env-tunable without a redeploy.
+STRONG_MATCH = float(os.getenv("TUTOR_STRONG_MATCH", "0.45"))
+WEAK_MATCH = float(os.getenv("TUTOR_WEAK_MATCH", "0.18"))
+# Corpus rows scanned per query — plenty for CAIE scale.
+MAX_CANDIDATES = int(os.getenv("TUTOR_MAX_CANDIDATES", "5000"))
 
-CUSTOM_LLM_TIMEOUT = 90
+CUSTOM_LLM_TIMEOUT = float(os.getenv("CUSTOM_LLM_TIMEOUT", "90"))
 
 
 def _tokens(text: str) -> set[str]:

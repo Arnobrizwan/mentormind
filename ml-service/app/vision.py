@@ -8,12 +8,20 @@ Three classic OpenCV workloads, no GPU required:
 
 from __future__ import annotations
 
+import os
+
 import cv2
 import numpy as np
 
 _FACE_CASCADE = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
+
+# Detection knobs — env-tunable for different cameras / sheet styles.
+PROCTOR_SCALE_FACTOR = float(os.getenv("PROCTOR_SCALE_FACTOR", "1.1"))
+PROCTOR_MIN_NEIGHBORS = int(os.getenv("PROCTOR_MIN_NEIGHBORS", "5"))
+PROCTOR_MIN_FACE_PX = int(os.getenv("PROCTOR_MIN_FACE_PX", "40"))
+OMR_FILL_THRESHOLD = float(os.getenv("OMR_FILL_THRESHOLD", "0.08"))
 
 
 def decode_image(raw: bytes) -> np.ndarray | None:
@@ -34,7 +42,10 @@ def proctor_check(image: np.ndarray) -> dict:
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray = cv2.equalizeHist(gray)
     faces = _FACE_CASCADE.detectMultiScale(
-        gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40)
+        gray,
+        scaleFactor=PROCTOR_SCALE_FACTOR,
+        minNeighbors=PROCTOR_MIN_NEIGHBORS,
+        minSize=(PROCTOR_MIN_FACE_PX, PROCTOR_MIN_FACE_PX),
     )
     count = len(faces)
     if count == 1:
@@ -88,7 +99,7 @@ def omr_grade(
             fills.append(float(cell.mean()) / 255.0)
         fill_grid.append([round(f, 3) for f in fills])
         best = int(np.argmax(fills))
-        detected.append(best if fills[best] > 0.08 else None)
+        detected.append(best if fills[best] > OMR_FILL_THRESHOLD else None)
 
     correct = sum(
         1 for got, expected in zip(detected, answer_key) if got == expected

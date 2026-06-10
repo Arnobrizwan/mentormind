@@ -433,20 +433,29 @@ class SearchView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        from apps.settings_engine.services import get_setting
+
+        min_chars = get_setting("search-min-query-chars")
+        if not isinstance(min_chars, int) or min_chars < 1:
+            min_chars = 2
+        limit = get_setting("search-result-limit")
+        if not isinstance(limit, int) or limit < 1:
+            limit = 20
+
         query = str(request.query_params.get("q", "")).strip()
-        if len(query) < 2:
+        if len(query) < min_chars:
             return Response({"query": query, "courses": [], "lessons": []})
 
         courses = Course.objects.filter(
             models.Q(title__icontains=query) | models.Q(description__icontains=query),
             is_published=True,
-        ).select_related("instructor")[:20]
+        ).select_related("instructor")[:limit]
 
         lessons = Lesson.objects.filter(
             title__icontains=query,
             is_published=True,
             course__is_published=True,
-        ).select_related("course")[:20]
+        ).select_related("course")[:limit]
 
         return Response(
             {

@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LearningApi } from '../core/api';
 import { apiErrorMessage } from '../core/errors';
 import { Course, Quiz, QuizAttempt } from '../core/models';
+import { SiteConfig } from '../core/site-config';
 
 @Component({
   selector: 'mm-quiz',
@@ -32,7 +33,7 @@ import { Course, Quiz, QuizAttempt } from '../core/models';
 
         @if (result(); as attempt) {
           <section class="result">
-            <div class="result__score" [class.result__score--pass]="attempt.score >= 50">
+            <div class="result__score" [class.result__score--pass]="attempt.score >= passThreshold()">
               <span class="result__number">{{ attempt.score }}<small>%</small></span>
               <span class="mono-label">
                 {{ attempt.correct_answers }} / {{ attempt.total_questions }} correct
@@ -259,6 +260,13 @@ import { Course, Quiz, QuizAttempt } from '../core/models';
 export class QuizPage {
   private readonly api = inject(LearningApi);
   private readonly route = inject(ActivatedRoute);
+  private readonly config = inject(SiteConfig);
+
+  /** Pass cutoff (%) — operators tune it live via the quiz-pass-threshold setting. */
+  protected readonly passThreshold = computed(() => {
+    const configured = Number(this.config.settings()['quiz-pass-threshold']);
+    return Number.isFinite(configured) && configured > 0 ? configured : 50;
+  });
 
   protected readonly course = signal<Course | null>(null);
   protected readonly quizId = signal<number | null>(null);
@@ -309,7 +317,7 @@ export class QuizPage {
   protected verdict(attempt: QuizAttempt): string {
     if (attempt.score === 100) return 'Flawless. The mentor is impressed.';
     if (attempt.score >= 75) return 'Strong work — nearly there.';
-    if (attempt.score >= 50) return 'A solid pass. Review and retake?';
+    if (attempt.score >= this.passThreshold()) return 'A solid pass. Review and retake?';
     return 'The notebook is open — review and try again.';
   }
 

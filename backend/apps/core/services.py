@@ -1,3 +1,5 @@
+import os
+
 from django.core.cache import cache
 from django.db.models import Count, Max
 
@@ -6,11 +8,12 @@ from .models import Course, Enrollment, QuizAttempt
 CACHE_KEY_PUBLISHED_LIST = "courses:published:list"
 CACHE_KEY_COURSE_DETAIL = "courses:detail:{slug}"
 CACHE_KEY_COURSE_DETAIL_BY_ID = "courses:detail:id:{id}"
-CACHE_TTL = 300  # 5 minutes; invalidated on changes
+# Invalidated eagerly on changes; TTLs are operational backstops.
+CACHE_TTL = int(os.getenv("COURSE_CACHE_TTL", "300"))
 
 LEADERBOARD_ZSET_KEY = "leaderboard:course:{id}"
 LEADERBOARD_CACHE_KEY = "leaderboard:course:{id}:top"
-LEADERBOARD_TTL = 60
+LEADERBOARD_TTL = int(os.getenv("LEADERBOARD_CACHE_TTL", "60"))
 
 
 def get_published_courses():

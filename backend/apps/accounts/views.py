@@ -4,11 +4,18 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.settings_engine.services import get_setting
+
 from .serializers import RegisterSerializer, UserSerializer
 
 User = get_user_model()
 
-MAX_AVATAR_BYTES = 5 * 1024 * 1024
+DEFAULT_AVATAR_MB = 5
+
+
+def max_avatar_mb() -> int:
+    configured = get_setting("avatar-max-mb")
+    return configured if isinstance(configured, int) and configured > 0 else DEFAULT_AVATAR_MB
 
 
 class RegisterView(generics.CreateAPIView):
@@ -38,9 +45,10 @@ class AvatarUploadView(APIView):
                 {"error": "Upload a file under the 'file' multipart key."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if file.size > MAX_AVATAR_BYTES:
+        limit_mb = max_avatar_mb()
+        if file.size > limit_mb * 1024 * 1024:
             return Response(
-                {"error": "Avatar must be 5 MB or smaller."},
+                {"error": f"Avatar must be {limit_mb} MB or smaller."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if not (file.content_type or "").startswith("image/"):
