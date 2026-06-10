@@ -42,3 +42,13 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Capacitor native build artifacts (keep project source, ignore builds)
+/android/.gradle/
+/android/app/build/
+/android/build/
+/android/capacitor-cordova-android-plugins/
+/ios/App/Pods/
+/ios/App/build/
+/ios/App/App/public/
+/android/app/src/main/assets/public/
