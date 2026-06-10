@@ -19,4 +19,7 @@ COPY app ./app
 
 EXPOSE 9000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9000"]
+# Scale uvicorn workers with the container's CPU allocation (UVICORN_WORKERS);
+# defaults to 2. CPU-bound OpenCV/inference work benefits from >1 process.
+ENV UVICORN_WORKERS=2
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 9000 --workers ${UVICORN_WORKERS}"]
