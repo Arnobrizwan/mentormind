@@ -2,171 +2,203 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..700&family=Spline+Sans+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Unbounded:wght@600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..700&family=Spline+Sans+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <style>
   :root {
     --magenta: #e6007e;
     --magenta-deep: #b80064;
     --purple: #7c3aed;
-    --ink: #17121d;
+    --ink: #140f1a;
+    --cyan: #22d3ee;
+    --yellow: #ffd23f;
     --chip-pink: #fbdcea;
-    --chip-mint: #d2f3e0;
+    --chip-mint: #c8f0d8;
     --chip-mint-text: #0e9659;
-    --chip-yellow: #fdeec2;
-    --chip-lav: #ece1fb;
-    --chip-yellow-text: #a06a00;
+    --chip-yellow: #ffe9a8;
+    --chip-lav: #e7d6ff;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  /* A1 portrait — match template frame pixel size exactly */
+
   .poster {
     position: relative;
     width: 2245px;
     height: 3179px;
-    background: #ffffff url('template-frame.png') no-repeat center / 2245px 3179px;
+    background: #fff url('template-frame.png') no-repeat center / 2245px 3179px;
     font-family: 'Plus Jakarta Sans', sans-serif;
     color: var(--ink);
     overflow: hidden;
   }
-  /* confetti doodles */
-  .confetti { position: absolute; border-radius: 3px; }
+  /* comic halftone + radial pop background inside the content area */
+  .comic-bg {
+    position:absolute; left:60px; right:60px; top:430px; bottom:300px;
+    background-image:
+      radial-gradient(circle at 50% 38%, rgba(255,210,63,0.18) 0%, transparent 42%),
+      radial-gradient(rgba(230,0,126,0.16) 2.4px, transparent 2.6px);
+    background-size: 100% 100%, 26px 26px;
+    z-index:0;
+  }
+  .ink-outline { box-shadow: 0 0 0 6px var(--ink); }
 
-  /* ---------- header text ---------- */
+  /* ---------- header ---------- */
   .kicker {
-    position: absolute; left: 150px; top: 470px;
-    font-family: 'Plus Jakarta Sans'; font-weight: 800;
-    letter-spacing: 0.32em; font-size: 34px; color: var(--magenta);
-    text-transform: uppercase;
+    position:absolute; left:150px; top:470px; z-index:3;
+    font-weight:800; letter-spacing:0.3em; font-size:34px; color:var(--magenta); text-transform:uppercase;
   }
   .title {
-    position: absolute; left: 140px; top: 530px;
-    font-family: 'Unbounded'; font-weight: 900; font-size: 205px;
-    line-height: 0.92; color: var(--magenta); letter-spacing: -0.03em;
+    position:absolute; left:138px; top:520px; z-index:3;
+    font-family:'Unbounded'; font-weight:900; font-size:208px; line-height:0.9; letter-spacing:-0.03em;
+    color:var(--magenta);
+    -webkit-text-stroke: 7px var(--ink);
+    paint-order: stroke fill;
+    text-shadow: 10px 10px 0 var(--ink);
   }
   .title .minds { color: var(--purple); }
   .subtitle {
-    position: absolute; left: 150px; top: 800px;
-    font-family: 'Unbounded'; font-weight: 700; font-size: 62px; color: var(--ink);
+    position:absolute; left:150px; top:790px; z-index:3;
+    font-family:'Unbounded'; font-weight:700; font-size:60px; color:var(--ink);
   }
-  .subtitle .wave { text-decoration: underline wavy var(--magenta) 4px; text-underline-offset: 12px; }
+  .subtitle .wave { text-decoration: underline wavy var(--magenta) 5px; text-underline-offset: 12px; }
   .scribble {
-    position: absolute; left: 150px; top: 920px;
-    font-family: 'Plus Jakarta Sans'; font-style: italic; font-weight: 600;
-    font-size: 38px; color: var(--purple); transform: rotate(-3deg);
+    position:absolute; left:150px; top:910px; z-index:3;
+    font-style:italic; font-weight:700; font-size:38px; color:var(--purple); transform:rotate(-3deg);
   }
-  .star {
-    position: absolute; right: 150px; top: 760px;
-    width: 280px; height: 280px;
-    background: var(--purple); color: #fff;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    font-family: 'Unbounded'; font-weight: 800; font-size: 34px; line-height: 1.05;
-    text-align: center; transform: rotate(-8deg);
-    clip-path: polygon(50% 0%,61% 18%,82% 12%,77% 34%,98% 38%,82% 53%,97% 70%,74% 70%,72% 92%,53% 78%,33% 95%,32% 71%,9% 72%,22% 53%,4% 38%,25% 33%,18% 12%,39% 18%);
+  /* BANG burst star */
+  .burst {
+    position:absolute; right:120px; top:720px; z-index:4;
+    width:330px; height:330px;
+    background:var(--purple);
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    font-family:'Bangers'; font-size:64px; line-height:0.9; color:#fff; letter-spacing:2px;
+    -webkit-text-stroke:2px var(--ink);
+    clip-path: polygon(50% 0,60% 20%,79% 8%,75% 30%,98% 28%,82% 47%,100% 62%,76% 65%,84% 90%,59% 76%,52% 100%,42% 76%,17% 90%,25% 64%,2% 60%,20% 46%,3% 28%,26% 30%,22% 8%,40% 20%);
+    animation: pop 1.8s ease-in-out infinite;
   }
 
   /* ---------- phone (real app screen) ---------- */
   .phone {
-    position: absolute; left: 760px; top: 1010px;
-    width: 720px; height: 1480px;
-    background: #ffffff; border: 14px solid #17121d; border-radius: 80px;
-    box-shadow: 0 40px 90px -30px rgba(230,0,126,0.5);
-    overflow: hidden;
+    position:absolute; left:762px; top:1000px; z-index:3;
+    width:720px; height:1480px;
+    background:#fff; border:12px solid var(--ink); border-radius:78px;
+    box-shadow: 14px 16px 0 rgba(20,15,26,0.9);
+    overflow:hidden;
+    animation: float 4s ease-in-out infinite;
   }
-  .notch { position:absolute; left:50%; top:18px; transform:translateX(-50%); width:230px; height:34px; background:#17121d; border-radius:0 0 22px 22px; z-index:5; }
+  .notch { position:absolute; left:50%; top:18px; transform:translateX(-50%); width:230px; height:34px; background:var(--ink); border-radius:0 0 22px 22px; z-index:5; }
   .app { position:absolute; inset:0; display:flex; flex-direction:column; font-size:25px; }
-  .app-top {
-    background: var(--magenta); color:#fff; padding: 70px 34px 24px;
-    display:flex; align-items:center; gap:18px;
-  }
-  .app-logo { width:64px;height:64px;border-radius:18px;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-size:34px; }
+  .app-top { background:var(--magenta); color:#fff; padding:70px 34px 24px; display:flex; align-items:center; gap:18px; border-bottom:4px solid var(--ink); }
+  .app-logo { width:64px;height:64px;border-radius:18px;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:34px; }
   .app-top .name { font-family:'Unbounded'; font-weight:700; font-size:32px; }
-  .app-top .status { font-size:21px; opacity:.85; }
-  .streak { margin-left:auto; background:#fff; color:var(--magenta); font-weight:800; font-size:21px; padding:8px 18px; border-radius:999px; }
-  .app-body { flex:1; background:#fff5fa; padding:30px 30px; display:flex; flex-direction:column; gap:24px; overflow:hidden; }
-  .bubble { max-width:78%; padding:26px 30px; border-radius:30px; font-size:25px; line-height:1.4; }
+  .app-top .status { font-size:21px; opacity:.9; }
+  .streak { margin-left:auto; background:#fff; color:var(--magenta); font-weight:800; font-size:21px; padding:8px 18px; border-radius:999px; border:3px solid var(--ink); }
+  .app-body { flex:1; background:#fff5fa; padding:30px; display:flex; flex-direction:column; gap:24px; overflow:hidden; }
+  .bubble { max-width:80%; padding:24px 28px; border-radius:28px; font-size:25px; line-height:1.4; border:3px solid var(--ink); }
   .bubble.me { align-self:flex-end; background:var(--ink); color:#fff; border-bottom-right-radius:8px; }
-  .bubble.ai { align-self:flex-start; background:#fff; border:2px solid #f3c9df; border-bottom-left-radius:8px; box-shadow:0 8px 20px -12px rgba(230,0,126,0.4); }
+  .bubble.ai { align-self:flex-start; background:#fff; border-bottom-left-radius:8px; box-shadow:5px 6px 0 rgba(20,15,26,0.85); }
   .bubble.ai .steps { font-family:'Spline Sans Mono'; font-size:23px; line-height:1.7; margin-top:10px; }
-  .bubble.ai .ok { color:var(--chip-mint-text); font-weight:700; }
-  .src { display:inline-block; margin-top:14px; font-size:18px; color:var(--purple); font-weight:700; }
-  .quizcard { background:linear-gradient(120deg,var(--magenta),var(--purple)); color:#fff; border-radius:28px; padding:26px 30px; }
-  .quizcard .qh { font-family:'Spline Sans Mono'; font-size:18px; letter-spacing:.12em; opacity:.9; }
-  .quizcard .opt { background:rgba(255,255,255,0.16); border-radius:16px; padding:14px 20px; margin-top:14px; font-size:23px; display:flex; justify-content:space-between; }
-  .quizcard .opt.correct { background:#fff; color:var(--magenta); font-weight:800; }
-  .mastery { margin-top:18px; }
-  .mastery .bar { height:18px; background:rgba(255,255,255,0.25); border-radius:999px; overflow:hidden; }
-  .mastery .fill { height:100%; width:78%; background:#fff; }
-  .app-input { background:#fff; padding:24px 30px; display:flex; align-items:center; gap:16px; border-top:2px solid #f3d3e4; }
-  .app-input .box { flex:1; background:#fff0f7; border-radius:999px; padding:18px 26px; color:#a07e92; font-size:23px; }
-  .app-input .snap, .app-input .send { width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px; }
-  .app-input .snap { background:#fdeec2; }
+  .bubble.ai .ok { color:var(--chip-mint-text); font-weight:800; }
+  .src { display:inline-block; margin-top:14px; font-size:18px; color:var(--purple); font-weight:800; }
+  .typing { align-self:flex-start; display:flex; gap:8px; padding:20px 26px; background:#fff; border:3px solid var(--ink); border-radius:28px; }
+  .typing span { width:14px; height:14px; border-radius:50%; background:var(--magenta); animation: blink 1.2s infinite; }
+  .typing span:nth-child(2){ animation-delay:.2s } .typing span:nth-child(3){ animation-delay:.4s }
+  .quizcard { background:linear-gradient(120deg,var(--magenta),var(--purple)); color:#fff; border-radius:26px; padding:24px 28px; border:3px solid var(--ink); box-shadow:5px 6px 0 rgba(20,15,26,0.85); }
+  .quizcard .qh { font-family:'Spline Sans Mono'; font-size:17px; letter-spacing:.1em; opacity:.95; }
+  .quizcard .opt { background:rgba(255,255,255,0.18); border-radius:14px; padding:13px 18px; margin-top:12px; font-size:23px; display:flex; justify-content:space-between; border:2px solid rgba(255,255,255,0.5); }
+  .quizcard .opt.correct { background:#fff; color:var(--magenta); font-weight:800; border-color:#fff; }
+  .mastery { margin-top:16px; }
+  .mastery .bar { height:18px; background:rgba(255,255,255,0.3); border-radius:999px; overflow:hidden; border:2px solid rgba(255,255,255,0.6); }
+  .mastery .fill { height:100%; width:0; background:#fff; animation: fillbar 2.5s ease-out forwards; }
+  .app-input { background:#fff; padding:22px 28px; display:flex; align-items:center; gap:16px; border-top:4px solid var(--ink); }
+  .app-input .box { flex:1; background:#fff0f7; border-radius:999px; padding:16px 24px; color:#a07e92; font-size:23px; border:2px solid var(--ink); }
+  .app-input .snap,.app-input .send { width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:27px;border:3px solid var(--ink); }
+  .app-input .snap { background:var(--yellow); }
   .app-input .send { background:var(--magenta); color:#fff; }
 
-  /* ---------- feature chips ---------- */
+  /* ---------- comic feature chips ---------- */
   .chip {
-    position:absolute; display:flex; align-items:center; gap:16px;
-    padding:22px 34px; border-radius:999px; border:4px solid var(--ink);
-    font-family:'Unbounded'; font-weight:700; font-size:30px;
-    box-shadow:7px 8px 0 rgba(23,18,29,0.85);
+    position:absolute; z-index:3; display:flex; align-items:center; gap:14px;
+    padding:20px 30px; border-radius:18px; border:5px solid var(--ink);
+    font-family:'Unbounded'; font-weight:700; font-size:29px;
+    box-shadow:8px 9px 0 var(--ink);
+    animation: bobble 3.2s ease-in-out infinite;
   }
-  .chip .ico { font-size:34px; }
-  .c1 { left:120px; top:1120px; background:var(--chip-yellow); transform:rotate(-3deg); }
-  .c2 { left:90px; top:1330px; background:var(--chip-lav); transform:rotate(2deg); }
-  .c3 { left:120px; top:1540px; background:var(--chip-mint); color:var(--chip-mint-text); transform:rotate(-2deg); }
-  .c4 { left:95px; top:1750px; background:#fff; transform:rotate(2deg); }
-  .c5 { left:120px; top:1960px; background:var(--chip-pink); transform:rotate(-3deg); }
-  .c6 { right:120px; top:1120px; background:#fff; transform:rotate(3deg); }
-  .c7 { right:95px; top:1330px; background:var(--chip-mint); color:var(--chip-mint-text); transform:rotate(-2deg); }
-  .c8 { right:120px; top:1540px; background:var(--chip-yellow); transform:rotate(3deg); }
-  .c9 { right:95px; top:1750px; background:var(--chip-lav); transform:rotate(-2deg); }
-  .c10 { right:120px; top:1960px; background:var(--chip-pink); transform:rotate(2deg); }
+  .chip .ico { font-size:33px; }
+  .c1 { left:120px; top:1120px; background:var(--chip-yellow); transform:rotate(-3deg); animation-delay:0s; }
+  .c2 { left:90px;  top:1320px; background:var(--chip-lav);   transform:rotate(2deg); animation-delay:.3s; }
+  .c3 { left:120px; top:1520px; background:var(--chip-mint); color:var(--chip-mint-text); transform:rotate(-2deg); animation-delay:.6s; }
+  .c4 { left:95px;  top:1720px; background:#fff; transform:rotate(2deg); animation-delay:.9s; }
+  .c5 { left:120px; top:1920px; background:var(--chip-pink); transform:rotate(-3deg); animation-delay:1.2s; }
+  .c6 { right:120px; top:1120px; background:#fff; transform:rotate(3deg); animation-delay:.15s; }
+  .c7 { right:90px;  top:1320px; background:var(--chip-mint); color:var(--chip-mint-text); transform:rotate(-2deg); animation-delay:.45s; }
+  .c8 { right:120px; top:1520px; background:var(--chip-yellow); transform:rotate(3deg); animation-delay:.75s; }
+  .c9 { right:90px;  top:1720px; background:var(--chip-lav); transform:rotate(-2deg); animation-delay:1.05s; }
+  .c10{ right:120px; top:1920px; background:var(--chip-pink); transform:rotate(2deg); animation-delay:1.35s; }
 
-  /* mastery donut */
   .donut {
-    position:absolute; right:175px; top:2120px; width:200px; height:200px; border-radius:50%;
+    position:absolute; right:165px; top:2110px; z-index:3; width:200px; height:200px; border-radius:50%;
     background: conic-gradient(var(--magenta) 0% 78%, #f3d3e4 78% 100%);
-    display:flex; align-items:center; justify-content:center; transform:rotate(4deg);
+    display:flex; align-items:center; justify-content:center; transform:rotate(5deg); border:5px solid var(--ink);
+    box-shadow:7px 8px 0 var(--ink); animation: spinwob 5s ease-in-out infinite;
   }
-  .donut .inner { width:150px;height:150px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center; }
-  .donut .pct { font-family:'Unbounded'; font-weight:800; font-size:46px; color:var(--magenta); }
-  .donut .lbl { font-family:'Spline Sans Mono'; font-size:18px; letter-spacing:.1em; }
+  .donut .inner { width:140px;height:140px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center; }
+  .donut .pct { font-family:'Unbounded'; font-weight:800; font-size:44px; color:var(--magenta); }
+  .donut .lbl { font-family:'Spline Sans Mono'; font-size:17px; letter-spacing:.1em; }
 
-  /* ---------- stats row ---------- */
-  .stats { position:absolute; left:0; top:2430px; width:100%; display:flex; justify-content:center; gap:170px; }
+  /* ---------- stats ---------- */
+  .stats { position:absolute; left:0; top:2430px; z-index:3; width:100%; display:flex; justify-content:center; gap:160px; }
   .stat { text-align:center; }
-  .stat .big { font-family:'Unbounded'; font-weight:900; font-size:120px; color:var(--magenta); line-height:1; }
+  .stat .big {
+    font-family:'Bangers'; font-size:150px; color:var(--magenta); line-height:0.9; letter-spacing:3px;
+    -webkit-text-stroke:4px var(--ink); text-shadow:7px 7px 0 rgba(20,15,26,0.9);
+  }
   .stat .big.p { color:var(--purple); }
-  .stat .cap { font-size:34px; color:var(--ink); font-weight:600; margin-top:6px; }
-  .stat.ring .big { border:10px solid var(--purple); border-radius:50%; width:200px; height:200px; display:flex; align-items:center; justify-content:center; margin:0 auto; font-size:78px; color:var(--purple); }
+  .stat .big.c { color:var(--cyan); }
+  .stat .cap { font-size:33px; color:var(--ink); font-weight:700; margin-top:8px; }
 
-  /* tech strip */
   .techstrip {
-    position:absolute; left:0; top:2680px; width:100%; text-align:center;
+    position:absolute; left:0; top:2700px; z-index:3; width:100%; text-align:center;
     font-family:'Spline Sans Mono'; font-weight:500; font-size:27px; color:var(--ink); letter-spacing:.02em;
   }
   .techstrip b { color:var(--magenta); }
+  .author { position:absolute; left:0; top:2762px; z-index:3; width:100%; text-align:center; font-weight:800; font-size:33px; color:var(--ink); }
 
-  /* author */
-  .author { position:absolute; left:0; top:2745px; width:100%; text-align:center; font-weight:700; font-size:33px; color:var(--ink); }
+  /* confetti */
+  .confetti { position:absolute; z-index:2; }
+
+  /* ---------- animations ---------- */
+  @keyframes float { 0%,100%{ transform:translateY(0) rotate(0) } 50%{ transform:translateY(-22px) rotate(-1deg) } }
+  @keyframes bobble { 0%,100%{ transform:translateY(0) rotate(var(--r,0)) } 50%{ transform:translateY(-12px) } }
+  @keyframes pop { 0%,100%{ transform:rotate(-8deg) scale(1) } 50%{ transform:rotate(-4deg) scale(1.08) } }
+  @keyframes blink { 0%,100%{ opacity:.25; transform:translateY(0) } 50%{ opacity:1; transform:translateY(-6px) } }
+  @keyframes fillbar { from{ width:0 } to{ width:78% } }
+  @keyframes spinwob { 0%,100%{ transform:rotate(5deg) } 50%{ transform:rotate(-5deg) } }
+  @keyframes confetti-fall { 0%{ transform:translateY(-20px) rotate(0); opacity:1 } 100%{ transform:translateY(40px) rotate(180deg); opacity:.6 } }
+  .confetti { animation: confetti-fall 2.4s ease-in-out infinite alternate; }
+
+  /* static render mode: freeze animations at a good frame */
+  .poster.static *, .poster.static { animation: none !important; }
+  .poster.static .mastery .fill { width:78%; }
+  .poster.static .phone { transform: translateY(-10px) rotate(-1deg); }
 </style>
 </head>
 <body>
-<div class="poster">
+<div class="poster" id="poster">
+  <div class="comic-bg"></div>
 
   <!-- confetti -->
-  <div class="confetti" style="left:380px;top:560px;width:22px;height:22px;background:#fbd34d;transform:rotate(20deg)"></div>
-  <div class="confetti" style="left:300px;top:640px;width:18px;height:18px;background:var(--purple);border-radius:50%"></div>
-  <div class="confetti" style="left:640px;top:600px;width:20px;height:20px;background:var(--magenta);transform:rotate(45deg)"></div>
-  <div class="confetti" style="left:1500px;top:900px;width:20px;height:20px;background:#22d3ee;border-radius:50%"></div>
-  <div class="confetti" style="left:1620px;top:980px;width:22px;height:22px;background:#fbd34d;transform:rotate(30deg)"></div>
-  <div class="confetti" style="left:1150px;top:2480px;width:20px;height:20px;background:var(--purple);transform:rotate(45deg)"></div>
-  <div class="confetti" style="left:980px;top:2520px;width:18px;height:18px;background:var(--magenta);border-radius:50%"></div>
+  <div class="confetti" style="left:380px;top:560px;width:22px;height:22px;background:var(--yellow);transform:rotate(20deg);animation-delay:.1s"></div>
+  <div class="confetti" style="left:300px;top:660px;width:18px;height:18px;background:var(--purple);border-radius:50%;animation-delay:.5s"></div>
+  <div class="confetti" style="left:660px;top:600px;width:20px;height:20px;background:var(--magenta);transform:rotate(45deg);animation-delay:.9s"></div>
+  <div class="confetti" style="left:1560px;top:980px;width:22px;height:22px;background:var(--cyan);border-radius:50%;animation-delay:.3s"></div>
+  <div class="confetti" style="left:1640px;top:1060px;width:20px;height:20px;background:var(--yellow);transform:rotate(30deg);animation-delay:.7s"></div>
+  <div class="confetti" style="left:1140px;top:2470px;width:20px;height:20px;background:var(--purple);transform:rotate(45deg);animation-delay:.2s"></div>
+  <div class="confetti" style="left:1000px;top:2520px;width:18px;height:18px;background:var(--magenta);border-radius:50%;animation-delay:.6s"></div>
 
-  <!-- title block -->
+  <!-- header -->
   <div class="kicker">AI-Powered Personal Tutoring App</div>
   <div class="title">Mentor<span class="minds">Minds</span></div>
   <div class="subtitle"><span class="wave">the AI tutor that never sleeps.</span></div>
-  <div class="scribble">trained on real past papers fr</div>
-  <div class="star">BUILT<br/>DIFFERENT</div>
+  <div class="scribble">trained on real past papers fr 🔥</div>
+  <div class="burst">BUILT<br/>DIFFERENT!</div>
 
   <!-- real app screen -->
   <div class="phone">
@@ -193,6 +225,7 @@
           </div>
           <span class="src">📑 Source: 9709 mark scheme · M1 A1</span>
         </div>
+        <div class="typing"><span></span><span></span><span></span></div>
         <div class="quizcard">
           <div class="qh">ADAPTIVE QUIZ · Q1 of 5 · SPM-aligned</div>
           <div style="font-size:25px;margin-top:10px;">Solve: 3x − 4 = 11</div>
@@ -212,7 +245,7 @@
     </div>
   </div>
 
-  <!-- feature chips: REAL app features -->
+  <!-- comic feature chips -->
   <div class="chip c1"><span class="ico">📷</span> Snap &amp; Solve</div>
   <div class="chip c2"><span class="ico">🎙️</span> Voice Tutor</div>
   <div class="chip c3"><span class="ico">🌐</span> Bahasa + English</div>
@@ -226,19 +259,24 @@
 
   <div class="donut"><div class="inner"><div class="pct">78%</div><div class="lbl">MASTERY</div></div></div>
 
-  <!-- stats: REAL to our build (3-30-300 headline numbers) -->
+  <!-- stats -->
   <div class="stats">
     <div class="stat"><div class="big">24/7</div><div class="cap">always online</div></div>
-    <div class="stat ring"><div class="big">&lt;3s</div><div class="cap">avg AI reply</div></div>
-    <div class="stat"><div class="big p">$0</div><div class="cap">API keys needed</div></div>
+    <div class="stat"><div class="big p">&lt;3s</div><div class="cap">avg AI reply</div></div>
+    <div class="stat"><div class="big c">$0</div><div class="cap">API keys needed</div></div>
   </div>
 
   <div class="techstrip">
     Full-stack: <b>Django</b> · <b>FastAPI</b> · <b>Angular</b> · Offline fine-tuned AI · Mistral-OCR pipeline · Redis · Postgres · Docker · K8s
   </div>
-
   <div class="author">Arnob Rizwan Ahmad · A22EC4005 · Faculty of Computing, UTM</div>
-
 </div>
+
+<script>
+  // Add ?static=1 to freeze animations for a clean print/PNG render.
+  if (new URLSearchParams(location.search).get('static') === '1') {
+    document.getElementById('poster').classList.add('static');
+  }
+</script>
 </body>
 </html>
