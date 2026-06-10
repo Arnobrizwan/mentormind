@@ -199,3 +199,26 @@ class TestTutorAnswering:
         with TestClient(app) as client:
             res = client.post("/v1/tutor/answer", json={"question": "  "})
             assert res.status_code == 400
+
+
+class TestFrontMatterHandling:
+    def test_cover_page_numbers_are_skipped(self):
+        doc = """Cambridge International AS & A Level
+1 hour 50 minutes
+INSTRUCTIONS: Answer all questions.
+
+1 Unless a particular method is specified, full marks for any method.
+
+---
+
+1 Solve $x^2 = 9$. [2]
+
+2 Factorise $x^2 - 4$. [2]
+
+3 Integrate $3x^2$. [2]
+"""
+        blocks = split_questions(doc)
+        assert sorted(blocks) == [1, 2, 3]
+        assert "Solve" in blocks[1]          # the real Q1, not the cover lines
+        assert "hour" not in blocks[1]
+        assert "Unless a particular" not in blocks[1]

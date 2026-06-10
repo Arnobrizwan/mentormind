@@ -61,26 +61,48 @@ def parse_filename(name: str) -> ParsedFilename | None:
     )
 
 
+# line-leading numbers that are duration statements, not questions
+TIME_ALLOCATION_RE = re.compile(r"^\s*(?:\*\*)?\d+(?:\*\*)?\s+hours?\b", re.IGNORECASE)
+
+
+def _greedy_chain(candidates: list[tuple[int, int]], start_index: int) -> list[tuple[int, int]]:
+    chain = [candidates[start_index]]
+    expected = 2
+    for position, number in candidates[start_index + 1:]:
+        if number == expected:
+            chain.append((position, number))
+            expected += 1
+    return chain
+
+
 def split_questions(markdown: str) -> dict[int, str]:
     """Split a paper's Markdown into {question_number: block}.
 
-    Question starts must form a strictly increasing sequence beginning at
-    1 — that filters out stray line-leading numbers (years, marks, data
-    values) that would otherwise look like question starts.
+    Question starts must form a strictly increasing 1,2,3… sequence —
+    that filters stray line-leading numbers (years, marks, data values).
+    Front matter is the hard case: cover pages contain their own
+    line-leading '1's ('1 hour 50 minutes', generic marking note 1), so
+    among all viable chains we keep the longest, breaking ties toward
+    the chain that starts LATEST (real questions come after the cover).
     """
-    candidates = [
-        (m.start(), int(m.group(1))) for m in QUESTION_START_RE.finditer(markdown)
-    ]
-    starts: list[tuple[int, int]] = []
-    expected = 1
-    for position, number in candidates:
-        if number == expected:
-            starts.append((position, number))
-            expected += 1
+    candidates = []
+    for m in QUESTION_START_RE.finditer(markdown):
+        line = markdown[m.start():].split("\n", 1)[0]
+        if TIME_ALLOCATION_RE.match(line):
+            continue
+        candidates.append((m.start(), int(m.group(1))))
+
+    best: list[tuple[int, int]] = []
+    for index, (position, number) in enumerate(candidates):
+        if number != 1:
+            continue
+        chain = _greedy_chain(candidates, index)
+        if len(chain) > len(best) or (len(chain) == len(best) and best and chain[0][0] > best[0][0]):
+            best = chain
 
     blocks: dict[int, str] = {}
-    for index, (position, number) in enumerate(starts):
-        end = starts[index + 1][0] if index + 1 < len(starts) else len(markdown)
+    for index, (position, number) in enumerate(best):
+        end = best[index + 1][0] if index + 1 < len(best) else len(markdown)
         block = markdown[position:end].strip()
         # drop page-break rules the OCR pass stitched in
         block = re.sub(r"\n+---\n+", "\n\n", block).strip()

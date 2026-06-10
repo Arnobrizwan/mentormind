@@ -24,3 +24,7 @@ ml-pipeline/data/
 backend/media/
 ml-pipeline/reports/drift.html
 ml-service/pastpapers.db
+ml-service/data/
+
+models/tutor-lora/
+ml-service/models/tutor-lora/

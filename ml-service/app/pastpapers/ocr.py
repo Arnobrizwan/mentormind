@@ -15,11 +15,32 @@ import asyncio
 import logging
 import os
 import random
+import re
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+
+# pypdf renders unmapped math glyphs as /name tokens — translate the
+# common Cambridge typesetting ones back to symbols.
+GLYPH_MAP = {
+    "/lpar": "(", "/rpar": ")", "/lbracket": "[", "/rbracket": "]",
+    "/lbrace": "{", "/rbrace": "}", "/minus": "−", "/plus": "+",
+    "/times": "×", "/divide": "÷", "/equal": "=", "/radical": "√",
+    "/integral": "∫", "/summation": "Σ", "/pi": "π", "/theta": "θ",
+    "/alpha": "α", "/beta": "β", "/lambda": "λ", "/mu": "μ",
+    "/omega": "ω", "/degree": "°", "/prime": "′", "/infinity": "∞",
+    "/lessequal": "≤", "/greaterequal": "≥", "/notequal": "≠",
+    "/arrowright": "→", "/proportional": "∝", "/plusminus": "±",
+}
+
+BOILERPLATE_RE = re.compile(
+    r"^.*(?:© UCLES|DO NOT WRITE IN THIS MARGIN|This document consists of"
+    r"|\[Turn over|BLANK PAGE).*$",
+    re.MULTILINE,
+)
+DOTTED_LINES_RE = re.compile(r"\.{6,}")
 
 
 class OCRServiceError(Exception):
@@ -87,15 +108,54 @@ class MistralOCRService:
             f"{label} failed after {self.max_retries} retries: {last_exc}"
         ) from last_exc
 
-    async def process_pdf_to_markdown(self, file_path: str) -> str:
-        """Upload a local PDF and return its full Markdown transcription.
+    @staticmethod
+    def _clean_extracted(text: str) -> str:
+        for glyph, symbol in GLYPH_MAP.items():
+            text = text.replace(glyph, symbol)
+        text = BOILERPLATE_RE.sub("", text)
+        text = DOTTED_LINES_RE.sub("", text)
+        return re.sub(r"\n{3,}", "\n\n", text).strip()
 
-        Pages are concatenated with horizontal rules so downstream regex
-        splitting still sees one continuous document.
+    def _extract_local(self, path: Path) -> str:
+        """Keyless fallback: read the PDF's embedded text layer directly.
+
+        Cambridge papers are digitally typeset, so this recovers the full
+        question text without any OCR API. Math comes back as plain
+        symbols rather than LaTeX — set MISTRAL_API_KEY for LaTeX-grade
+        output.
+        """
+        try:
+            from pypdf import PdfReader
+        except ImportError as exc:  # pragma: no cover
+            raise OCRServiceError(
+                "No MISTRAL_API_KEY and pypdf is not installed — one of the "
+                "two is required."
+            ) from exc
+
+        reader = PdfReader(str(path))
+        pages = [self._clean_extracted(page.extract_text() or "") for page in reader.pages]
+        markdown = "\n\n---\n\n".join(p for p in pages if p)
+        if not markdown.strip():
+            raise OCRServiceError(
+                f"{path.name} has no text layer — a scanned PDF needs the "
+                "Mistral OCR path (set MISTRAL_API_KEY)."
+            )
+        return markdown
+
+    async def process_pdf_to_markdown(self, file_path: str) -> str:
+        """Convert a PDF to Markdown text.
+
+        With MISTRAL_API_KEY: full OCR via mistral-ocr-latest (handles
+        scans, outputs LaTeX math). Without it: the embedded text layer
+        is extracted locally, so the pipeline works completely offline.
+        Pages are concatenated with horizontal rules either way.
         """
         path = Path(file_path)
         if not path.exists():
             raise OCRServiceError(f"PDF not found: {file_path}")
+
+        if not self.api_key:
+            return await asyncio.to_thread(self._extract_local, path)
 
         client = self._client_or_raise()
 
