@@ -28,6 +28,12 @@ class HealthTests(TestCase):
 
 
 class SettingsEngineTests(TestCase):
+    def setUp(self):
+        # Start from a clean slate — migrations seed brand rows (site-name,
+        # tagline); these tests assert exact dicts on their own keys.
+        cache.clear()
+        SiteSetting.objects.all().delete()
+
     def test_public_settings_and_cache_invalidation(self):
         SiteSetting.objects.create(key="site-name", value="MentorMind", is_public=True)
         SiteSetting.objects.create(key="smtp-secret", value="x", is_public=False)
@@ -532,12 +538,12 @@ class ManagementApiTests(TestCase):
 
     def test_setting_management_is_staff_only(self):
         res = self.as_admin.post("/api/v1/settings/manage/", {
-            "key": "site-name", "value": "MentorMind", "is_public": True,
+            "key": "hero-banner", "value": "Welcome", "is_public": True,
         }, format="json")
         self.assertEqual(res.status_code, 201)
 
         from apps.settings_engine.services import get_public_settings
-        self.assertEqual(get_public_settings()["site-name"], "MentorMind")
+        self.assertEqual(get_public_settings()["hero-banner"], "Welcome")
 
         self.assertEqual(self.as_student.get("/api/v1/settings/manage/").status_code, 403)
 
