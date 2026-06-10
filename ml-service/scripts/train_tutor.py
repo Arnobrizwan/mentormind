@@ -126,11 +126,11 @@ def run_local_finetune(
             per_device_train_batch_size=1,
             gradient_accumulation_steps=8,
             learning_rate=2e-4,
-            max_seq_length=max_seq,
+            max_length=max_seq,
             logging_steps=5,
             save_strategy="epoch",
             bf16=use_bf16,
-            use_mps_device=(device == "mps"),
+            use_cpu=False,  # MPS/CUDA auto-selected by Accelerate
             report_to=[],
         ),
         peft_config=LoraConfig(
