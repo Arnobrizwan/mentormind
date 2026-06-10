@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { LearningApi } from '../core/api';
 import { AuthService } from '../core/auth';
+import { EngagementApi } from '../core/engagement';
 import { QuizAttempt } from '../core/models';
 
 interface CourseRef {
@@ -17,9 +18,22 @@ interface CourseRef {
     <section class="desk rise">
       <p class="mono-label">My Desk</p>
       <h1>
-        Welcome back,
+        {{ greeting() }},
         <em>{{ firstName() }}.</em>
       </h1>
+      @if (engagement.me(); as eng) {
+        <div class="spark-row">
+          <span class="mono-label">🔥 {{ eng.streak }}-day streak</span>
+          <span class="mono-label">★ {{ eng.points_total }} pts</span>
+          @if (!eng.daily_login_claimed) {
+            <button class="btn btn--accent claim-btn" (click)="claimDaily()">
+              Claim today's +5 pts
+            </button>
+          } @else {
+            <span class="stamp">Daily reward claimed</span>
+          }
+        </div>
+      }
     </section>
 
     <div class="stats rise" style="animation-delay: 90ms">
@@ -36,6 +50,23 @@ interface CourseRef {
         <span class="mono-label">quiz attempts</span>
       </div>
     </div>
+
+    @if (engagement.me(); as eng) {
+      <section class="badges rise" style="animation-delay: 120ms">
+        <h2>Badges</h2>
+        <div class="badges__row">
+          @for (badge of eng.badges; track badge.key) {
+            <div class="badge" [class.badge--locked]="!badge.earned" [title]="badge.description">
+              <span class="badge__icon">{{ badge.earned ? badge.icon : '🔒' }}</span>
+              <span class="badge__name">{{ badge.name }}</span>
+              <span class="mono-label">
+                {{ badge.earned ? 'earned' : badge.progress + '/' + badge.threshold }}
+              </span>
+            </div>
+          }
+        </div>
+      </section>
+    }
 
     @if (loading()) {
       <p class="mono-label state-note">Tidying the desk…</p>
@@ -106,6 +137,60 @@ interface CourseRef {
     }
   `,
   styles: `
+    .spark-row {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .claim-btn {
+      padding: 0.45rem 1.05rem;
+      font-size: 0.82rem;
+    }
+
+    .badges {
+      margin-bottom: 2.2rem;
+
+      h2 {
+        font-size: 1.5rem;
+        margin-bottom: 0.9rem;
+      }
+    }
+
+    .badges__row {
+      display: flex;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.15rem;
+      width: 108px;
+      padding: 0.8rem 0.5rem;
+      background: var(--card);
+      border: 1.5px solid var(--sage);
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .badge--locked {
+      border-color: var(--line);
+      filter: grayscale(1);
+      opacity: 0.65;
+    }
+
+    .badge__icon { font-size: 1.5rem; }
+
+    .badge__name {
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
     .desk h1 {
       font-size: clamp(2.2rem, 5vw, 3.6rem);
       margin-top: 0.7rem;
@@ -247,6 +332,7 @@ interface CourseRef {
 })
 export class DashboardPage {
   protected readonly api = inject(LearningApi);
+  protected readonly engagement = inject(EngagementApi);
   private readonly auth = inject(AuthService);
 
   protected readonly loading = signal(true);
@@ -275,11 +361,23 @@ export class DashboardPage {
       const [, courses] = await Promise.all([
         this.api.refreshEnrollments(),
         this.api.listCourses(),
+        this.engagement.refresh(),
       ]);
       this.courseRefs.set(courses.map((c) => ({ course: c.id, slug: c.slug })));
     } finally {
       this.loading.set(false);
     }
+  }
+
+  protected greeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  protected async claimDaily(): Promise<void> {
+    await this.engagement.claimDailyLogin();
   }
 
   protected firstName(): string {

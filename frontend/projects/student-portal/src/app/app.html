@@ -11,6 +11,7 @@
         <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Catalog</a>
         @if (auth.isLoggedIn()) {
           <a routerLink="/dashboard" routerLinkActive="is-active">My Desk</a>
+          <a routerLink="/tutor" routerLinkActive="is-active">AI Tutor</a>
         }
         @if (auth.user(); as user) {
           <span class="nav__user mono-label">{{ user.display_name || user.email }}</span>
