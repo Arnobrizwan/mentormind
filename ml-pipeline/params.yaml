@@ -1,0 +1,16 @@
+prepare:
+  n_students: 4000
+  seed: 42
+  test_size: 0.2
+
+train:
+  model: logistic_regression
+  C: 1.0
+  max_iter: 500
+
+evaluate:
+  decision_threshold: 0.5
+
+drift:
+  # share of drifted features above which the report flags DRIFT
+  alert_share: 0.3

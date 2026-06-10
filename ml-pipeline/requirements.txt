@@ -1,0 +1,9 @@
+# Training pipeline — heavier deps live here, never in the serving image.
+scikit-learn
+pandas
+numpy
+joblib
+pyyaml
+dvc
+evidently
+mlflow  # optional at runtime: train.py only uses it when MLFLOW_TRACKING_URI is set

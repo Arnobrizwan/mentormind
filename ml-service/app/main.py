@@ -8,8 +8,9 @@ import json
 import os
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from pydantic import BaseModel
 
-from . import vision
+from . import dropout, vision
 
 app = FastAPI(title="MentorMind ML Service", version="0.4.0")
 
@@ -32,7 +33,34 @@ def models():
             "status": "loaded" if vision.ocr_available() else "unavailable",
             "engine": "tesseract",
         },
-        "dropout_risk": {"status": "not_loaded", "phase": 5},
+        "dropout_risk": {
+            "status": "loaded" if dropout.get_model() else "not_loaded",
+            "engine": "logistic-regression (ml-pipeline export)",
+        },
+    }
+
+
+class EngagementFeatures(BaseModel):
+    progress_pct: float
+    days_since_last_login: float
+    quiz_avg: float
+    lessons_per_week: float
+    chat_messages: float
+
+
+@app.post("/v1/predict/dropout-risk")
+def predict_dropout(features: EngagementFeatures):
+    """Score a student's dropout risk from engagement features."""
+    model = dropout.get_model()
+    if model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="dropout_risk model not loaded — run the ml-pipeline first.",
+        )
+    probability = model.predict_proba(features.model_dump())
+    return {
+        "probability": round(probability, 4),
+        "risk": dropout.DropoutModel.bucket(probability),
     }
 
 

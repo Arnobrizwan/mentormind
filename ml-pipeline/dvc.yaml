@@ -1,0 +1,53 @@
+stages:
+  prepare:
+    cmd: python src/prepare.py
+    wdir: .
+    deps:
+      - src/prepare.py
+      - src/common.py
+    params:
+      - prepare
+    outs:
+      - data/train.csv
+      - data/test.csv
+
+  train:
+    cmd: python src/train.py
+    wdir: .
+    deps:
+      - src/train.py
+      - src/common.py
+      - data/train.csv
+    params:
+      - train
+    outs:
+      - models/dropout_risk.joblib
+      - models/dropout_risk.json
+
+  evaluate:
+    cmd: python src/evaluate.py
+    wdir: .
+    deps:
+      - src/evaluate.py
+      - models/dropout_risk.joblib
+      - data/test.csv
+    params:
+      - evaluate
+    metrics:
+      - metrics.json:
+          cache: false
+
+  drift:
+    cmd: python src/drift.py
+    wdir: .
+    deps:
+      - src/drift.py
+      - data/train.csv
+      - data/test.csv
+    params:
+      - drift
+    outs:
+      - reports/drift.json:
+          cache: false
+      - reports/drift.html:
+          cache: false

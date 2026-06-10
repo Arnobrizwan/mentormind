@@ -1,0 +1,68 @@
+name: ML Train
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "ml-pipeline/**"
+      - ".github/workflows/ml-train.yml"
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install pipeline dependencies
+        working-directory: ml-pipeline
+        run: pip install -r requirements.txt
+
+      - name: Reproduce pipeline (prepare -> train -> evaluate -> drift gate)
+        working-directory: ml-pipeline
+        env:
+          # Point at a hosted MLflow (e.g. DagsHub free tier) to log + register runs
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+        run: dvc repro --no-run-cache
+
+      - name: Show metrics
+        working-directory: ml-pipeline
+        run: cat metrics.json reports/drift.json
+
+      - name: Upload model + reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: dropout-risk-${{ github.sha }}
+          path: |
+            ml-pipeline/models/dropout_risk.json
+            ml-pipeline/metrics.json
+            ml-pipeline/reports/drift.html
+            ml-pipeline/reports/drift.json
+
+  deploy-model:
+    needs: train
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dropout-risk-${{ github.sha }}
+          path: artifact
+
+      - name: Bake fresh model into ml-service image
+        run: |
+          mkdir -p ml-service/models
+          cp artifact/models/dropout_risk.json ml-service/models/
+          docker build -t mentormind-ml-service:${{ github.sha }} ml-service
+
+      # Pushing to a registry / triggering the free-tier host redeploy goes
+      # here once REGISTRY_* secrets are configured:
+      # docker push ... && curl -X POST $RENDER_DEPLOY_HOOK

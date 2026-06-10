@@ -116,3 +116,25 @@ class TestOcr:
         )
         assert res.status_code == 200
         assert "MENTORMIND" in res.json()["text"].upper()
+
+
+class TestDropoutRisk:
+    def test_model_is_loaded(self):
+        res = client.get("/v1/models")
+        assert res.json()["dropout_risk"]["status"] == "loaded"
+
+    def test_disengaged_student_is_high_risk(self):
+        res = client.post("/v1/predict/dropout-risk", json={
+            "progress_pct": 5, "days_since_last_login": 45,
+            "quiz_avg": 20, "lessons_per_week": 0, "chat_messages": 0,
+        })
+        assert res.status_code == 200
+        assert res.json()["risk"] == "high"
+
+    def test_engaged_student_is_low_risk(self):
+        res = client.post("/v1/predict/dropout-risk", json={
+            "progress_pct": 90, "days_since_last_login": 1,
+            "quiz_avg": 85, "lessons_per_week": 5, "chat_messages": 12,
+        })
+        assert res.json()["risk"] == "low"
+        assert res.json()["probability"] < 0.2

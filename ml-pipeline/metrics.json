@@ -1,0 +1,7 @@
+{
+  "accuracy": 0.8291,
+  "f1": 0.7892,
+  "roc_auc": 0.9106,
+  "test_rows": 825,
+  "positive_rate": 0.3976
+}
