@@ -222,3 +222,31 @@ INSTRUCTIONS: Answer all questions.
         assert "Solve" in blocks[1]          # the real Q1, not the cover lines
         assert "hour" not in blocks[1]
         assert "Unless a particular" not in blocks[1]
+
+
+class TestOfflineInference:
+    def test_local_llm_disabled_returns_none(self, monkeypatch):
+        from app.pastpapers import local_llm
+
+        monkeypatch.delenv("LOCAL_LLM", raising=False)
+        assert local_llm.is_enabled() is False
+        assert local_llm.generate("2+2?", "You are a tutor.") is None
+
+    def test_answering_is_fully_local_without_model(self, pipeline_env):
+        """With no LOCAL_LLM and no CUSTOM_LLM_URL, answers still come —
+        from the corpus — so the tutor works with zero network."""
+        import os
+        from app.pastpapers import answering
+
+        os.environ.pop("CUSTOM_LLM_URL", None)
+        os.environ.pop("LOCAL_LLM", None)
+
+        with TestClient(app) as client:
+            client.post("/api/pipeline/discover", json={"folder": str(pipeline_env)})
+            client.post("/api/pipeline/process-next")
+            res = client.post("/v1/tutor/answer", json={
+                "question": "Solve the equation 2x + 3 = 11",
+            })
+            assert res.status_code == 200
+            assert res.json()["matched"] is True
+            assert "$x = 4$" in res.json()["answer"]

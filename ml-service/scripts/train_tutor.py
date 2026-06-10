@@ -68,19 +68,27 @@ def dataset_stats(rows: list[dict]) -> dict:
     return {"questions": stats(q_lens), "answers": stats(a_lens)}
 
 
-def has_gpu_stack() -> bool:
+def detect_device() -> str | None:
+    """Return 'cuda', 'mps' (Apple Silicon), or None when no trainable
+    accelerator + training stack is present."""
     try:
-        import torch  # noqa: F401
+        import torch
+        from trl import SFTTrainer  # noqa: F401
 
-        import torch as t
-
-        return t.cuda.is_available()
+        if torch.cuda.is_available():
+            return "cuda"
+        if torch.backends.mps.is_available():
+            return "mps"
     except Exception:
-        return False
+        pass
+    return None
 
 
-def run_local_finetune(rows: list[dict], base: str, epochs: int, max_seq: int) -> None:
-    """LoRA SFT via TRL — runs on a CUDA GPU."""
+def run_local_finetune(
+    rows: list[dict], base: str, epochs: int, max_seq: int, device: str
+) -> None:
+    """LoRA SFT via TRL — runs on CUDA or Apple-Silicon MPS."""
+    import torch
     from datasets import Dataset
     from peft import LoraConfig
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -98,7 +106,16 @@ def run_local_finetune(rows: list[dict], base: str, epochs: int, max_seq: int) -
         }
 
     dataset = Dataset.from_list(rows).map(to_text)
-    model = AutoModelForCausalLM.from_pretrained(base, device_map="auto")
+
+    # bf16 on CUDA; fp32 on MPS (half precision is unstable there).
+    use_bf16 = device == "cuda"
+    model = AutoModelForCausalLM.from_pretrained(
+        base,
+        torch_dtype=torch.bfloat16 if use_bf16 else torch.float32,
+        device_map="auto" if device == "cuda" else None,
+    )
+    if device == "mps":
+        model = model.to("mps")
 
     trainer = SFTTrainer(
         model=model,
@@ -106,13 +123,15 @@ def run_local_finetune(rows: list[dict], base: str, epochs: int, max_seq: int) -
         args=SFTConfig(
             output_dir=str(ADAPTER_OUT),
             num_train_epochs=epochs,
-            per_device_train_batch_size=2,
-            gradient_accumulation_steps=4,
+            per_device_train_batch_size=1,
+            gradient_accumulation_steps=8,
             learning_rate=2e-4,
             max_seq_length=max_seq,
-            logging_steps=10,
+            logging_steps=5,
             save_strategy="epoch",
-            bf16=True,
+            bf16=use_bf16,
+            use_mps_device=(device == "mps"),
+            report_to=[],
         ),
         peft_config=LoraConfig(
             r=16, lora_alpha=32, lora_dropout=0.05, task_type="CAUSAL_LM",
@@ -165,9 +184,10 @@ def main() -> int:
     rows = load_dataset()
     stats = dataset_stats(rows)
 
-    if not args.dry_run and has_gpu_stack():
-        print(f"GPU detected — fine-tuning {args.base} on {len(rows)} examples…")
-        run_local_finetune(rows, args.base, args.epochs, args.max_seq)
+    device = None if args.dry_run else detect_device()
+    if device:
+        print(f"{device.upper()} detected — fine-tuning {args.base} on {len(rows)} examples…")
+        run_local_finetune(rows, args.base, args.epochs, args.max_seq, device)
     else:
         print_plan(rows, stats, args.base)
     return 0

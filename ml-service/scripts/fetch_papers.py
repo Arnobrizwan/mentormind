@@ -32,7 +32,7 @@ DEST = Path(__file__).resolve().parent.parent / "data" / "papers"
 SUBJECTS: list[tuple[str, str, str, list[str]]] = [
     # --- Cambridge O Level — sciences & maths ---
     ("4024", "cambridge-o-level", "mathematics-d-4024", ["11", "12", "21", "22"]),
-    ("4037", "cambridge-o-level", "additional-mathematics-4037", ["11", "12", "21", "22"]),
+    ("4037", "cambridge-o-level", "mathematics-additional-4037", ["11", "12", "21", "22"]),
     ("4040", "cambridge-o-level", "statistics-4040", ["12", "13", "22", "23"]),
     ("5054", "cambridge-o-level", "physics-5054", ["11", "12", "21", "22"]),
     ("5070", "cambridge-o-level", "chemistry-5070", ["11", "12", "21", "22"]),

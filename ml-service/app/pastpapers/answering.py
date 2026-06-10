@@ -24,7 +24,7 @@ import urllib.request
 
 from sqlalchemy import select
 
-from . import models
+from . import local_llm, models
 from .models import AlignedQuestion, PastPaper
 
 TOKEN_RE = re.compile(r"[a-z0-9]+")
@@ -81,23 +81,31 @@ async def _ranked_matches(question_text: str, limit: int = 3) -> list[tuple[floa
     return scored[:limit]
 
 
-def _call_fine_tuned_model(question: str, subject: str, level: str, context: str) -> str | None:
-    """OpenAI-compatible chat call to your self-hosted fine-tuned model.
-    Returns None on any failure so retrieval guidance can take over."""
+def _system_prompt(subject: str, level: str, context: str) -> str:
+    return (
+        f"You are a Cambridge {level or 'O/A Level'} {subject or ''} tutor. "
+        "Answer with full step-by-step working in mark-scheme style. "
+        "Ground your answer in this reference material:\n\n" + context
+    )
+
+
+def _generate_answer(question: str, subject: str, level: str, context: str) -> str | None:
+    """Generate from the fine-tuned model. Tries fully-offline in-process
+    inference first (LOCAL_LLM=1), then an OpenAI-compatible server
+    (CUSTOM_LLM_URL). Returns None if neither is available."""
+    local = local_llm.generate(
+        question, _system_prompt(subject, level, ""), context
+    )
+    if local:
+        return local
+
     url = os.getenv("CUSTOM_LLM_URL", "")
     if not url:
         return None
     payload = {
         "model": os.getenv("CUSTOM_LLM_MODEL", "mentormind-tutor"),
         "messages": [
-            {
-                "role": "system",
-                "content": (
-                    f"You are a Cambridge {level or 'O/A Level'} {subject or ''} tutor. "
-                    "Answer with full step-by-step working in mark-scheme style. "
-                    "Ground your answer in this reference material:\n\n" + context
-                ),
-            },
+            {"role": "system", "content": _system_prompt(subject, level, context)},
             {"role": "user", "content": question},
         ],
         "temperature": 0.2,
@@ -140,7 +148,7 @@ async def answer_question(question: str, subject: str = "", level: str = "") -> 
         for score, aligned, paper in matches
         if score >= WEAK_MATCH
     )
-    generated = _call_fine_tuned_model(question, subject, level, context)
+    generated = _generate_answer(question, subject, level, context)
     if generated:
         source = _source_of(matches[0][2], matches[0][1]) if context else None
         return {"answer": generated, "matched": False, "source": source}
