@@ -63,7 +63,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve", "leaderboard"]:
             return [AllowAny()]
-        if self.action == "enroll":
+        if self.action in ["enroll", "recommended"]:
             return [IsAuthenticated()]
         return [IsInstructor()]
 
@@ -169,6 +169,13 @@ class CourseViewSet(viewsets.ModelViewSet):
         """Top quiz scorers — Redis sorted set when available, DB fallback."""
         course = self.get_object()
         return Response(services.get_leaderboard(course.id))
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
+    def recommended(self, request):
+        """Personalised course picks via enrollment co-occurrence."""
+        courses = services.get_recommendations(request.user)
+        serializer = self.get_serializer(courses, many=True)
+        return Response(serializer.data)
 
 
 class LessonViewSet(viewsets.ModelViewSet):

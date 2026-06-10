@@ -1,4 +1,10 @@
-# Phase 1: API skeleton only. PyTorch/OpenCV land in Phase 4 (kept out
-# until then so the image stays small while infra is being built).
+# Phase 4: classic CV workloads (no GPU needed). PyTorch deliberately
+# omitted — Haar cascades + grid OMR + Tesseract cover the demo features
+# at a fraction of the image size.
 fastapi
 uvicorn[standard]
+opencv-python-headless
+numpy
+pillow
+python-multipart
+pytesseract

@@ -372,3 +372,55 @@ class AvatarUploadTests(TestCase):
         bad.name = "notes.txt"
         res = client.put("/api/v1/auth/me/avatar/", {"file": bad}, format="multipart")
         self.assertEqual(res.status_code, 400)
+
+
+class RecommendationTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.instructor = User.objects.create_user(
+            email="rec-teach@mentormind.dev", password="pass-123456"
+        )
+        self.courses = [
+            Course.objects.create(
+                title=f"Course {i}", slug=f"rec-course-{i}", description="d",
+                instructor=self.instructor, is_published=True,
+            )
+            for i in range(4)
+        ]
+        # peers who took course 0 also took courses 1 and 2 (2x overlap on 1)
+        self.me = User.objects.create_user(email="rec-me@mentormind.dev", password="pass-123456")
+        Enrollment.objects.create(student=self.me, course=self.courses[0])
+        for i, extra in enumerate([[1, 2], [1]]):
+            peer = User.objects.create_user(
+                email=f"rec-peer{i}@mentormind.dev", password="pass-123456"
+            )
+            Enrollment.objects.create(student=peer, course=self.courses[0])
+            for idx in extra:
+                Enrollment.objects.create(student=peer, course=self.courses[idx])
+
+        self.client_me = APIClient()
+        self.client_me.force_authenticate(user=self.me)
+
+    def test_co_occurrence_ranking(self):
+        res = self.client_me.get("/api/v1/courses/recommended/")
+        self.assertEqual(res.status_code, 200)
+        slugs = [c["slug"] for c in res.json()]
+        # course 1 (two peers) outranks course 2 (one peer); own course excluded
+        self.assertNotIn("rec-course-0", slugs)
+        self.assertEqual(slugs[0], "rec-course-1")
+        self.assertEqual(slugs[1], "rec-course-2")
+        # padded out with popular courses (course 3 has no peers but is published)
+        self.assertIn("rec-course-3", slugs)
+
+    def test_new_user_gets_popular_fallback(self):
+        cache.clear()
+        fresh = User.objects.create_user(email="rec-new@mentormind.dev", password="pass-123456")
+        client = APIClient()
+        client.force_authenticate(user=fresh)
+        res = client.get("/api/v1/courses/recommended/")
+        self.assertEqual(res.status_code, 200)
+        slugs = [c["slug"] for c in res.json()]
+        self.assertEqual(slugs[0], "rec-course-0")  # most enrolled
+
+    def test_requires_auth(self):
+        self.assertEqual(APIClient().get("/api/v1/courses/recommended/").status_code, 401)

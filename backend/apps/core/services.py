@@ -1,7 +1,7 @@
 from django.core.cache import cache
 from django.db.models import Count, Max
 
-from .models import Course, QuizAttempt
+from .models import Course, Enrollment, QuizAttempt
 
 CACHE_KEY_PUBLISHED_LIST = "courses:published:list"
 CACHE_KEY_COURSE_DETAIL = "courses:detail:{slug}"
@@ -148,3 +148,52 @@ def get_leaderboard(course_id, limit=10):
 
     cache.set(cache_key, entries, LEADERBOARD_TTL)
     return entries
+
+
+# --- Recommendations: enrollment co-occurrence ------------------------------
+
+RECOMMENDATIONS_CACHE_KEY = "recs:user:{id}"
+RECOMMENDATIONS_TTL = 300
+
+
+def get_recommendations(user, limit=5):
+    """'Students who took your courses also took…' — classic item-based
+    co-occurrence over enrollments, topped up with the most popular courses
+    when the user's neighbourhood is too small."""
+    cache_key = RECOMMENDATIONS_CACHE_KEY.format(id=user.id)
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    my_course_ids = list(
+        Enrollment.objects.filter(student=user).values_list("course_id", flat=True)
+    )
+
+    recommended = []
+    if my_course_ids:
+        peer_ids = (
+            Enrollment.objects.filter(course_id__in=my_course_ids)
+            .exclude(student=user)
+            .values_list("student_id", flat=True)
+        )
+        recommended = list(
+            Course.objects.filter(is_published=True, enrollments__student_id__in=peer_ids)
+            .exclude(id__in=my_course_ids)
+            .annotate(overlap=Count("enrollments"))
+            .order_by("-overlap", "-created_at")
+            .select_related("instructor")[:limit]
+        )
+
+    if len(recommended) < limit:
+        seen = set(my_course_ids) | {c.id for c in recommended}
+        popular = (
+            Course.objects.filter(is_published=True)
+            .exclude(id__in=seen)
+            .annotate(popularity=Count("enrollments"))
+            .order_by("-popularity", "-created_at")
+            .select_related("instructor")[: limit - len(recommended)]
+        )
+        recommended.extend(popular)
+
+    cache.set(cache_key, recommended, RECOMMENDATIONS_TTL)
+    return recommended
