@@ -1,0 +1,282 @@
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.core.cache import cache
+from django.test import TestCase
+from rest_framework.test import APIClient
+
+from apps.flags.models import FeatureFlag
+from apps.flags.services import flag_enabled
+from apps.settings_engine.models import SiteSetting
+from apps.settings_engine.services import get_public_settings, get_setting
+from .models import Course, Enrollment, Lesson, Quiz, QuizAttempt, QuizQuestion
+from .services import get_course_detail, get_published_courses
+
+User = get_user_model()
+
+
+class HealthTests(TestCase):
+    def test_health_reports_ok_and_instance(self):
+        res = self.client.get("/api/v1/health/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["database"], "ok")
+        self.assertIn("instance", res.json())
+
+    def test_served_by_header_present(self):
+        res = self.client.get("/api/v1/health/")
+        self.assertTrue(res.headers["X-Served-By"])
+
+
+class SettingsEngineTests(TestCase):
+    def test_public_settings_and_cache_invalidation(self):
+        SiteSetting.objects.create(key="site-name", value="MentorMind", is_public=True)
+        SiteSetting.objects.create(key="smtp-secret", value="x", is_public=False)
+
+        public = get_public_settings()
+        self.assertEqual(public, {"site-name": "MentorMind"})
+
+        # save() must invalidate the cache so changes apply live
+        s = SiteSetting.objects.get(key="site-name")
+        s.value = "MentorMind BD"
+        s.save()
+        self.assertEqual(get_setting("site-name"), "MentorMind BD")
+        self.assertEqual(get_public_settings()["site-name"], "MentorMind BD")
+
+    def test_public_endpoint_is_open(self):
+        SiteSetting.objects.create(key="site-name", value="MentorMind", is_public=True)
+        res = APIClient().get("/api/v1/settings/public/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["site-name"], "MentorMind")
+
+
+class FlagsTests(TestCase):
+    def test_flags_toggle_live(self):
+        flag = FeatureFlag.objects.create(key="chat", enabled=True)
+        self.assertTrue(flag_enabled("chat"))
+        flag.enabled = False
+        flag.save()
+        self.assertFalse(flag_enabled("chat"))
+        self.assertFalse(flag_enabled("unknown-module"))
+
+
+class AuthTests(TestCase):
+    def test_register_and_jwt_login_and_me(self):
+        client = APIClient()
+        res = client.post(
+            "/api/v1/auth/register/",
+            {"email": "student@mentormind.dev", "password": "Sup3r-secret!", "display_name": "Student"},
+        )
+        self.assertEqual(res.status_code, 201)
+
+        res = client.post(
+            "/api/v1/auth/token/",
+            {"email": "student@mentormind.dev", "password": "Sup3r-secret!"},
+        )
+        self.assertEqual(res.status_code, 200)
+        access = res.json()["access"]
+
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        res = client.get("/api/v1/auth/me/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["email"], "student@mentormind.dev")
+
+    def test_me_requires_auth(self):
+        self.assertEqual(APIClient().get("/api/v1/auth/me/").status_code, 401)
+
+
+class LearningEngineTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.instructor_group, _ = Group.objects.get_or_create(name="Instructors")
+
+        self.instructor = User.objects.create_user(
+            email="instructor@mentormind.dev",
+            password="password123",
+            display_name="Dr. Jane",
+        )
+        self.instructor.groups.add(self.instructor_group)
+
+        self.student = User.objects.create_user(
+            email="student@mentormind.dev",
+            password="password123",
+            display_name="Alex",
+        )
+
+        self.course = Course.objects.create(
+            title="Introduction to AI",
+            slug="intro-to-ai",
+            description="Learn artificial intelligence from scratch.",
+            instructor=self.instructor,
+            is_published=True,
+        )
+
+        self.lesson = Lesson.objects.create(
+            course=self.course,
+            title="What is Machine Learning?",
+            content="Machine learning is the study of computer algorithms...",
+            video_url="https://example.com/ml-video",
+            order=1,
+            is_published=True,
+        )
+
+        self.quiz = Quiz.objects.create(
+            course=self.course,
+            lesson=self.lesson,
+            title="ML Basics Quiz",
+            description="Test your knowledge on ML basics.",
+        )
+
+        self.question = QuizQuestion.objects.create(
+            quiz=self.quiz,
+            text="What does ML stand for?",
+            options=["Machine Learning", "Max Likelihood", "My Life", "More Laughter"],
+            correct_option_index=0,
+            order=1,
+        )
+
+        self.client_instructor = APIClient()
+        self.client_instructor.force_authenticate(user=self.instructor)
+
+        self.client_student = APIClient()
+        self.client_student.force_authenticate(user=self.student)
+
+    def test_course_creation_permissions(self):
+        # Student should not be able to create courses
+        res = self.client_student.post(
+            "/api/v1/courses/",
+            {
+                "title": "Invalid Course",
+                "slug": "invalid-course",
+                "description": "Student shouldn't create this.",
+            },
+        )
+        self.assertEqual(res.status_code, 403)
+
+        # Instructor can create course
+        res = self.client_instructor.post(
+            "/api/v1/courses/",
+            {
+                "title": "Advanced PyTorch",
+                "slug": "advanced-pytorch",
+                "description": "Deep dive into PyTorch.",
+                "is_published": False,
+            },
+        )
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.json()["instructor"], self.instructor.id)
+
+    def test_course_list_caching_and_invalidation(self):
+        # Fetch initial courses (should cache it)
+        courses = get_published_courses()
+        self.assertEqual(len(courses), 1)
+
+        # Create new published course
+        new_course = Course.objects.create(
+            title="Deep Learning",
+            slug="deep-learning",
+            description="Neural networks explained.",
+            instructor=self.instructor,
+            is_published=True,
+        )
+
+        # Cache should be invalidated automatically
+        courses = get_published_courses()
+        self.assertEqual(len(courses), 2)
+
+    def test_course_detail_caching_and_invalidation(self):
+        # Fetch detail (should cache detail)
+        course = get_course_detail("intro-to-ai")
+        self.assertEqual(course.title, "Introduction to AI")
+
+        # Modify course title directly in DB bypass save to test cache persistence
+        Course.objects.filter(id=self.course.id).update(title="Intro to AI (Updated)")
+        course_cached = get_course_detail("intro-to-ai")
+        self.assertEqual(course_cached.title, "Introduction to AI")
+
+        # Now save properly to trigger signal and invalidate cache
+        self.course.title = "Introduction to AI (New Title)"
+        self.course.save()
+
+        # Cache should be invalidated and return new title
+        course_updated = get_course_detail("intro-to-ai")
+        self.assertEqual(course_updated.title, "Introduction to AI (New Title)")
+
+    def test_lesson_content_censoring_for_non_enrolled(self):
+        # Student views course details
+        res = self.client_student.get(f"/api/v1/courses/{self.course.slug}/")
+        self.assertEqual(res.status_code, 200)
+
+        # Student is not enrolled, content should be censored
+        lesson_data = res.json()["lessons"][0]
+        self.assertEqual(lesson_data["content"], "Enroll in this course to unlock this lesson's content.")
+        self.assertIsNone(lesson_data["video_url"])
+
+        # Instructor views course details, content should be visible
+        res_inst = self.client_instructor.get(f"/api/v1/courses/{self.course.slug}/")
+        self.assertEqual(res_inst.status_code, 200)
+        lesson_data_inst = res_inst.json()["lessons"][0]
+        self.assertIn("computer algorithms", lesson_data_inst["content"])
+        self.assertEqual(lesson_data_inst["video_url"], "https://example.com/ml-video")
+
+    def test_quiz_correct_option_masking_for_students(self):
+        # Student enrolls first
+        self.client_student.post(f"/api/v1/courses/{self.course.slug}/enroll/")
+
+        # Student gets quiz
+        res = self.client_student.get(f"/api/v1/quizzes/{self.quiz.id}/")
+        self.assertEqual(res.status_code, 200)
+        
+        # Student should not see correct option index
+        self.assertNotIn("correct_option_index", res.json()["questions"][0])
+
+        # Instructor gets quiz
+        res_inst = self.client_instructor.get(f"/api/v1/quizzes/{self.quiz.id}/")
+        self.assertEqual(res_inst.status_code, 200)
+        
+        # Instructor should see correct option index
+        self.assertEqual(res_inst.json()["questions"][0]["correct_option_index"], 0)
+
+    def test_enrollment_and_progress_flow(self):
+        # Student enrolls
+        res = self.client_student.post(f"/api/v1/courses/{self.course.slug}/enroll/")
+        self.assertEqual(res.status_code, 201)
+        enrollment_id = res.json()["id"]
+
+        # View enrollment progress (should be 0%)
+        self.assertEqual(res.json()["progress_percentage"], 0.0)
+
+        # Verify lesson content is now unlocked for student
+        res_course = self.client_student.get(f"/api/v1/courses/{self.course.slug}/")
+        self.assertEqual(res_course.status_code, 200)
+        self.assertIn("computer algorithms", res_course.json()["lessons"][0]["content"])
+
+        # Mark lesson completed
+        res_complete = self.client_student.post(
+            f"/api/v1/enrollments/{enrollment_id}/complete-lesson/",
+            {"lesson_id": self.lesson.id},
+        )
+        self.assertEqual(res_complete.status_code, 200)
+        self.assertEqual(res_complete.json()["progress_percentage"], 100.0)
+
+    def test_quiz_submission_and_attempt(self):
+        # Student enrolls first
+        self.client_student.post(f"/api/v1/courses/{self.course.slug}/enroll/")
+
+        # Submit correct answer (Machine Learning is index 0)
+        res = self.client_student.post(
+            f"/api/v1/quizzes/{self.quiz.id}/submit/",
+            {"answers": {self.question.id: 0}},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.json()["score"], 100.0)
+        self.assertEqual(res.json()["correct_answers"], 1)
+
+        # Submit wrong answer
+        res_wrong = self.client_student.post(
+            f"/api/v1/quizzes/{self.quiz.id}/submit/",
+            {"answers": {self.question.id: 1}},
+            format="json",
+        )
+        self.assertEqual(res_wrong.status_code, 201)
+        self.assertEqual(res_wrong.json()["score"], 0.0)
+        self.assertEqual(res_wrong.json()["correct_answers"], 0)

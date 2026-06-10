@@ -1,0 +1,15 @@
+# MentorMind backend — latest versions, resolved at install time.
+# Pin with `pip freeze > requirements.lock` before production deploys.
+Django
+djangorestframework
+djangorestframework-simplejwt
+drf-spectacular
+django-cors-headers
+django-environ
+django-redis
+django-prometheus
+django-filter
+celery[redis]
+psycopg[binary]
+gunicorn
+whitenoise

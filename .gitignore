@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+db.sqlite3
+backend/staticfiles/
+.env
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+
+# ML
+mlruns/
+*.pt
+*.onnx
+ml-pipeline/data/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

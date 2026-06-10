@@ -1,0 +1,4 @@
+# Phase 1: API skeleton only. PyTorch/OpenCV land in Phase 4 (kept out
+# until then so the image stays small while infra is being built).
+fastapi
+uvicorn[standard]
