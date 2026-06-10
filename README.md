@@ -68,7 +68,7 @@ docs/         architecture notes
 ## Roadmap
 
 1. ✅ Foundation — monorepo, Django + Angular + FastAPI skeletons, full Compose infra
-2. Dynamic content engine + core learning (courses, lessons, quizzes, enrollment)
+2. ✅ Dynamic content engine + core learning — courses/lessons/quizzes/enrollment API with cache-aside + invalidation, and the student-portal Angular app (catalog, enrollment, lesson viewer, quiz taking, progress dashboard)
 3. Infra showcase — caching layers, R2 uploads, Channels chat, notifications
 4. ML features — proctoring, OMR grading, OCR, recommendations
 5. MLOps — DVC, MLflow registry, GitHub Actions train/deploy, Evidently drift

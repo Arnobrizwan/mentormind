@@ -29,7 +29,9 @@
                 "input": "projects/student-portal/public"
               }
             ],
-            "styles": ["projects/student-portal/src/styles.scss"]
+            "styles": [
+              "projects/student-portal/src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {
@@ -65,7 +67,10 @@
               "buildTarget": "student-portal:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          }
         },
         "test": {
           "builder": "@angular/build:unit-test"
@@ -95,7 +100,9 @@
                 "input": "projects/instructor-studio/public"
               }
             ],
-            "styles": ["projects/instructor-studio/src/styles.scss"]
+            "styles": [
+              "projects/instructor-studio/src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {
@@ -161,7 +168,9 @@
                 "input": "projects/admin-console/public"
               }
             ],
-            "styles": ["projects/admin-console/src/styles.scss"]
+            "styles": [
+              "projects/admin-console/src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {
