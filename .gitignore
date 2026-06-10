@@ -21,3 +21,4 @@ ml-pipeline/data/
 .DS_Store
 .idea/
 .vscode/
+backend/media/

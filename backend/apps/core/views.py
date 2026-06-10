@@ -61,7 +61,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     lookup_field = "slug"
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve"]:
+        if self.action in ["list", "retrieve", "leaderboard"]:
             return [AllowAny()]
         if self.action == "enroll":
             return [IsAuthenticated()]
@@ -163,6 +163,12 @@ class CourseViewSet(viewsets.ModelViewSet):
             serializer.data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
+
+    @action(detail=True, methods=["get"], permission_classes=[AllowAny])
+    def leaderboard(self, request, slug=None):
+        """Top quiz scorers — Redis sorted set when available, DB fallback."""
+        course = self.get_object()
+        return Response(services.get_leaderboard(course.id))
 
 
 class LessonViewSet(viewsets.ModelViewSet):

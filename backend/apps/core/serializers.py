@@ -98,6 +98,7 @@ class CourseSerializer(serializers.ModelSerializer):
             "description",
             "instructor",
             "instructor_name",
+            "cover_image",
             "is_published",
             "lessons",
             "quizzes",

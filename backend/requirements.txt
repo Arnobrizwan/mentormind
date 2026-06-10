@@ -13,3 +13,11 @@ celery[redis]
 psycopg[binary]
 gunicorn
 whitenoise
+# Phase 3: websockets chat, object-storage uploads, image fields
+channels
+channels-redis
+daphne
+django-storages[s3]
+Pillow
+uvicorn[standard]
+uvicorn-worker

@@ -31,6 +31,7 @@ class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
     display_name = models.CharField(max_length=150, blank=True)
+    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
     avatar_url = models.URLField(blank=True)
 
     USERNAME_FIELD = "email"

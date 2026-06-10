@@ -1,8 +1,8 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from .models import Course, Lesson, Quiz
-from .services import invalidate_course_cache
+from .models import Course, Lesson, Quiz, QuizAttempt
+from .services import invalidate_course_cache, record_leaderboard_score
 
 
 @receiver(post_save, sender=Course)
@@ -23,3 +23,11 @@ def on_lesson_change(sender, instance, **kwargs):
 def on_quiz_change(sender, instance, **kwargs):
     # Invalidate parent course cache
     invalidate_course_cache(instance.course_id, instance.course.slug)
+
+
+@receiver(post_save, sender=QuizAttempt)
+def on_quiz_attempt(sender, instance, created, **kwargs):
+    if created:
+        record_leaderboard_score(
+            instance.quiz.course_id, instance.enrollment.student_id, instance.score
+        )

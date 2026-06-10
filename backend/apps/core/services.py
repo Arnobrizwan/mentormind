@@ -1,10 +1,16 @@
 from django.core.cache import cache
-from .models import Course
+from django.db.models import Count, Max
+
+from .models import Course, QuizAttempt
 
 CACHE_KEY_PUBLISHED_LIST = "courses:published:list"
 CACHE_KEY_COURSE_DETAIL = "courses:detail:{slug}"
 CACHE_KEY_COURSE_DETAIL_BY_ID = "courses:detail:id:{id}"
 CACHE_TTL = 300  # 5 minutes; invalidated on changes
+
+LEADERBOARD_ZSET_KEY = "leaderboard:course:{id}"
+LEADERBOARD_CACHE_KEY = "leaderboard:course:{id}:top"
+LEADERBOARD_TTL = 60
 
 
 def get_published_courses():
@@ -57,3 +63,88 @@ def invalidate_course_cache(course_id, course_slug=None):
     cache.delete(CACHE_KEY_COURSE_DETAIL_BY_ID.format(id=course_id))
     if course_slug:
         cache.delete(CACHE_KEY_COURSE_DETAIL.format(slug=course_slug))
+
+
+# --- Leaderboard: Redis sorted set showcase, DB aggregate fallback ---------
+
+
+def record_leaderboard_score(course_id, user_id, score):
+    """Keep each student's best score in a Redis sorted set. When the cache
+    backend isn't Redis (bare-metal dev, tests) this quietly no-ops and the
+    DB fallback in get_leaderboard serves instead."""
+    try:
+        from django_redis import get_redis_connection
+
+        conn = get_redis_connection("default")
+        # GT: only update if the new score is greater (best-score semantics)
+        conn.zadd(LEADERBOARD_ZSET_KEY.format(id=course_id), {str(user_id): score}, gt=True)
+    except Exception:
+        pass
+    cache.delete(LEADERBOARD_CACHE_KEY.format(id=course_id))
+
+
+def _leaderboard_from_redis(course_id, limit):
+    try:
+        from django.contrib.auth import get_user_model
+        from django_redis import get_redis_connection
+
+        conn = get_redis_connection("default")
+        pairs = conn.zrevrange(
+            LEADERBOARD_ZSET_KEY.format(id=course_id), 0, limit - 1, withscores=True
+        )
+        if not pairs:
+            return None
+        user_ids = [int(member) for member, _ in pairs]
+        users = get_user_model().objects.in_bulk(user_ids)
+        entries = []
+        for rank, (member, score) in enumerate(pairs, start=1):
+            user = users.get(int(member))
+            if not user:
+                continue
+            entries.append(
+                {
+                    "rank": rank,
+                    "student": user.display_name or user.email.split("@")[0],
+                    "best_score": round(score, 2),
+                }
+            )
+        return entries or None
+    except Exception:
+        return None
+
+
+def _leaderboard_from_db(course_id, limit):
+    rows = (
+        QuizAttempt.objects.filter(quiz__course_id=course_id)
+        .values(
+            "enrollment__student_id",
+            "enrollment__student__display_name",
+            "enrollment__student__email",
+        )
+        .annotate(best_score=Max("score"), attempts=Count("id"))
+        .order_by("-best_score")[:limit]
+    )
+    return [
+        {
+            "rank": rank,
+            "student": row["enrollment__student__display_name"]
+            or row["enrollment__student__email"].split("@")[0],
+            "best_score": round(row["best_score"], 2),
+        }
+        for rank, row in enumerate(rows, start=1)
+    ]
+
+
+def get_leaderboard(course_id, limit=10):
+    """Top quiz scorers for a course, cached for 60s."""
+    cache_key = LEADERBOARD_CACHE_KEY.format(id=course_id)
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    entries = _leaderboard_from_redis(course_id, limit)
+    if entries is None:
+        entries = _leaderboard_from_db(course_id, limit)
+
+    cache.set(cache_key, entries, LEADERBOARD_TTL)
+    return entries

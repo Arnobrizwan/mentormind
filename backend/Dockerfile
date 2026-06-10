@@ -14,4 +14,5 @@ RUN DJANGO_SETTINGS_MODULE=config.settings python manage.py collectstatic --noin
 
 EXPOSE 8000
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--access-logfile", "-"]
+# ASGI worker so HTTP and the Channels websocket chat share one port
+CMD ["gunicorn", "config.asgi:application", "-k", "uvicorn_worker.UvicornWorker", "--bind", "0.0.0.0:8000", "--workers", "2", "--access-logfile", "-"]

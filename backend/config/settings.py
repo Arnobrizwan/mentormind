@@ -42,11 +42,15 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
     "django_prometheus",
+    "channels",
+    "storages",
     # mentormind
     "apps.accounts",
     "apps.core",
     "apps.settings_engine",
     "apps.flags",
+    "apps.notifications",
+    "apps.chat",
 ]
 
 MIDDLEWARE = [
@@ -109,6 +113,27 @@ else:
         "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}
     }
 
+# --- Channels: Redis layer in Compose/K8s, in-memory for dev/tests --------
+if env("REDIS_URL"):
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [env("REDIS_URL")]},
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
+    }
+
+# --- Email: console in dev, real SMTP via env in production ---------------
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL", default="MentorMind <no-reply@mentormind.dev>"
+)
+
 # --- Celery ----------------------------------------------------------------
 CELERY_BROKER_URL = env("REDIS_URL", default="") or "memory://"
 CELERY_RESULT_BACKEND = env("REDIS_URL", default="") or None
@@ -150,10 +175,30 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
+
+# Object storage (Cloudflare R2 or any S3-compatible service): flipping one
+# env var moves all uploads off the local disk — no code changes.
+if env("R2_ENDPOINT_URL", default=""):
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "endpoint_url": env("R2_ENDPOINT_URL"),
+            "access_key": env("R2_ACCESS_KEY_ID", default=""),
+            "secret_key": env("R2_SECRET_ACCESS_KEY", default=""),
+            "bucket_name": env("R2_BUCKET", default="mentormind"),
+            "custom_domain": env("R2_PUBLIC_DOMAIN", default=None),
+            "file_overwrite": False,
+            "default_acl": None,
+            "signature_version": "s3v4",
+        },
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

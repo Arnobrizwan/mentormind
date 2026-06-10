@@ -280,3 +280,95 @@ class LearningEngineTests(TestCase):
         self.assertEqual(res_wrong.status_code, 201)
         self.assertEqual(res_wrong.json()["score"], 0.0)
         self.assertEqual(res_wrong.json()["correct_answers"], 0)
+
+
+class LeaderboardTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        group, _ = Group.objects.get_or_create(name="Instructors")
+        self.instructor = User.objects.create_user(
+            email="lb-teach@mentormind.dev", password="pass-123456", display_name="Teach"
+        )
+        self.instructor.groups.add(group)
+        self.course = Course.objects.create(
+            title="Leaderboard 101",
+            slug="leaderboard-101",
+            description="d",
+            instructor=self.instructor,
+            is_published=True,
+        )
+        self.quiz = Quiz.objects.create(course=self.course, title="LB Quiz")
+
+        for i, score in enumerate([40.0, 90.0, 75.0]):
+            student = User.objects.create_user(
+                email=f"lb-s{i}@mentormind.dev",
+                password="pass-123456",
+                display_name=f"Student {i}",
+            )
+            enrollment = Enrollment.objects.create(student=student, course=self.course)
+            QuizAttempt.objects.create(
+                enrollment=enrollment,
+                quiz=self.quiz,
+                score=score,
+                total_questions=10,
+                correct_answers=int(score / 10),
+            )
+
+    def test_leaderboard_orders_by_best_score(self):
+        res = APIClient().get(f"/api/v1/courses/{self.course.slug}/leaderboard/")
+        self.assertEqual(res.status_code, 200)
+        entries = res.json()
+        self.assertEqual(len(entries), 3)
+        self.assertEqual(entries[0]["student"], "Student 1")
+        self.assertEqual(entries[0]["best_score"], 90.0)
+        self.assertEqual([e["rank"] for e in entries], [1, 2, 3])
+
+    def test_best_score_wins_over_retakes(self):
+        cache.clear()
+        enrollment = Enrollment.objects.get(student__email="lb-s0@mentormind.dev")
+        QuizAttempt.objects.create(
+            enrollment=enrollment, quiz=self.quiz, score=95.0,
+            total_questions=10, correct_answers=9,
+        )
+        res = APIClient().get(f"/api/v1/courses/{self.course.slug}/leaderboard/")
+        self.assertEqual(res.json()[0]["student"], "Student 0")
+        self.assertEqual(res.json()[0]["best_score"], 95.0)
+
+
+class AvatarUploadTests(TestCase):
+    def test_avatar_upload_sets_url(self):
+        import io
+
+        from PIL import Image
+
+        user = User.objects.create_user(
+            email="ava@mentormind.dev", password="pass-123456"
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        buf = io.BytesIO()
+        Image.new("RGB", (32, 32), color=(200, 69, 31)).save(buf, format="PNG")
+        buf.seek(0)
+        buf.name = "avatar.png"
+
+        res = client.put("/api/v1/auth/me/avatar/", {"file": buf}, format="multipart")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("avatars/", res.json()["avatar_url"])
+
+        user.refresh_from_db()
+        self.assertTrue(user.avatar.name.startswith("avatars/"))
+        user.avatar.delete(save=False)
+
+    def test_rejects_non_image(self):
+        import io
+
+        user = User.objects.create_user(
+            email="ava2@mentormind.dev", password="pass-123456"
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+        bad = io.BytesIO(b"not an image")
+        bad.name = "notes.txt"
+        res = client.put("/api/v1/auth/me/avatar/", {"file": bad}, format="multipart")
+        self.assertEqual(res.status_code, 400)
