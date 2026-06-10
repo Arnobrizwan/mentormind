@@ -1,1 +1,220 @@
-/* You can add global styles to this file, and also import other style files */
+/* ============================================================
+   MentorMind Admin Console — "Control Room" design system
+   Phosphor terminal: near-black, mono type, green/amber signal
+   lights, faint scanlines.
+   ============================================================ */
+
+:root {
+  --void: #0b0e0d;
+  --bay: #111614;
+  --bay-raised: #16201c;
+  --text: #cfe3d8;
+  --text-dim: #6f8a7e;
+  --phosphor: #46d97e;
+  --phosphor-dim: rgba(70, 217, 126, 0.16);
+  --amber: #ffb454;
+  --alarm: #ff6b5e;
+  --line: rgba(207, 227, 216, 0.12);
+  --line-strong: rgba(207, 227, 216, 0.3);
+
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', monospace;
+  --font-sans: 'IBM Plex Sans', 'Helvetica Neue', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background-color: var(--void);
+  /* faint scanlines + a phosphor glow at the top */
+  background-image:
+    radial-gradient(90% 40% at 50% 0%, rgba(70, 217, 126, 0.06) 0%, transparent 70%),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 3px,
+      rgba(0, 0, 0, 0.18) 3px,
+      rgba(0, 0, 0, 0.18) 4px
+    );
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 14.5px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+p { margin: 0; }
+a { color: inherit; }
+button { font-family: inherit; }
+
+::selection {
+  background: var(--phosphor);
+  color: var(--void);
+}
+
+/* ---- primitives ---------------------------------------------- */
+
+.label {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.bay {
+  background: var(--bay);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.3rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--phosphor);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--phosphor);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--phosphor);
+    color: var(--void);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+.btn--alarm {
+  border-color: var(--alarm);
+  color: var(--alarm);
+
+  &:hover:not(:disabled) {
+    background: var(--alarm);
+    color: var(--void);
+  }
+}
+
+.btn--sm {
+  padding: 0.28rem 0.7rem;
+  font-size: 0.7rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  input, textarea, select {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--void);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+
+    &:focus {
+      outline: none;
+      border-color: var(--phosphor);
+      box-shadow: 0 0 0 3px var(--phosphor-dim);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 70px;
+  }
+}
+
+.error-note {
+  padding: 0.6rem 0.85rem;
+  border-left: 3px solid var(--alarm);
+  background: rgba(255, 107, 94, 0.08);
+  color: var(--alarm);
+  font-size: 0.82rem;
+}
+
+/* toggle switch */
+.switch {
+  position: relative;
+  width: 42px;
+  height: 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 99px;
+  background: var(--void);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: transform 0.18s ease, background 0.18s ease;
+  }
+
+  &.is-on {
+    border-color: var(--phosphor);
+    background: var(--phosphor-dim);
+
+    &::after {
+      transform: translateX(20px);
+      background: var(--phosphor);
+    }
+  }
+}
+
+@keyframes boot-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.boot-in {
+  animation: boot-in 0.4s ease-out both;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.blink {
+  animation: blink 1.6s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

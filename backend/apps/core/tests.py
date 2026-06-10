@@ -437,3 +437,105 @@ class SystemStatusTests(TestCase):
         self.assertEqual(body["components"]["database_replica"]["status"], "not_configured")
         self.assertEqual(body["components"]["ml_service"]["status"], "not_configured")
         self.assertIn("latency_ms", body["components"]["database_primary"])
+
+
+class ManagementApiTests(TestCase):
+    """Endpoints powering instructor-studio and admin-console."""
+
+    def setUp(self):
+        cache.clear()
+        group, _ = Group.objects.get_or_create(name="Instructors")
+        self.instructor = User.objects.create_user(
+            email="mgmt-teach@mentormind.dev", password="pass-123456", display_name="Teach"
+        )
+        self.instructor.groups.add(group)
+        self.other_instructor = User.objects.create_user(
+            email="mgmt-other@mentormind.dev", password="pass-123456"
+        )
+        self.other_instructor.groups.add(group)
+        self.student = User.objects.create_user(
+            email="mgmt-learn@mentormind.dev", password="pass-123456", display_name="Learner"
+        )
+        self.admin = User.objects.create_user(
+            email="mgmt-admin@mentormind.dev", password="pass-123456", is_staff=True
+        )
+        self.course = Course.objects.create(
+            title="Mgmt 101", slug="mgmt-101", description="d",
+            instructor=self.instructor, is_published=True,
+        )
+        self.quiz = Quiz.objects.create(course=self.course, title="Mgmt Quiz")
+        self.enrollment = Enrollment.objects.create(student=self.student, course=self.course)
+
+        self.as_instructor = APIClient()
+        self.as_instructor.force_authenticate(user=self.instructor)
+        self.as_other = APIClient()
+        self.as_other.force_authenticate(user=self.other_instructor)
+        self.as_student = APIClient()
+        self.as_student.force_authenticate(user=self.student)
+        self.as_admin = APIClient()
+        self.as_admin.force_authenticate(user=self.admin)
+
+    def test_instructor_creates_question(self):
+        res = self.as_instructor.post("/api/v1/questions/", {
+            "quiz": self.quiz.id, "text": "2+2?", "options": ["3", "4"],
+            "correct_option_index": 1, "order": 1,
+        }, format="json")
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.json()["correct_option_index"], 1)
+
+    def test_question_validation_rejects_bad_index(self):
+        res = self.as_instructor.post("/api/v1/questions/", {
+            "quiz": self.quiz.id, "text": "?", "options": ["a", "b"],
+            "correct_option_index": 5, "order": 1,
+        }, format="json")
+        self.assertEqual(res.status_code, 400)
+
+    def test_other_instructor_cannot_touch_foreign_quiz(self):
+        res = self.as_other.post("/api/v1/questions/", {
+            "quiz": self.quiz.id, "text": "?", "options": ["a", "b"],
+            "correct_option_index": 0, "order": 1,
+        }, format="json")
+        self.assertEqual(res.status_code, 403)
+
+    def test_student_cannot_author_questions(self):
+        res = self.as_student.post("/api/v1/questions/", {
+            "quiz": self.quiz.id, "text": "?", "options": ["a", "b"],
+            "correct_option_index": 0, "order": 1,
+        }, format="json")
+        self.assertEqual(res.status_code, 403)
+
+    def test_students_roster_for_own_course_only(self):
+        res = self.as_instructor.get(f"/api/v1/courses/{self.course.slug}/students/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()[0]["student_email"], "mgmt-learn@mentormind.dev")
+
+        res = self.as_other.get(f"/api/v1/courses/{self.course.slug}/students/")
+        self.assertEqual(res.status_code, 403)
+
+    def test_flag_management_is_staff_only(self):
+        res = self.as_admin.post("/api/v1/flags/manage/", {
+            "key": "proctoring", "enabled": True, "description": "ML proctoring",
+        }, format="json")
+        self.assertEqual(res.status_code, 201)
+        flag_id = res.json()["id"]
+
+        # toggling invalidates the public flags dict
+        from apps.flags.services import flag_enabled
+        self.assertTrue(flag_enabled("proctoring"))
+        self.as_admin.patch(f"/api/v1/flags/manage/{flag_id}/", {"enabled": False}, format="json")
+        self.assertFalse(flag_enabled("proctoring"))
+
+        self.assertEqual(
+            self.as_instructor.get("/api/v1/flags/manage/").status_code, 403
+        )
+
+    def test_setting_management_is_staff_only(self):
+        res = self.as_admin.post("/api/v1/settings/manage/", {
+            "key": "site-name", "value": "MentorMind", "is_public": True,
+        }, format="json")
+        self.assertEqual(res.status_code, 201)
+
+        from apps.settings_engine.services import get_public_settings
+        self.assertEqual(get_public_settings()["site-name"], "MentorMind")
+
+        self.assertEqual(self.as_student.get("/api/v1/settings/manage/").status_code, 403)

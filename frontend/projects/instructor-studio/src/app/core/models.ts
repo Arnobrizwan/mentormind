@@ -1,0 +1,80 @@
+export interface User {
+  id: number;
+  email: string;
+  display_name: string;
+  avatar_url: string;
+  roles: string[];
+  is_staff: boolean;
+  date_joined: string;
+}
+
+export interface Lesson {
+  id: number;
+  course: number;
+  title: string;
+  content: string;
+  video_url: string | null;
+  order: number;
+  is_published: boolean;
+}
+
+export interface QuizQuestion {
+  id: number;
+  quiz: number;
+  text: string;
+  options: string[];
+  order: number;
+  correct_option_index?: number;
+}
+
+export interface Quiz {
+  id: number;
+  course: number;
+  lesson: number | null;
+  title: string;
+  description: string;
+  questions: QuizQuestion[];
+}
+
+export interface Course {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  instructor: number;
+  instructor_name: string;
+  cover_image: string | null;
+  is_published: boolean;
+  lessons: Lesson[];
+  quizzes: Quiz[];
+  created_at: string;
+}
+
+export interface QuizAttempt {
+  id: number;
+  quiz: number;
+  quiz_title: string;
+  score: number;
+  total_questions: number;
+  correct_answers: number;
+  completed_at: string;
+}
+
+export interface Enrollment {
+  id: number;
+  student: number;
+  student_email: string;
+  student_name: string;
+  course: number;
+  enrolled_at: string;
+  completed_lessons: number[];
+  progress_percentage: number;
+  quiz_attempts: QuizAttempt[];
+}
+
+export interface Paginated<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}

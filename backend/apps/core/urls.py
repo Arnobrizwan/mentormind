@@ -6,6 +6,7 @@ from .views import (
     EnrollmentViewSet,
     HealthView,
     LessonViewSet,
+    QuizQuestionViewSet,
     QuizViewSet,
     SystemStatusView,
 )
@@ -14,6 +15,7 @@ router = DefaultRouter()
 router.register("courses", CourseViewSet, basename="course")
 router.register("lessons", LessonViewSet, basename="lesson")
 router.register("quizzes", QuizViewSet, basename="quiz")
+router.register("questions", QuizQuestionViewSet, basename="question")
 router.register("enrollments", EnrollmentViewSet, basename="enrollment")
 
 urlpatterns = [

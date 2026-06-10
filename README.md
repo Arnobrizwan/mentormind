@@ -23,7 +23,7 @@ client ──► nginx (LB :8080) ──► api-1 / api-2 (Django + DRF + gunico
 | Layer | Tech |
 |---|---|
 | Backend | Django 6 + DRF + Celery + SimpleJWT (Python 3.14) |
-| Frontend | Angular (latest) — `student-portal`, `instructor-studio`, `admin-console` |
+| Frontend | Angular (latest) — `student-portal` (:4200), `instructor-studio` (:4201), `admin-console` (:4202) |
 | ML service | FastAPI (+ PyTorch / OpenCV from Phase 4) |
 | Data | PostgreSQL primary + read replica, Redis |
 | Infra | Docker Compose → Kubernetes (Phase 6), nginx LB |

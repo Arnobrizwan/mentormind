@@ -138,7 +138,11 @@
               "buildTarget": "instructor-studio:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "proxyConfig": "proxy.conf.json",
+            "port": 4201
+          }
         },
         "test": {
           "builder": "@angular/build:unit-test"
@@ -206,7 +210,11 @@
               "buildTarget": "admin-console:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "proxyConfig": "proxy.conf.json",
+            "port": 4202
+          }
         },
         "test": {
           "builder": "@angular/build:unit-test"

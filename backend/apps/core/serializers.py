@@ -52,6 +52,26 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
         fields = ("id", "quiz", "text", "options", "correct_option_index", "order")
         read_only_fields = ("id",)
 
+    def validate(self, data):
+        options = data.get("options", self.instance.options if self.instance else None)
+        index = data.get(
+            "correct_option_index",
+            self.instance.correct_option_index if self.instance else None,
+        )
+        if not isinstance(options, list) or len(options) < 2:
+            raise serializers.ValidationError(
+                {"options": "Provide a list of at least 2 options."}
+            )
+        if not all(isinstance(o, str) and o.strip() for o in options):
+            raise serializers.ValidationError(
+                {"options": "Every option must be a non-empty string."}
+            )
+        if index is not None and index >= len(options):
+            raise serializers.ValidationError(
+                {"correct_option_index": "Index is out of range for the options list."}
+            )
+        return data
+
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         request = self.context.get("request")

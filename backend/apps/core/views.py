@@ -17,6 +17,7 @@ from .serializers import (
     LessonSerializer,
     QuizSerializer,
     QuizAttemptSerializer,
+    QuizQuestionSerializer,
 )
 
 
@@ -175,6 +176,27 @@ class CourseViewSet(viewsets.ModelViewSet):
         """Personalised course picks via enrollment co-occurrence."""
         courses = services.get_recommendations(request.user)
         serializer = self.get_serializer(courses, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["get"], permission_classes=[IsInstructor])
+    def students(self, request, slug=None):
+        """Roster with progress — only for this course's instructor/staff."""
+        course = self.get_object()
+        if course.instructor != request.user and not request.user.is_staff:
+            return Response(
+                {"detail": "Only this course's instructor can view its roster."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        enrollments = (
+            Enrollment.objects.using("default")
+            .filter(course=course)
+            .select_related("student")
+            .prefetch_related("completed_lessons", "quiz_attempts")
+            .order_by("-enrolled_at")
+        )
+        serializer = EnrollmentSerializer(
+            enrollments, many=True, context={"request": request}
+        )
         return Response(serializer.data)
 
 
@@ -389,3 +411,26 @@ class SystemStatusView(APIView):
             },
             status=200 if healthy else 503,
         )
+
+
+class QuizQuestionViewSet(viewsets.ModelViewSet):
+    """Question authoring for instructors — ownership enforced through the
+    parent quiz's course."""
+
+    serializer_class = QuizQuestionSerializer
+    permission_classes = [IsInstructor]
+    filterset_fields = ["quiz"]
+
+    def get_queryset(self):
+        queryset = QuizQuestion.objects.using("default").select_related("quiz__course")
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return queryset
+        return queryset.filter(quiz__course__instructor=user)
+
+    def perform_create(self, serializer):
+        quiz = serializer.validated_data["quiz"]
+        user = self.request.user
+        if quiz.course.instructor != user and not user.is_staff:
+            raise PermissionDenied("You are not the instructor of this course.")
+        serializer.save()
