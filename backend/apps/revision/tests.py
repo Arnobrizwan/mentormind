@@ -162,3 +162,44 @@ class RevisionApiTests(TestCase):
                 user=self.instructor, title__icontains="flashcard"
             ).exists()
         )
+
+
+class ReviewFixTests(TestCase):
+    """Regression: reviewing a not-yet-due card must not farm points."""
+
+    def test_early_re_review_is_rejected(self):
+        instructor = User.objects.create_user(
+            email="farm-i@mentormind.dev", password="password123"
+        )
+        student = User.objects.create_user(
+            email="farm-s@mentormind.dev", password="password123"
+        )
+        course = Course.objects.create(
+            title="F", slug="farm-c", description="d",
+            instructor=instructor, is_published=True,
+        )
+        Enrollment.objects.create(student=student, course=course)
+        flashcard = Flashcard.objects.create(
+            course=course, front="f", back="b", is_published=True
+        )
+        card = ReviewCard.objects.create(
+            user=student, flashcard=flashcard, due_at=timezone.now()
+        )
+        client = APIClient()
+        client.force_authenticate(user=student)
+        first = client.post(
+            "/api/v1/revision/review/", {"card": card.id, "grade": 5}, format="json"
+        )
+        self.assertEqual(first.status_code, 200)
+        # Card is now scheduled in the future — immediate re-review refused
+        again = client.post(
+            "/api/v1/revision/review/", {"card": card.id, "grade": 5}, format="json"
+        )
+        self.assertEqual(again.status_code, 409)
+
+        from apps.engagement.models import PointsEvent
+
+        self.assertEqual(
+            PointsEvent.objects.filter(user=student, action="revision_review").count(),
+            1,
+        )

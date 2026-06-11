@@ -762,6 +762,9 @@ export class TutorPage {
     const content = (this.draft().trim() || this.lastFailed).trim();
     const image = this.attachment();
     if ((!content && !image) || this.thinking()) return;
+    // Stop any live dictation so the continuous recognizer can't repopulate
+    // the cleared draft with the transcript of the message just sent.
+    this.stopMic();
     this.thinking.set(true);
     this.error.set(null);
     try {

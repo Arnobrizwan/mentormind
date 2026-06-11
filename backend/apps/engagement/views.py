@@ -89,11 +89,15 @@ class RemediationTicketViewSet(viewsets.ModelViewSet):
     filterset_fields = ["status", "risk"]
 
     def get_queryset(self):
-        return (
-            RemediationTicket.objects.using("default")
-            .select_related("student")
-            .all()
-        )
+        queryset = RemediationTicket.objects.using("default").select_related("student")
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return queryset
+        # Instructors only see (and triage) students from their own courses —
+        # the same isolation as rosters, readiness and proctoring timelines.
+        return queryset.filter(
+            student__enrollments__course__instructor=user
+        ).distinct()
 
     def create(self, request, *args, **kwargs):
         # Tickets are opened by the risk scan, never by hand.
@@ -104,9 +108,18 @@ class RemediationTicketViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"])
     def scan(self, request):
-        """Run the dropout-risk sweep now instead of waiting for Monday."""
+        """Run the dropout-risk sweep now instead of waiting for Monday.
+        Single-flight: the platform-wide sweep hits the ml-service once per
+        student, so concurrent or repeated triggers are refused."""
+        from django.core.cache import cache
+
         from .tasks import scan_dropout_risk
 
+        if not cache.add("engagement:dropout-scan-lock", 1, timeout=600):
+            return Response(
+                {"queued": False, "detail": "A scan is already in progress."},
+                status=status.HTTP_409_CONFLICT,
+            )
         result = scan_dropout_risk.delay()
         return Response(
             {"queued": True, "task_id": result.id},

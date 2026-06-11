@@ -376,6 +376,12 @@ export class QuizPage {
   private readonly stream = signal<MediaStream | null>(null);
   private readonly proctorVideo = viewChild<ElementRef<HTMLVideoElement>>('proctorVideo');
   private frameTimer: number | null = null;
+  /**
+   * Bumped by stopProctoring() (including on destroy) so a getUserMedia call
+   * that resolves after the permission prompt outlived the session discards
+   * its stream instead of leaking the camera.
+   */
+  private proctorSession = 0;
 
   protected readonly proctorWarning = computed(() => {
     switch (this.proctorVerdict()) {
@@ -392,9 +398,21 @@ export class QuizPage {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const slug = params.get('slug');
       const id = Number(params.get('id'));
-      this.quizId.set(Number.isFinite(id) ? id : null);
+      const nextId = Number.isFinite(id) ? id : null;
+      if (this.quizId() !== nextId) {
+        // The router reuses this component across quiz routes — drop the
+        // previous quiz's answers/result so they don't bleed into this one.
+        this.answers.set({});
+        this.result.set(null);
+        this.error.set(null);
+      }
+      this.quizId.set(nextId);
       if (slug && this.course()?.slug !== slug) {
         void this.load(slug);
+      } else if (this.quiz() && !this.result()) {
+        // Same course, new quiz: load() is skipped, so make sure proctoring
+        // is running again (it stops after a submit). No-op if already live.
+        void this.startProctoring();
       }
     });
 
@@ -432,8 +450,15 @@ export class QuizPage {
       this.proctorState.set('unavailable');
       return;
     }
+    const session = this.proctorSession;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640 } });
+      if (this.proctorSession !== session) {
+        // The component was destroyed (or proctoring stopped) while the
+        // permission prompt was open — release the camera and bail out.
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       this.stream.set(stream);
       this.proctorState.set('on');
       this.frameTimer = window.setInterval(
@@ -471,6 +496,7 @@ export class QuizPage {
   }
 
   private stopProctoring(): void {
+    this.proctorSession += 1;
     if (this.frameTimer !== null) {
       window.clearInterval(this.frameTimer);
       this.frameTimer = null;

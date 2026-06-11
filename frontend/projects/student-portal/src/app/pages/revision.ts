@@ -302,7 +302,15 @@ export class RevisionPage {
 
   protected onKey(event: KeyboardEvent): void {
     const target = event.target as HTMLElement | null;
-    if (target && /^(input|textarea|select)$/i.test(target.tagName)) return;
+    // Leave native activation alone when focus is on an interactive control
+    // (Space must press the focused grade/retry button, not flip the card).
+    if (
+      target &&
+      (target.closest('button, a, [role="button"]') ||
+        /^(input|textarea|select)$/i.test(target.tagName))
+    ) {
+      return;
+    }
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     if (event.code === 'Space') {
       event.preventDefault();

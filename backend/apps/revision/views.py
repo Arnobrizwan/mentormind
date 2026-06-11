@@ -146,6 +146,14 @@ class ReviewView(APIView):
         except (ReviewCard.DoesNotExist, ValueError, TypeError):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
+        # Only due cards can be graded — otherwise re-reviewing the same
+        # card in a loop farms unlimited engagement points.
+        if card.due_at > timezone.now():
+            return Response(
+                {"error": "This card is not due yet."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
         sm2.review(card, grade)
         card.save()
 

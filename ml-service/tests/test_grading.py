@@ -138,3 +138,19 @@ class TestReviewFixes:
         raw = '{not json} then the real one: {"score": 2, "criteria_met": [], "criteria_missing": [], "feedback": ""}'
         parsed = grading._parse_llm_grade(raw, 5)
         assert parsed is not None and parsed["score"] == 2
+
+    def test_long_thorough_answer_is_not_penalized(self):
+        # Criterion recall must not shrink as the answer grows (the old
+        # cosine normalized by answer length and failed thorough answers).
+        long_answer = (
+            "First, recall that acceleration is defined as the rate of change "
+            "of velocity with respect to time. We are told the car starts from "
+            "rest, so the initial velocity u is zero, and reaches a final "
+            "velocity v of twenty metres per second after a time t of eight "
+            "seconds. Using a = (v - u) / t with the correct values gives "
+            "(20 - 0) / 8, and so the answer is 2.5 m/s^2 in SI units, which "
+            "is a sensible magnitude for a road car accelerating briskly."
+        )
+        result = grading._heuristic_grade(long_answer, MARK_SCHEME, 5)
+        assert result["score"] == 5
+        assert result["criteria_missing"] == []

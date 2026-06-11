@@ -232,3 +232,93 @@ class DropoutRiskTests(TestCase):
         self.assertEqual(res.status_code, 200)
         ticket.refresh_from_db()
         self.assertEqual(ticket.status, "contacted")
+
+
+class ReviewFixTests(TestCase):
+    """Regressions from the adversarial review — engagement scope/locks."""
+
+    def setUp(self):
+        from django.contrib.auth.models import Group
+
+        from apps.core.models import Course, Enrollment
+
+        group, _ = Group.objects.get_or_create(name="Instructors")
+        self.instructor_a = User.objects.create_user(
+            email="fix-instr-a@mentormind.dev", password="password123"
+        )
+        self.instructor_a.groups.add(group)
+        self.instructor_b = User.objects.create_user(
+            email="fix-instr-b@mentormind.dev", password="password123"
+        )
+        self.instructor_b.groups.add(group)
+        self.student = User.objects.create_user(
+            email="fix-student@mentormind.dev", password="password123"
+        )
+        course_a = Course.objects.create(
+            title="A", slug="fix-a", description="d",
+            instructor=self.instructor_a, is_published=True,
+        )
+        Enrollment.objects.create(student=self.student, course=course_a)
+
+    def test_tickets_are_scoped_to_the_students_own_instructors(self):
+        from rest_framework.test import APIClient
+
+        from .models import RemediationTicket
+
+        ticket = RemediationTicket.objects.create(
+            student=self.student, risk="high", probability=0.9, features={}
+        )
+        as_a = APIClient()
+        as_a.force_authenticate(user=self.instructor_a)
+        self.assertEqual(as_a.get("/api/v1/engagement/risk/tickets/").json()["count"], 1)
+
+        # Instructor B teaches none of this student's courses: no list, 404 on PATCH
+        as_b = APIClient()
+        as_b.force_authenticate(user=self.instructor_b)
+        self.assertEqual(as_b.get("/api/v1/engagement/risk/tickets/").json()["count"], 0)
+        self.assertEqual(
+            as_b.patch(
+                f"/api/v1/engagement/risk/tickets/{ticket.id}/",
+                {"status": "resolved"},
+                format="json",
+            ).status_code,
+            404,
+        )
+
+    def test_scan_is_single_flight(self):
+        from django.core.cache import cache
+
+        from rest_framework.test import APIClient
+
+        cache.clear()
+        as_a = APIClient()
+        as_a.force_authenticate(user=self.instructor_a)
+        from unittest.mock import patch
+
+        with patch("apps.core.ml_client.post_json", return_value={"probability": 0.1, "risk": "low"}):
+            first = as_a.post("/api/v1/engagement/risk/tickets/scan/")
+        # Eager Celery runs the task inline, which releases the lock in its
+        # finally block — so re-add it to simulate a still-running scan.
+        self.assertEqual(first.status_code, 202)
+        cache.add("engagement:dropout-scan-lock", 1, timeout=600)
+        second = as_a.post("/api/v1/engagement/risk/tickets/scan/")
+        self.assertEqual(second.status_code, 409)
+        cache.clear()
+
+    def test_db_constraint_blocks_duplicate_unresolved_tickets(self):
+        from django.db import IntegrityError, transaction
+
+        from .models import RemediationTicket
+
+        RemediationTicket.objects.create(
+            student=self.student, risk="high", probability=0.9, features={}
+        )
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            RemediationTicket.objects.create(
+                student=self.student, risk="medium", probability=0.0, features={}
+            )
+        # A resolved ticket plus a fresh open one is fine
+        RemediationTicket.objects.filter(student=self.student).update(status="resolved")
+        RemediationTicket.objects.create(
+            student=self.student, risk="medium", probability=0.5, features={}
+        )

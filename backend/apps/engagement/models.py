@@ -102,6 +102,15 @@ class RemediationTicket(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["status", "-created_at"])]
+        constraints = [
+            # DB-enforced "one unresolved ticket per student" — concurrent
+            # scans (beat sweep + on-demand trigger) can't double-ticket.
+            models.UniqueConstraint(
+                fields=["student"],
+                condition=models.Q(status__in=("open", "contacted")),
+                name="one_unresolved_ticket_per_student",
+            )
+        ]
 
     def __str__(self):
         return f"{self.student.email} [{self.risk}] {self.status}"

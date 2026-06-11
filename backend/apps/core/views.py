@@ -306,6 +306,21 @@ class QuizViewSet(viewsets.ModelViewSet):
         quiz = self.get_object()
         user = request.user
 
+        # One in-flight submit per user+quiz: closes the count-then-create
+        # race that let parallel requests beat the attempt cap.
+        lock_key = f"quiz-submit-lock:{user.id}:{quiz.id}"
+        if not cache.add(lock_key, 1, timeout=15):
+            return Response(
+                {"error": "Previous submission still processing — try again."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        try:
+            return self._graded_submit(request, quiz, user)
+        finally:
+            cache.delete(lock_key)
+
+    def _graded_submit(self, request, quiz, user):
+
         # Fetch enrollment to check eligibility (strongly consistent write-your-own-writes)
         enrollment = Enrollment.objects.using("default").filter(student=user, course=quiz.course).first()
         if not enrollment:
@@ -607,6 +622,22 @@ class ShortAnswerQuestionViewSet(viewsets.ModelViewSet):
     def submit(self, request, pk=None):
         """Grade the student's free-text answer against the mark scheme."""
         question = self.get_object()
+
+        # One in-flight submission per user+question — protects the attempt
+        # cap from parallel submits and stops duplicate ml-service grading
+        # calls. Generous timeout: grading may run the in-process LLM.
+        lock_key = f"sa-submit-lock:{request.user.id}:{question.id}"
+        if not cache.add(lock_key, 1, timeout=90):
+            return Response(
+                {"error": "Previous submission still processing — try again."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        try:
+            return self._graded_submit(request, question)
+        finally:
+            cache.delete(lock_key)
+
+    def _graded_submit(self, request, question):
         enrollment = (
             Enrollment.objects.using("default")
             .filter(student=request.user, course=question.course)

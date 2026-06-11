@@ -29,9 +29,9 @@ logger = logging.getLogger(__name__)
 CUSTOM_LLM_TIMEOUT = float(os.getenv("CUSTOM_LLM_TIMEOUT", "30"))
 
 # "Term: definition" / "Term — definition" / "Term – definition" /
-# "Term - definition" (hyphen needs trailing whitespace, so compound
-# words never split)
-_DEFINITION_RE = re.compile(r"^\s*[\-\*•]?\s*([^:—–\-\n]{3,80})\s*[:—–-]\s+(.{8,})$")
+# "Term - definition". A hyphen separator must be whitespace-flanked so
+# hyphenated terms ("Self-inductance: ...") and compound words never split.
+_DEFINITION_RE = re.compile(r"^\s*[\-\*•]?\s*([^:—–\n]{3,80}?)\s*(?::|[—–]|\s-)\s+(.{8,})$")
 _MD_NOISE_RE = re.compile(r"[#*_`>]+")
 
 

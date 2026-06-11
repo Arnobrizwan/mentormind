@@ -23,7 +23,14 @@ def scan_dropout_risk():
     enrolled student against the ml-service dropout model; nudge and
     ticket the high-risk ones. Also runnable on demand from the
     instructor studio."""
+    from django.core.cache import cache
+
     from .risk import scan_students
 
-    scanned, flagged = scan_students()
+    try:
+        scanned, flagged = scan_students()
+    finally:
+        # Free the on-demand trigger's single-flight lock as soon as the
+        # sweep ends (the lock also self-expires after 10 minutes).
+        cache.delete("engagement:dropout-scan-lock")
     return f"scanned {scanned} student(s), flagged {flagged} high-risk"

@@ -63,8 +63,8 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
                 type="checkbox"
                 class="item__check"
                 [checked]="item.done"
-                [disabled]="togglingId() === item.id"
-                (change)="toggle(item)"
+                [disabled]="togglingId() !== null"
+                (change)="toggle(item, $event)"
                 [attr.aria-label]="(item.done ? 'Mark not done: ' : 'Mark done: ') + item.title"
               />
               <span class="item__icon" aria-hidden="true">{{ icon(item.kind) }}</span>
@@ -240,13 +240,20 @@ export class PlannerPage {
     }
   }
 
-  protected async toggle(item: PlanItem): Promise<void> {
-    if (this.togglingId() !== null) return;
+  protected async toggle(item: PlanItem, event: Event): Promise<void> {
+    const checkbox = event.target as HTMLInputElement;
+    if (this.togglingId() !== null) {
+      // Another toggle is in flight — undo the native flip so the box keeps
+      // matching the model ([checked] won't rewrite an unchanged binding).
+      checkbox.checked = item.done;
+      return;
+    }
     this.togglingId.set(item.id);
     this.error.set(null);
     try {
       this.plan.set(await this.api.toggle(item.id));
     } catch (err) {
+      checkbox.checked = item.done;
       this.error.set(apiErrorMessage(err, 'Could not update that item — try again.'));
     } finally {
       this.togglingId.set(null);

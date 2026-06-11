@@ -148,8 +148,12 @@ def ensure_plan(user):
         .first()
     )
     if plan is None:
-        plan = StudyPlan.objects.using("default").create(
-            student=user, week_start=monday, items=build_items(user)
+        # get_or_create rides the (student, week_start) unique constraint,
+        # so concurrent first accesses can't race into an IntegrityError.
+        plan, _ = StudyPlan.objects.using("default").get_or_create(
+            student=user,
+            week_start=monday,
+            defaults={"items": build_items(user)},
         )
     return plan
 
@@ -183,15 +187,22 @@ def _escalate_if_slipping(user, monday):
     )
     if has_unresolved:
         return False
-    RemediationTicket.objects.using("default").create(
-        student=user,
-        risk=RemediationTicket.Risk.MEDIUM,
-        probability=0.0,
-        features={
-            "source": "study_plan",
-            "recent_completion_pct": [plan.completion_pct for plan in previous],
-        },
-    )
+    from django.db import IntegrityError
+
+    try:
+        RemediationTicket.objects.using("default").create(
+            student=user,
+            risk=RemediationTicket.Risk.MEDIUM,
+            probability=0.0,
+            features={
+                "source": "study_plan",
+                "recent_completion_pct": [plan.completion_pct for plan in previous],
+            },
+        )
+    except IntegrityError:
+        # A concurrent risk scan opened a ticket first — that's the goal
+        # achieved, not a failure.
+        return False
     return True
 
 

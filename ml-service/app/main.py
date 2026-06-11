@@ -8,18 +8,13 @@ Plus: the Cambridge past-paper OCR + alignment training pipeline.
 import json
 import os
 from contextlib import asynccontextmanager
-from pathlib import Path
 
-from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 
-# Must run before the local imports below — pastpapers.local_llm and
-# pastpapers.answering read their env knobs at import time.
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-
-from . import dropout, flashcards, grading, quizgen, vision  # noqa: E402
+from . import env as _env  # loads .env BEFORE siblings read their knobs
+from . import dropout, flashcards, grading, quizgen, vision
 from .auth import require_api_key
 from .flags import flag_enabled
 from .pastpapers import answering

@@ -8,8 +8,6 @@ import { apiErrorMessage } from '../core/errors';
 import { Course } from '../core/models';
 import { ShortAnswerApi, ShortAnswerQuestion, ShortAnswerSubmission } from '../core/short-answers';
 
-const MAX_ATTEMPTS = 3;
-
 @Component({
   selector: 'mm-short-answers',
   imports: [RouterLink],
@@ -62,7 +60,7 @@ const MAX_ATTEMPTS = 3;
               <h2 class="work__prompt">{{ q.prompt }}</h2>
               <p class="mono-label">
                 worth {{ q.max_score }} {{ q.max_score === 1 ? 'mark' : 'marks' }} ·
-                {{ attemptsUsed() }} / {{ maxAttempts }} attempts used
+                {{ attemptsUsed() }} {{ attemptsUsed() === 1 ? 'attempt' : 'attempts' }} used
               </p>
 
               @if (result(); as graded) {
@@ -118,7 +116,7 @@ const MAX_ATTEMPTS = 3;
                   <div class="work__actions">
                     @if (!canAttempt()) {
                       <span class="quiet">
-                        All {{ maxAttempts }} attempts used — review your feedback below.
+                        You've used all your attempts — review your feedback below.
                       </span>
                     }
                     <button
@@ -379,8 +377,6 @@ export class ShortAnswersPage {
   private readonly shortAnswers = inject(ShortAnswerApi);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly maxAttempts = MAX_ATTEMPTS;
-
   protected readonly course = signal<Course | null>(null);
   protected readonly questions = signal<ShortAnswerQuestion[]>([]);
   protected readonly selected = signal<ShortAnswerQuestion | null>(null);
@@ -396,9 +392,12 @@ export class ShortAnswersPage {
   private readonly capReported = signal(false);
 
   protected readonly attemptsUsed = computed(() => this.history().length);
-  protected readonly canAttempt = computed(
-    () => !this.capReported() && this.attemptsUsed() < MAX_ATTEMPTS,
-  );
+  /**
+   * The attempt cap lives server-side (a live-tunable setting, default 3) —
+   * never re-derive it here. Submissions stay open until the backend's 400
+   * attempt-cap response flips capReported.
+   */
+  protected readonly canAttempt = computed(() => !this.capReported());
 
   constructor() {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {

@@ -36,18 +36,26 @@ def _weights():
     return weights, total
 
 
-def enrollment_readiness(enrollment):
-    """Score one enrollment. Returns {readiness, components}."""
+def enrollment_readiness(enrollment, total_lessons=None):
+    """Score one enrollment. Returns {readiness, components}. Pass
+    total_lessons when scoring a whole course so the count runs once."""
     course = enrollment.course
     student = enrollment.student
 
-    total_lessons = (
-        Lesson.objects.using("default")
-        .filter(course=course, is_published=True)
+    if total_lessons is None:
+        total_lessons = (
+            Lesson.objects.using("default")
+            .filter(course=course, is_published=True)
+            .count()
+        )
+    # Published-only on both sides, clamped: lessons unpublished after
+    # completion must not push progress past 100%.
+    completed = (
+        enrollment.completed_lessons.using("default")
+        .filter(is_published=True)
         .count()
     )
-    completed = enrollment.completed_lessons.using("default").count()
-    progress = 100.0 * completed / total_lessons if total_lessons else 0.0
+    progress = min(100.0, 100.0 * completed / total_lessons) if total_lessons else 0.0
 
     attempts = list(
         QuizAttempt.objects.using("default").filter(enrollment=enrollment)
@@ -134,13 +142,18 @@ def course_readiness(course):
     from .models import Enrollment
 
     results = []
+    total_lessons = (
+        Lesson.objects.using("default")
+        .filter(course=course, is_published=True)
+        .count()
+    )
     enrollments = (
         Enrollment.objects.using("default")
         .filter(course=course)
         .select_related("student")
     )
     for enrollment in enrollments:
-        entry = enrollment_readiness(enrollment)
+        entry = enrollment_readiness(enrollment, total_lessons=total_lessons)
         entry.update(
             {
                 "enrollment": enrollment.id,

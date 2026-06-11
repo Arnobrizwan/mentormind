@@ -105,3 +105,11 @@ class TestReviewFixes:
         )
         questions = quizgen._parse_llm_questions(raw, 5)
         assert questions is not None and questions[0]["text"] == "Q"
+
+    def test_hyphenated_terms_stay_intact(self):
+        content = (
+            "Self-inductance: the production of an emf in a coil by its own changing current.\n"
+            "Mutual inductance: an emf induced in one coil by current changes in another.\n"
+        )
+        questions = quizgen._heuristic_questions(content, "", 5)
+        assert any("Self-inductance" in q["text"] for q in questions)

@@ -77,17 +77,27 @@ def _load():
     _pipeline = (model, tokenizer, device)
 
 
+# Give up waiting for the generation lock after this long — callers fall
+# back (retrieval/heuristics) instead of stacking worker threads forever
+# behind one slow generation.
+LOCK_TIMEOUT_SECONDS = float(os.getenv("LOCAL_LLM_LOCK_TIMEOUT", "60"))
+
+
 def generate(question: str, system_prompt: str, context: str = "") -> str | None:
     """Generate a tutor answer locally. Returns None if local inference is
-    disabled or the model can't be loaded (caller falls back to retrieval)."""
+    disabled, busy past the lock timeout, or fails (callers fall back)."""
     global _load_failed
     if not is_enabled() or _load_failed:
         return None
 
     # One generation at a time: callers invoke this from worker threads
     # (asyncio.to_thread), and concurrent generate() on a single MPS/CUDA
-    # model corrupts state and spikes memory.
-    with _lock:
+    # model corrupts state and spikes memory. Bounded wait: shed load to
+    # the callers' fallbacks rather than queueing past client timeouts.
+    if not _lock.acquire(timeout=LOCK_TIMEOUT_SECONDS):
+        logger.warning("Local LLM busy for >%ss — falling back", LOCK_TIMEOUT_SECONDS)
+        return None
+    try:
         if _pipeline is None:
             try:
                 _load()
@@ -107,20 +117,27 @@ def generate(question: str, system_prompt: str, context: str = "") -> str | None
             {"role": "system", "content": system},
             {"role": "user", "content": question},
         ]
-        prompt = tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
-        inputs = tokenizer(prompt, return_tensors="pt").to(device)
-        with torch.no_grad():
-            output = model.generate(
-                **inputs,
-                max_new_tokens=MAX_NEW_TOKENS,
-                do_sample=True,
-                temperature=TEMPERATURE,
-                top_p=TOP_P,
-                pad_token_id=tokenizer.eos_token_id,
+        try:
+            prompt = tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
             )
-        text = tokenizer.decode(
-            output[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
-        )
+            inputs = tokenizer(prompt, return_tensors="pt").to(device)
+            with torch.no_grad():
+                output = model.generate(
+                    **inputs,
+                    max_new_tokens=MAX_NEW_TOKENS,
+                    do_sample=True,
+                    temperature=TEMPERATURE,
+                    top_p=TOP_P,
+                    pad_token_id=tokenizer.eos_token_id,
+                )
+            text = tokenizer.decode(
+                output[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
+            )
+        except Exception as exc:  # runtime OOM / tokenizer edge — one bad
+            # request must not 500 the endpoint; callers have fallbacks
+            logger.warning("Local LLM generation failed: %s", exc)
+            return None
         return text.strip() or None
+    finally:
+        _lock.release()

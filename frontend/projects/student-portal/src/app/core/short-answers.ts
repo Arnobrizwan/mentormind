@@ -51,9 +51,13 @@ export class ShortAnswerApi {
   private readonly http = inject(HttpClient);
 
   list(courseId: number): Promise<ShortAnswerQuestion[]> {
+    // page_size lifts the default page of 20 (backend caps it at 200) so
+    // courses with many questions aren't silently truncated.
     return firstValueFrom(
       this.http
-        .get<Paginated<ShortAnswerQuestion>>(`/api/v1/short-answers/?course=${courseId}`)
+        .get<Paginated<ShortAnswerQuestion>>(
+          `/api/v1/short-answers/?course=${courseId}&page_size=100`,
+        )
         .pipe(retry(GET_RETRY)),
     ).then((page) => page.results);
   }

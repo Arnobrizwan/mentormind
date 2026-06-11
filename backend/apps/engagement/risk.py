@@ -37,10 +37,14 @@ def engagement_features(user):
         total = Lesson.objects.using("default").filter(
             course=enrollment.course, is_published=True
         ).count()
-        completed = enrollment.completed_lessons.count()
+        # Published-only + clamp, mirroring readiness: unpublishing lessons
+        # after completion must not inflate progress past 100%.
+        completed = sum(
+            1 for lesson in enrollment.completed_lessons.all() if lesson.is_published
+        )
         completed_total += completed
         if total:
-            progress_values.append(100.0 * completed / total)
+            progress_values.append(min(100.0, 100.0 * completed / total))
     progress_pct = sum(progress_values) / len(progress_values) if progress_values else 0.0
 
     last_seen = user.last_login or user.date_joined
@@ -89,9 +93,27 @@ def remediate(user, risk, probability, features):
         ticket.features = features
         ticket.save(update_fields=["risk", "probability", "features", "updated_at"])
     else:
-        ticket = RemediationTicket.objects.using("default").create(
-            student=user, risk=risk, probability=probability, features=features
-        )
+        from django.db import IntegrityError
+
+        try:
+            ticket = RemediationTicket.objects.using("default").create(
+                student=user, risk=risk, probability=probability, features=features
+            )
+        except IntegrityError:
+            # A concurrent scan won the unique-unresolved race — reuse its
+            # ticket and skip the duplicate nudge.
+            ticket = (
+                RemediationTicket.objects.using("default")
+                .filter(
+                    student=user,
+                    status__in=[
+                        RemediationTicket.Status.OPEN,
+                        RemediationTicket.Status.CONTACTED,
+                    ],
+                )
+                .first()
+            )
+            created = False
     if created:
         from apps.notifications.models import Notification
         from apps.notifications.services import notify

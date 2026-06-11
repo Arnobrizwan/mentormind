@@ -28,8 +28,9 @@ logger = logging.getLogger(__name__)
 
 CUSTOM_LLM_TIMEOUT = float(os.getenv("CUSTOM_LLM_TIMEOUT", "30"))
 
-# Same separators as flashcards.py: colon, em/en dash, spaced hyphen.
-_DEFINITION_RE = re.compile(r"^\s*[\-\*•]?\s*([^:—–\-\n]{3,80})\s*[:—–-]\s+(.{8,})$")
+# Same separators as flashcards.py: colon, em/en dash, whitespace-flanked
+# hyphen — hyphenated terms like "Self-inductance" stay intact.
+_DEFINITION_RE = re.compile(r"^\s*[\-\*•]?\s*([^:—–\n]{3,80}?)\s*(?::|[—–]|\s-)\s+(.{8,})$")
 _MD_NOISE_RE = re.compile(r"[#*_`>]+")
 
 

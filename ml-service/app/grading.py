@@ -24,13 +24,22 @@ import httpx
 
 from .llm_json import extract_object
 from .pastpapers import local_llm
-from .pastpapers.answering import _allowed_llm_url, _similarity, _tokens
+from .pastpapers.answering import _allowed_llm_url, _tokens
 
 logger = logging.getLogger(__name__)
 
 CUSTOM_LLM_TIMEOUT = float(os.getenv("CUSTOM_LLM_TIMEOUT", "30"))
-# A criterion counts as met when the student's answer overlaps it this much.
-CRITERION_MATCH = float(os.getenv("GRADER_CRITERION_MATCH", "0.30"))
+# A criterion is met when this fraction of its content tokens appear in the
+# answer. Recall against the criterion only — normalizing by answer length
+# (cosine) would penalize thorough answers for being long.
+CRITERION_MATCH = float(os.getenv("GRADER_CRITERION_MATCH", "0.5"))
+
+
+def _criterion_recall(answer_tokens: set[str], criterion: str) -> float:
+    criterion_tokens = _tokens(criterion)
+    if not criterion_tokens:
+        return 0.0
+    return len(answer_tokens & criterion_tokens) / len(criterion_tokens)
 
 
 def _grading_prompt(question: str, mark_scheme: str, max_score: int) -> str:
@@ -68,7 +77,7 @@ def _heuristic_grade(student_answer: str, mark_scheme: str, max_score: int) -> d
     criteria = _criteria_lines(mark_scheme)
     met, missing = [], []
     for criterion in criteria:
-        if _similarity(answer_tokens, _tokens(criterion)) >= CRITERION_MATCH:
+        if _criterion_recall(answer_tokens, criterion) >= CRITERION_MATCH:
             met.append(criterion)
         else:
             missing.append(criterion)

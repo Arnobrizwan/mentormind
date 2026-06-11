@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -44,13 +45,22 @@ class ToggleItemView(APIView):
 
     def post(self, request, item_id):
         plan = builder.ensure_plan(request.user)
-        items = list(plan.items)
-        for item in items:
-            if item.get("id") == item_id:
-                item["done"] = not item.get("done")
-                plan.items = items
-                plan.save(update_fields=["items", "updated_at"])
-                return Response(_serialize(plan))
+        # Row lock for the read-modify-write on the items JSON — two quick
+        # ticks otherwise read the same list and the second save reverts
+        # the first. (select_for_update is a no-op on SQLite dev DBs.)
+        with transaction.atomic(using="default"):
+            plan = (
+                StudyPlan.objects.using("default")
+                .select_for_update()
+                .get(id=plan.id)
+            )
+            items = list(plan.items)
+            for item in items:
+                if item.get("id") == item_id:
+                    item["done"] = not item.get("done")
+                    plan.items = items
+                    plan.save(update_fields=["items", "updated_at"])
+                    return Response(_serialize(plan))
         return Response(
             {"error": "No such item in this week's plan."},
             status=status.HTTP_404_NOT_FOUND,

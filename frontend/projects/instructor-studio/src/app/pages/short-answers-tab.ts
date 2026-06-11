@@ -478,7 +478,15 @@ export class ShortAnswersTab {
       .then((subs) => {
         if (this.openSubmissions() === question.id) this.submissions.set(subs);
       })
-      .catch((err) => this.error.set(apiErrorMessage(err, 'Could not load submissions.')))
-      .finally(() => this.subsLoading.set(false));
+      .catch((err) => {
+        if (this.openSubmissions() === question.id) {
+          this.error.set(apiErrorMessage(err, 'Could not load submissions.'));
+        }
+      })
+      // Same guard as above: a stale request settling must not clear the
+      // spinner (or set errors) for the panel that is currently open.
+      .finally(() => {
+        if (this.openSubmissions() === question.id) this.subsLoading.set(false);
+      });
   }
 }
