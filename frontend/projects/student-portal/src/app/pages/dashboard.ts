@@ -443,7 +443,7 @@ interface CourseRef {
     .focus__meter {
       width: 160px;
       height: 8px;
-      border: 1px solid var(--ink);
+      border: 1px solid var(--line-strong);
       border-radius: 99px;
       overflow: hidden;
       background: var(--card);
@@ -550,8 +550,8 @@ interface CourseRef {
       display: flex;
       gap: 0;
       margin: 2rem 0 2.4rem;
-      border-top: 2px solid var(--ink);
-      border-bottom: 2px solid var(--ink);
+      border-top: 2px solid var(--line-strong);
+      border-bottom: 2px solid var(--line-strong);
     }
 
     .stat {
@@ -632,7 +632,7 @@ interface CourseRef {
     .progress {
       width: 160px;
       height: 8px;
-      border: 1px solid var(--ink);
+      border: 1px solid var(--line-strong);
       border-radius: 99px;
       overflow: hidden;
       background: var(--card);
@@ -656,7 +656,7 @@ interface CourseRef {
       th {
         text-align: left;
         padding: 0.6rem 0.4rem;
-        border-bottom: 2px solid var(--ink);
+        border-bottom: 2px solid var(--line-strong);
       }
 
       td {

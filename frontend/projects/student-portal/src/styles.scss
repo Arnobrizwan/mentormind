@@ -1,47 +1,52 @@
 /* ============================================================
-   MentorMind Student Portal — "Sticker" design system (Gen-Z)
-   Poster palette: hot magenta primary, purple secondary, pastel
-   sticker chips, black outlines on white. Variable names are kept
-   stable so every component adopts the new look.
+   MentorMind Student Portal — "Fresh Air" design system
+   Light, airy palette: cool near-white surfaces, fresh teal
+   primary, sky secondary, pastel chips, soft diffuse shadows.
+   Variable names are kept stable so every component adopts the
+   new look without template changes.
    ============================================================ */
 
 :root {
-  /* surfaces — light */
-  --paper: #ffffff;
-  --paper-deep: #ffe6f3;     /* soft pink section bg */
+  /* surfaces — light, cool-tinted */
+  --paper: #f7fbfc;
+  --paper-deep: #e9f5f6;     /* soft aqua section bg */
   --card: #ffffff;
-  --card-2: #fff0f8;
-  /* text — near-black ink */
-  --ink: #17121d;
-  --ink-soft: #8a7e90;
-  --line: rgba(23, 18, 29, 0.12);
-  --line-strong: rgba(23, 18, 29, 0.88);   /* sticker black outline */
-  /* accents — poster brand */
-  --accent: #e6007e;         /* hot magenta (primary) */
-  --accent-deep: #b80064;
-  --accent-2: #7c3aed;       /* purple (BUILT DIFFERENT) */
-  --sage: #14b06a;           /* mint green (chip text) */
-  --sage-deep: #0e9659;
-  --marker: #fbd34d;         /* highlighter yellow */
-  --hot: #ff4fa3;
-  --danger: #e5384d;
-  /* pastel sticker chips */
-  --chip-pink: #fbdcea;
-  --chip-mint: #d2f3e0;
-  --chip-yellow: #fdeec2;
-  --chip-lav: #ece1fb;
+  --card-2: #f1f9f9;
+  /* text — near-black slate ink (WCAG AA preserved) */
+  --ink: #16282f;
+  --ink-soft: #5c7079;
+  --line: rgba(22, 40, 47, 0.1);
+  --line-strong: rgba(22, 40, 47, 0.16);   /* gentle outline (was sticker black) */
+  /* accents — fresh teal / sky */
+  --accent: #0d9488;         /* fresh teal (primary) */
+  --accent-deep: #0f766e;
+  --accent-2: #0284c7;       /* clear sky (secondary) */
+  --sage: #0e8a58;           /* leaf green (chip text) */
+  --sage-deep: #0b6e47;
+  --marker: #ffe177;         /* soft highlighter yellow */
+  --hot: #fb7185;            /* coral pop */
+  --danger: #d93a52;
+  /* pastel chips */
+  --chip-pink: #ffe7ee;
+  --chip-mint: #d9f4e7;
+  --chip-yellow: #fdf1cd;
+  --chip-lav: #e8ecfb;
 
-  --grad-hero: linear-gradient(115deg, #e6007e 0%, #b5179e 52%, #7c3aed 100%);
-  --grad-btn: linear-gradient(120deg, #e6007e 0%, #c01f86 100%);
+  --grad-hero: linear-gradient(115deg, #0d9488 0%, #0e9aa7 52%, #0284c7 100%);
+  --grad-btn: linear-gradient(120deg, #0d9488 0%, #0f766e 100%);
 
   --font-display: 'Unbounded', 'Arial Black', sans-serif;
   --font-body: 'Plus Jakarta Sans', 'Avenir Next', sans-serif;
   --font-mono: 'Spline Sans Mono', 'SFMono-Regular', monospace;
 
-  /* sticker shadows: soft pink lift + faint solid offset */
-  --shadow-card: 0 2px 0 rgba(23, 18, 29, 0.06), 0 16px 34px -20px rgba(230, 0, 126, 0.4);
-  --shadow-lift: 0 3px 0 rgba(23, 18, 29, 0.08), 0 28px 50px -22px rgba(124, 58, 237, 0.42);
-  --glow: 0 0 22px -4px rgba(230, 0, 126, 0.5);
+  /* soft, diffuse, low-alpha shadows */
+  --shadow-card: 0 1px 2px rgba(22, 40, 47, 0.04), 0 10px 24px -16px rgba(13, 148, 136, 0.18);
+  --shadow-lift: 0 2px 4px rgba(22, 40, 47, 0.05), 0 18px 36px -18px rgba(13, 148, 136, 0.28);
+  --glow: 0 6px 20px -6px rgba(13, 148, 136, 0.35);
+
+  /* shared motion */
+  --speed: 160ms;
+  --ease: cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 * {
@@ -56,11 +61,11 @@ body {
   margin: 0;
   min-height: 100dvh;
   background-color: var(--paper);
-  /* soft pink/purple glows top + bottom, like the poster waves */
+  /* gentle teal/sky glows top + bottom */
   background-image:
-    radial-gradient(70% 38% at 8% -4%, rgba(230, 0, 126, 0.12) 0%, transparent 60%),
-    radial-gradient(60% 34% at 96% 2%, rgba(124, 58, 237, 0.1) 0%, transparent 60%),
-    radial-gradient(80% 30% at 50% 104%, rgba(230, 0, 126, 0.1) 0%, transparent 65%);
+    radial-gradient(70% 38% at 8% -4%, rgba(13, 148, 136, 0.08) 0%, transparent 60%),
+    radial-gradient(60% 34% at 96% 2%, rgba(2, 132, 199, 0.07) 0%, transparent 60%),
+    radial-gradient(80% 30% at 50% 104%, rgba(13, 148, 136, 0.06) 0%, transparent 65%);
   background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-body);
@@ -94,6 +99,106 @@ button {
   color: var(--ink);
 }
 
+/* ---- interaction layer --------------------------------------- */
+
+a,
+button,
+input,
+select,
+textarea,
+[role='button'] {
+  transition:
+    background-color var(--speed) var(--ease),
+    color var(--speed) var(--ease),
+    border-color var(--speed) var(--ease),
+    box-shadow var(--speed) var(--ease),
+    transform var(--speed) var(--ease),
+    opacity var(--speed) var(--ease);
+}
+
+button:active:not(:disabled),
+[role='button']:active {
+  transform: scale(0.98);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.btn:focus-visible,
+.field input:focus-visible,
+.field textarea:focus-visible,
+.field select:focus-visible {
+  outline-offset: 1px;
+}
+
+/* hover lift for card-like tiles */
+.card,
+.stat,
+.quick__tile,
+.enrollment,
+.badge,
+.auth__card {
+  transition:
+    transform var(--speed) var(--ease),
+    box-shadow var(--speed) var(--ease),
+    border-color var(--speed) var(--ease),
+    background-color var(--speed) var(--ease);
+}
+
+.card:hover,
+.stat:hover,
+.quick__tile:hover,
+.enrollment:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+}
+
+/* animated progress bars / meters */
+.progress__bar,
+[class*='meter-fill'] {
+  transition: width 0.45s var(--ease);
+}
+
+/* readiness ring: settle-in pop + gentle hover scale */
+@keyframes ring-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.ready__ring {
+  animation: ring-pop 0.3s var(--ease) both;
+  transition: transform var(--speed) var(--ease), box-shadow var(--speed) var(--ease);
+}
+
+.ready__ring:hover {
+  transform: scale(1.08);
+}
+
+/* page content entrance: fade + rise once */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page > * {
+  animation: page-in 240ms var(--ease) both;
+}
+
 /* ---- shared primitives -------------------------------------- */
 
 .mono-label {
@@ -120,11 +225,11 @@ button {
   letter-spacing: 0.01em;
   cursor: pointer;
   text-decoration: none;
-  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease, filter 0.18s ease;
+  transition: transform var(--speed) var(--ease), box-shadow var(--speed) var(--ease), filter var(--speed) var(--ease), background-color var(--speed) var(--ease), border-color var(--speed) var(--ease), color var(--speed) var(--ease);
 }
 
 .btn:hover:not(:disabled) {
-  transform: translateY(-2px) scale(1.03);
+  transform: translateY(-2px);
   box-shadow: var(--glow);
 }
 
@@ -144,7 +249,7 @@ button {
 }
 
 .btn--accent:hover:not(:disabled) {
-  filter: brightness(1.1);
+  filter: brightness(1.06);
   box-shadow: var(--glow);
 }
 
@@ -155,7 +260,7 @@ button {
 }
 
 .btn--ghost:hover:not(:disabled) {
-  background: rgba(230, 0, 126, 0.1);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   border-color: var(--accent);
   color: var(--accent-deep);
 }
@@ -163,7 +268,7 @@ button {
 .stamp {
   display: inline-block;
   padding: 0.3rem 0.75rem;
-  border: 1.5px solid var(--sage);
+  border: 1.5px solid color-mix(in srgb, var(--sage) 45%, transparent);
   border-radius: 999px;
   color: var(--sage);
   font-family: var(--font-mono);
@@ -171,7 +276,7 @@ button {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  background: rgba(20, 176, 106, 0.14);
+  background: color-mix(in srgb, var(--sage) 10%, transparent);
 }
 
 .hairline {
@@ -190,13 +295,19 @@ button {
 .field textarea,
 .field select {
   padding: 0.75rem 0.95rem;
-  border: 2px solid var(--line-strong);
+  border: 1.5px solid var(--line-strong);
   border-radius: 14px;
   background: var(--card);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 0.95rem;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease), background-color var(--speed) var(--ease);
+}
+
+.field input:hover,
+.field textarea:hover,
+.field select:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong));
 }
 
 .field input:focus,
@@ -204,13 +315,13 @@ button {
 .field select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(230, 0, 126, 0.16);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .error-note {
   padding: 0.7rem 0.95rem;
-  border: 1.5px solid var(--danger);
-  background: rgba(229, 56, 77, 0.08);
+  border: 1.5px solid color-mix(in srgb, var(--danger) 50%, transparent);
+  background: color-mix(in srgb, var(--danger) 7%, transparent);
   color: var(--danger);
   font-size: 0.88rem;
   border-radius: 12px;
@@ -233,9 +344,37 @@ button {
   animation: rise-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* ---- reduced motion: disable all of the above ----------------- */
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .page > *,
+  .rise,
+  .ready__ring {
+    animation: none !important;
+  }
+
+  .card:hover,
+  .stat:hover,
+  .quick__tile:hover,
+  .enrollment:hover,
+  .btn:hover:not(:disabled),
+  .ready__ring:hover {
+    transform: none;
+  }
+
+  button:active:not(:disabled),
+  [role='button']:active,
+  .btn:active:not(:disabled) {
+    transform: none;
   }
 }

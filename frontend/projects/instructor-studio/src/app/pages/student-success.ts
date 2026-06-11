@@ -141,7 +141,7 @@ type StatusFilter = RiskTicketStatus | 'all';
       margin-top: 1rem;
       padding: 0.6rem 0.85rem;
       border-left: 3px solid var(--teal);
-      background: rgba(92, 200, 175, 0.1);
+      background: rgba(14, 125, 104, 0.08);
       color: var(--teal);
       font-size: 0.86rem;
       border-radius: 0 5px 5px 0;
@@ -165,6 +165,12 @@ type StatusFilter = RiskTicketStatus | 'all';
         letter-spacing: 0.1em;
         text-transform: uppercase;
         cursor: pointer;
+        transition: color 160ms ease, border-bottom-color 160ms ease, background 160ms ease;
+
+        &:hover {
+          color: var(--ink);
+          background: rgba(31, 28, 22, 0.04);
+        }
 
         &.is-active {
           color: var(--amber);
@@ -220,7 +226,7 @@ type StatusFilter = RiskTicketStatus | 'all';
       &.risk--high {
         color: var(--red);
         border-color: var(--red);
-        background: rgba(224, 108, 90, 0.1);
+        background: rgba(178, 58, 44, 0.07);
       }
     }
 

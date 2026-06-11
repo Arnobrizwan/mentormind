@@ -185,7 +185,7 @@ import { ShortAnswerApi, ShortAnswerQuestion, ShortAnswerSubmission } from '../c
       max-width: 60ch;
       color: var(--ink-soft);
       padding-bottom: 1.4rem;
-      border-bottom: 2px solid var(--ink);
+      border-bottom: 2px solid var(--line-strong);
       margin-bottom: 1.4rem;
     }
 
@@ -270,7 +270,7 @@ import { ShortAnswerApi, ShortAnswerQuestion, ShortAnswerSubmission } from '../c
       margin-top: 1rem;
       padding: 1.2rem;
       background: var(--card);
-      border: 1.5px solid var(--ink);
+      border: 1.5px solid var(--line-strong);
       border-radius: 12px;
       display: flex;
       flex-direction: column;

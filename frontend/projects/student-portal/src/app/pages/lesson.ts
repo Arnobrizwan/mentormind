@@ -83,7 +83,7 @@ import { Course, Lesson } from '../core/models';
       max-width: 760px;
       margin: 0 auto;
       background: var(--card);
-      border: 1.5px solid var(--ink);
+      border: 1.5px solid var(--line-strong);
       border-radius: 14px;
       padding: clamp(1.5rem, 4vw, 3rem);
       box-shadow: var(--shadow-card);
@@ -100,7 +100,7 @@ import { Course, Lesson } from '../core/models';
       font-size: clamp(1.9rem, 4vw, 2.9rem);
       margin-top: 0.5rem;
       padding-bottom: 1.2rem;
-      border-bottom: 2px solid var(--ink);
+      border-bottom: 2px solid var(--line-strong);
     }
 
     .locked {

@@ -117,11 +117,12 @@ import { Course } from '../core/models';
     .course {
       display: block;
       text-decoration: none;
-      transition: border-color 0.15s ease, transform 0.15s ease;
+      transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 
       &:hover {
         border-color: var(--amber);
         transform: translateX(4px);
+        box-shadow: var(--shadow-md);
       }
     }
 

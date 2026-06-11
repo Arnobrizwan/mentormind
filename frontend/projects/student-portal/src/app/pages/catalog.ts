@@ -113,7 +113,7 @@ import { Course } from '../core/models';
       gap: 0.55rem;
       padding: 1.4rem 1.4rem 1.2rem;
       background: var(--card);
-      border: 1.5px solid var(--ink);
+      border: 1.5px solid var(--line-strong);
       border-radius: 12px;
       box-shadow: var(--shadow-card);
       text-decoration: none;

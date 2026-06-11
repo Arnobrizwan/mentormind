@@ -186,14 +186,14 @@ import { ShortAnswerApi } from '../core/short-answers';
       color: var(--ink-soft);
       font-size: 1.05rem;
       padding-bottom: 1.4rem;
-      border-bottom: 2px solid var(--ink);
+      border-bottom: 2px solid var(--line-strong);
       margin-bottom: 0.6rem;
     }
 
     .progress {
       width: 200px;
       height: 8px;
-      border: 1px solid var(--ink);
+      border: 1px solid var(--line-strong);
       border-radius: 99px;
       overflow: hidden;
       background: var(--card);

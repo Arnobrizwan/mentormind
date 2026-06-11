@@ -315,7 +315,7 @@ const STARTERS = [
     }
 
     .banner--warn {
-      background: rgba(242, 194, 73, 0.25);
+      background: color-mix(in srgb, var(--marker) 35%, transparent);
       border: 1px solid var(--marker);
     }
 
@@ -325,7 +325,7 @@ const STARTERS = [
       align-items: center;
       gap: 1rem;
       flex-wrap: wrap;
-      background: rgba(200, 69, 31, 0.08);
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
       border: 1.5px solid var(--accent);
     }
 
@@ -336,7 +336,7 @@ const STARTERS = [
       min-height: 320px;
       padding: 1.2rem;
       background: var(--card);
-      border: 1.5px solid var(--ink);
+      border: 1.5px solid var(--line-strong);
       border-radius: 12px;
       margin-bottom: 0.9rem;
     }
@@ -376,7 +376,7 @@ const STARTERS = [
         font-size: 0.78rem;
         padding: 0.15rem 0.45rem;
 
-        &.is-picked { border-color: var(--accent); background: rgba(200, 69, 31, 0.1); }
+        &.is-picked { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
       }
     }
 

@@ -118,18 +118,18 @@ const POLL_MS = 5000;
 
     .cell--ok .cell__light {
       background: var(--sage);
-      box-shadow: 0 0 0 4px rgba(60, 107, 88, 0.18);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--sage) 18%, transparent);
       animation: pulse 2.4s ease-in-out infinite;
     }
 
     .cell--err .cell__light {
       background: var(--danger);
-      box-shadow: 0 0 0 4px rgba(165, 42, 28, 0.2);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 20%, transparent);
     }
 
     @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 3px rgba(60, 107, 88, 0.1); }
-      50% { box-shadow: 0 0 0 6px rgba(60, 107, 88, 0.25); }
+      0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--sage) 10%, transparent); }
+      50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--sage) 25%, transparent); }
     }
 
     .cell__body {

@@ -116,7 +116,7 @@ const GRADES = [
       min-height: 240px;
       padding: 1.6rem;
       background: var(--card);
-      border: 2px solid var(--ink);
+      border: 2px solid var(--line-strong);
       border-radius: 14px;
       margin-bottom: 1.1rem;
     }

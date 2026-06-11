@@ -157,7 +157,7 @@ import { SiteConfig } from '../core/site-config';
     .exam__desc {
       color: var(--ink-soft);
       padding-bottom: 1.4rem;
-      border-bottom: 2px solid var(--ink);
+      border-bottom: 2px solid var(--line-strong);
     }
 
     .proctor {
@@ -254,13 +254,13 @@ import { SiteConfig } from '../core/site-config';
       transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 
       &:hover {
-        border-color: var(--ink);
+        border-color: var(--accent);
         transform: translateX(3px);
       }
 
       &.is-picked {
         border-color: var(--accent);
-        background: rgba(200, 69, 31, 0.08);
+        background: color-mix(in srgb, var(--accent) 8%, transparent);
 
         .option__key {
           background: var(--accent);

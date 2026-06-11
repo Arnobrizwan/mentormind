@@ -110,8 +110,8 @@ const VERDICT_LABEL: Record<ProctorLog['verdict'], string> = {
       padding: 1rem 1.2rem;
 
       &.has-violations {
-        border-color: rgba(224, 108, 90, 0.55);
-        background: linear-gradient(rgba(224, 108, 90, 0.05), rgba(224, 108, 90, 0.05)), var(--panel);
+        border-color: rgba(178, 58, 44, 0.45);
+        background: linear-gradient(rgba(178, 58, 44, 0.04), rgba(178, 58, 44, 0.04)), var(--panel);
       }
     }
 
@@ -158,6 +158,21 @@ const VERDICT_LABEL: Record<ProctorLog['verdict'], string> = {
       border-radius: 50%;
       background: var(--ink-dim);
       flex: 0 0 auto;
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .strip .dot {
+      animation: dot-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+      &:hover {
+        transform: scale(1.5);
+        box-shadow: 0 1px 4px rgba(31, 28, 22, 0.25);
+      }
+    }
+
+    @keyframes dot-pop {
+      from { opacity: 0; transform: scale(0.4); }
+      to { opacity: 1; transform: scale(1); }
     }
 
     .dot--ok { background: var(--teal); }

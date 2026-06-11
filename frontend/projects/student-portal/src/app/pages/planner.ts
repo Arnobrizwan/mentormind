@@ -119,7 +119,7 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
     .progress {
       width: 200px;
       height: 8px;
-      border: 1px solid var(--ink);
+      border: 1px solid var(--line-strong);
       border-radius: 99px;
       overflow: hidden;
       background: var(--card);

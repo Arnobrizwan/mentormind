@@ -262,7 +262,8 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
       text-decoration: none;
       display: inline-block;
       margin-bottom: 1rem;
-      &:hover { color: var(--amber); }
+      transition: color 160ms ease, transform 160ms ease;
+      &:hover { color: var(--amber); transform: translateX(-2px); }
     }
 
     .head {
@@ -303,6 +304,12 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
         letter-spacing: 0.1em;
         text-transform: uppercase;
         cursor: pointer;
+        transition: color 160ms ease, border-bottom-color 160ms ease, background 160ms ease;
+
+        &:hover {
+          color: var(--ink);
+          background: rgba(31, 28, 22, 0.04);
+        }
 
         &.is-active {
           color: var(--amber);
@@ -409,6 +416,13 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
     .bar__fill {
       height: 100%;
       background: var(--teal);
+      transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1), background 160ms ease;
+      animation: bar-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes bar-grow {
+      from { transform: scaleX(0); transform-origin: left center; }
+      to { transform: scaleX(1); transform-origin: left center; }
     }
 
     .bar__fill--mid { background: var(--amber); }

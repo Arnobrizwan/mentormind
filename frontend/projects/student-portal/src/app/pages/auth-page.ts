@@ -119,7 +119,7 @@ import { apiErrorMessage } from '../core/errors';
 
     .auth__card {
       background: var(--card);
-      border: 1.5px solid var(--ink);
+      border: 1.5px solid var(--line-strong);
       border-radius: 14px;
       padding: 1.8rem;
       box-shadow: var(--shadow-card);

@@ -1,22 +1,25 @@
 /* ============================================================
    MentorMind Instructor Studio — "Drafting Desk" design system
-   Dark graphite drafting table: blueprint grid, amber pencil
-   accent, technical mono annotations.
+   Light paper drafting table: faint blueprint-grid watermark,
+   deep amber pencil accent, technical mono annotations.
    ============================================================ */
 
 :root {
-  --desk: #16181e;
-  --panel: #1e2128;
-  --panel-raised: #252932;
-  --ink: #e9e6dd;
-  --ink-dim: #9a968c;
-  --grid-line: rgba(110, 140, 180, 0.07);
-  --line: rgba(233, 230, 221, 0.12);
-  --line-strong: rgba(233, 230, 221, 0.28);
-  --amber: #e8a33d;
-  --amber-deep: #c9821b;
-  --teal: #5cc8af;
-  --red: #e06c5a;
+  --desk: #f7f5f0;
+  --panel: #ffffff;
+  --panel-raised: #f9f7f2;
+  --ink: #1f1c16;
+  --ink-dim: #5f594c;
+  --grid-line: rgba(70, 100, 150, 0.055);
+  --line: rgba(31, 28, 22, 0.12);
+  --line-strong: rgba(31, 28, 22, 0.26);
+  --amber: #9a6402;
+  --amber-deep: #7c5002;
+  --teal: #0e7d68;
+  --red: #b23a2c;
+
+  --shadow-sm: 0 1px 2px rgba(31, 28, 22, 0.05), 0 2px 8px rgba(31, 28, 22, 0.05);
+  --shadow-md: 0 2px 4px rgba(31, 28, 22, 0.06), 0 10px 24px rgba(31, 28, 22, 0.09);
 
   --font-display: 'Bricolage Grotesque', 'Arial Narrow', sans-serif;
   --font-body: 'Albert Sans', 'Helvetica Neue', sans-serif;
@@ -31,7 +34,7 @@ body {
   margin: 0;
   min-height: 100dvh;
   background-color: var(--desk);
-  /* blueprint grid */
+  /* blueprint grid, faded to a paper watermark */
   background-image:
     linear-gradient(var(--grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
@@ -60,6 +63,11 @@ button { font-family: inherit; }
   color: var(--desk);
 }
 
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
 /* ---- primitives ---------------------------------------------- */
 
 .tag {
@@ -76,6 +84,13 @@ button { font-family: inherit; }
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 1.4rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 160ms ease, transform 160ms ease, border-color 160ms ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
 }
 
 .btn {
@@ -86,18 +101,30 @@ button { font-family: inherit; }
   border: 1px solid var(--amber);
   border-radius: 6px;
   background: var(--amber);
-  color: #1a1308;
+  color: #fffdf7;
   font-family: var(--font-body);
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease,
+    box-shadow 160ms ease, color 160ms ease;
 
   &:hover:not(:disabled) {
     background: var(--amber-deep);
     border-color: var(--amber-deep);
     transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(154, 100, 2, 0.25);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0) scale(0.97);
+    box-shadow: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
   }
 
   &:disabled {
@@ -111,8 +138,9 @@ button { font-family: inherit; }
   color: var(--amber);
 
   &:hover:not(:disabled) {
-    background: rgba(232, 163, 61, 0.12);
-    color: var(--amber);
+    background: rgba(154, 100, 2, 0.08);
+    color: var(--amber-deep);
+    box-shadow: none;
   }
 }
 
@@ -122,8 +150,9 @@ button { font-family: inherit; }
   color: var(--red);
 
   &:hover:not(:disabled) {
-    background: rgba(224, 108, 90, 0.12);
+    background: rgba(178, 58, 44, 0.07);
     border-color: var(--red);
+    box-shadow: none;
   }
 }
 
@@ -145,12 +174,17 @@ button { font-family: inherit; }
     color: var(--ink);
     font-family: var(--font-body);
     font-size: 0.92rem;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+
+    &:hover:not(:disabled) {
+      border-color: var(--amber);
+    }
 
     &:focus {
       outline: none;
       border-color: var(--amber);
-      box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.18);
+      background: var(--panel);
+      box-shadow: 0 0 0 3px rgba(154, 100, 2, 0.15);
     }
   }
 
@@ -166,7 +200,7 @@ button { font-family: inherit; }
 .error-note {
   padding: 0.6rem 0.85rem;
   border-left: 3px solid var(--red);
-  background: rgba(224, 108, 90, 0.1);
+  background: rgba(178, 58, 44, 0.07);
   color: var(--red);
   font-size: 0.86rem;
   border-radius: 0 5px 5px 0;
@@ -178,11 +212,18 @@ button { font-family: inherit; }
   height: 8px;
   border-radius: 50%;
   background: var(--ink-dim);
+  transition: background 160ms ease, box-shadow 160ms ease;
 
   &.is-live {
     background: var(--teal);
-    box-shadow: 0 0 0 3px rgba(92, 200, 175, 0.18);
+    box-shadow: 0 0 0 3px rgba(14, 125, 104, 0.16);
+    animation: live-pulse 2.4s ease-in-out infinite;
   }
+}
+
+@keyframes live-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(14, 125, 104, 0.16); }
+  50% { box-shadow: 0 0 0 6px rgba(14, 125, 104, 0.08); }
 }
 
 @keyframes sheet-in {
@@ -197,6 +238,7 @@ button { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

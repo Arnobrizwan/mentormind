@@ -30,6 +30,9 @@
   display: flex;
   align-items: center;
   gap: 0.55rem;
+  transition: opacity 160ms ease;
+
+  &:hover { opacity: 0.75; }
 }
 
 .brand__mark {
@@ -62,9 +65,11 @@
     text-decoration: none;
     padding-bottom: 0.15rem;
     border-bottom: 2px solid transparent;
+    transition: color 160ms ease, border-bottom-color 160ms ease;
 
     &:hover {
       color: var(--amber);
+      border-bottom-color: var(--line-strong);
     }
 
     &.is-active {
@@ -77,6 +82,8 @@
 .page {
   flex: 1;
   padding: clamp(1.4rem, 3vw, 2.4rem) 0 3.5rem;
+  /* one-time fade-rise entrance; keyframes live in the global sheet */
+  animation: sheet-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .footbar {
