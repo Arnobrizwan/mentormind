@@ -80,16 +80,21 @@ def _source_of(paper: PastPaper, question: AlignedQuestion) -> dict:
     }
 
 
-async def _ranked_matches(question_text: str, limit: int = 3) -> list[tuple[float, AlignedQuestion, PastPaper]]:
+async def _ranked_matches(
+    question_text: str, limit: int = 3, exclude_ids: set[str] | None = None
+) -> list[tuple[float, AlignedQuestion, PastPaper]]:
     query = _tokens(question_text)
+    statement = (
+        select(AlignedQuestion, PastPaper)
+        .join(PastPaper, AlignedQuestion.question_paper_id == PastPaper.id)
+        .limit(MAX_CANDIDATES)
+    )
+    if exclude_ids:
+        # Evaluation harness: a question being scored must not retrieve
+        # itself, or held-out accuracy is meaninglessly perfect.
+        statement = statement.where(AlignedQuestion.id.notin_(exclude_ids))
     async with models.SessionFactory() as session:
-        rows = (
-            await session.execute(
-                select(AlignedQuestion, PastPaper)
-                .join(PastPaper, AlignedQuestion.question_paper_id == PastPaper.id)
-                .limit(MAX_CANDIDATES)
-            )
-        ).all()
+        rows = (await session.execute(statement)).all()
     if len(_token_cache) > 2 * MAX_CANDIDATES:
         _token_cache.clear()  # only on a corpus swap; normal growth never trips this
     scored = []
@@ -146,12 +151,18 @@ async def _generate_answer(question: str, subject: str, level: str, context: str
         return None
 
 
-async def answer_question(question: str, subject: str = "", level: str = "") -> dict:
+async def answer_question(
+    question: str,
+    subject: str = "",
+    level: str = "",
+    exclude_ids: set[str] | None = None,
+) -> dict:
     """Answer a student's question from the past-paper corpus.
 
     Returns {"answer": str, "matched": bool, "source": dict | None}.
+    exclude_ids is for the evaluation harness only (leave-one-out).
     """
-    matches = await _ranked_matches(question)
+    matches = await _ranked_matches(question, exclude_ids=exclude_ids)
     best = matches[0] if matches else None
 
     # 1) Strong match — return the real mark-scheme working verbatim.
