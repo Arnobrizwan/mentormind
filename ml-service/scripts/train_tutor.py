@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import sys
 from pathlib import Path
 
@@ -139,8 +140,8 @@ def run_local_finetune(
 
     dataset = Dataset.from_list(rows).map(to_text)
 
-    # bf16 on CUDA; fp32 on MPS (half precision is unstable there).
-    use_bf16 = device == "cuda"
+    # bf16 on CUDA and MPS.
+    use_bf16 = device in ("cuda", "mps")
     model = AutoModelForCausalLM.from_pretrained(
         base,
         torch_dtype=torch.bfloat16 if use_bf16 else torch.float32,
@@ -164,6 +165,8 @@ def run_local_finetune(
             bf16=use_bf16,
             use_cpu=False,  # MPS/CUDA auto-selected by Accelerate
             report_to=[],
+            gradient_checkpointing=True,
+            gradient_checkpointing_kwargs={"use_reentrant": False},
         ),
         peft_config=LoraConfig(
             r=16, lora_alpha=32, lora_dropout=0.05, task_type="CAUSAL_LM",
@@ -212,6 +215,13 @@ def main() -> int:
     parser.add_argument("--max-seq", type=int, default=2048)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
+        "--max-examples",
+        type=int,
+        default=0,
+        help="Cap the training set after a seeded shuffle (0 = use everything). "
+        "Lets memory-constrained boxes (e.g. Apple Silicon) run a pilot.",
+    )
+    parser.add_argument(
         "--extra",
         nargs="*",
         default=[
@@ -223,6 +233,12 @@ def main() -> int:
     args = parser.parse_args()
 
     rows = load_dataset(args.extra)
+    if args.max_examples and len(rows) > args.max_examples:
+        # Shuffle before slicing — the corpus is ordered by subject/year, so a
+        # plain head-cut would train on a single subject.
+        random.Random(42).shuffle(rows)
+        rows = rows[: args.max_examples]
+        print(f"capped to {len(rows)} examples (--max-examples)")
     stats = dataset_stats(rows)
 
     device = None if args.dry_run else detect_device()
