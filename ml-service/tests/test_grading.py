@@ -121,3 +121,20 @@ class TestGradeEndpoint:
             },
         )
         assert response.status_code in (400, 422)
+
+
+class TestReviewFixes:
+    """Regressions from the adversarial review."""
+
+    def test_second_json_object_after_payload_still_parses(self):
+        raw = (
+            '{"score": 3, "criteria_met": [], "criteria_missing": [], '
+            '"feedback": "ok"} P.S. {"note": "ignore me"}'
+        )
+        parsed = grading._parse_llm_grade(raw, 5)
+        assert parsed is not None and parsed["score"] == 3
+
+    def test_braces_in_prose_before_payload_are_skipped(self):
+        raw = '{not json} then the real one: {"score": 2, "criteria_met": [], "criteria_missing": [], "feedback": ""}'
+        parsed = grading._parse_llm_grade(raw, 5)
+        assert parsed is not None and parsed["score"] == 2

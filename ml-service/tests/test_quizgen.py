@@ -75,3 +75,33 @@ class TestGenerateQuizEndpoint:
         body = response.json()
         assert body["engine"] == "llm"
         assert body["questions"][0]["text"] == "Define velocity"
+
+
+class TestReviewFixes:
+    """Regressions from the adversarial review."""
+
+    def test_hyphen_separated_definitions_match(self):
+        content = (
+            "Velocity - the rate of change of displacement per unit time.\n"
+            "Speed - the distance travelled per unit time, no direction.\n"
+        )
+        questions = quizgen._heuristic_questions(content, "", 5)
+        assert len(questions) == 2
+
+    def test_duplicate_definitions_never_duplicate_the_answer(self):
+        content = (
+            "Mitochondrion: the powerhouse of the cell.\n"
+            "Chloroplast: the powerhouse of the cell.\n"
+            "Ribosome: builds proteins from amino acids.\n"
+        )
+        for q in quizgen._heuristic_questions(content, "", 5):
+            correct = q["options"][q["correct_option_index"]]
+            assert q["options"].count(correct) == 1
+
+    def test_trailing_junk_after_json_array_still_parses(self):
+        raw = (
+            '[{"text": "Q", "options": ["a", "b"], "correct_option_index": 0}]'
+            " — hope that helps! {unrelated}"
+        )
+        questions = quizgen._parse_llm_questions(raw, 5)
+        assert questions is not None and questions[0]["text"] == "Q"

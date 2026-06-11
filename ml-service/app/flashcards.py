@@ -14,13 +14,13 @@ review — nothing generated here reaches a student unapproved.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import re
 
 import httpx
 
+from .llm_json import extract_array
 from .pastpapers import local_llm
 from .pastpapers.answering import _allowed_llm_url
 
@@ -28,9 +28,10 @@ logger = logging.getLogger(__name__)
 
 CUSTOM_LLM_TIMEOUT = float(os.getenv("CUSTOM_LLM_TIMEOUT", "30"))
 
-_JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
-# "Term: definition" / "Term — definition" / "Term - definition"
-_DEFINITION_RE = re.compile(r"^\s*[\-\*•]?\s*([^:—\-\n]{3,80})\s*[:—]\s+(.{8,})$")
+# "Term: definition" / "Term — definition" / "Term – definition" /
+# "Term - definition" (hyphen needs trailing whitespace, so compound
+# words never split)
+_DEFINITION_RE = re.compile(r"^\s*[\-\*•]?\s*([^:—–\-\n]{3,80})\s*[:—–-]\s+(.{8,})$")
 _MD_NOISE_RE = re.compile(r"[#*_`>]+")
 
 
@@ -48,14 +49,8 @@ def _generation_prompt(topic: str, count: int) -> str:
 
 
 def _parse_llm_cards(raw: str, count: int) -> list[dict] | None:
-    match = _JSON_ARRAY_RE.search(raw)
-    if not match:
-        return None
-    try:
-        body = json.loads(match.group(0))
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(body, list):
+    body = extract_array(raw)
+    if body is None:
         return None
     cards = []
     for item in body:

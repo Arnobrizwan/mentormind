@@ -16,13 +16,13 @@ No third-party AI APIs anywhere in this path.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import re
 
 import httpx
 
+from .llm_json import extract_object
 from .pastpapers import local_llm
 from .pastpapers.answering import _allowed_llm_url, _similarity, _tokens
 
@@ -31,8 +31,6 @@ logger = logging.getLogger(__name__)
 CUSTOM_LLM_TIMEOUT = float(os.getenv("CUSTOM_LLM_TIMEOUT", "30"))
 # A criterion counts as met when the student's answer overlaps it this much.
 CRITERION_MATCH = float(os.getenv("GRADER_CRITERION_MATCH", "0.30"))
-
-_JSON_BLOCK_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
 def _grading_prompt(question: str, mark_scheme: str, max_score: int) -> str:
@@ -95,14 +93,8 @@ def _heuristic_grade(student_answer: str, mark_scheme: str, max_score: int) -> d
 def _parse_llm_grade(raw: str, max_score: int) -> dict | None:
     """Pull the JSON object out of the model's reply and normalise it.
     Returns None on anything malformed — the caller falls back."""
-    match = _JSON_BLOCK_RE.search(raw)
-    if not match:
-        return None
-    try:
-        body = json.loads(match.group(0))
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(body, dict):
+    body = extract_object(raw)
+    if body is None:
         return None
     try:
         score = int(body.get("score"))
