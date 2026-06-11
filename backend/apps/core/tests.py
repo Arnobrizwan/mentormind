@@ -89,6 +89,20 @@ class AuthTests(TestCase):
     def test_me_requires_auth(self):
         self.assertEqual(APIClient().get("/api/v1/auth/me/").status_code, 401)
 
+    def test_login_throttle_scope_configured(self):
+        from django.conf import settings as dj_settings
+        from django.urls import resolve
+        from rest_framework.throttling import ScopedRateThrottle
+
+        from apps.accounts.views import ThrottledTokenObtainPairView
+
+        view_class = resolve("/api/v1/auth/token/").func.view_class
+        self.assertIs(view_class, ThrottledTokenObtainPairView)
+        self.assertEqual(view_class.throttle_scope, "auth")
+        self.assertIn(ScopedRateThrottle, view_class.throttle_classes)
+        # The rate key exists (None under the test runner, 10/min live)
+        self.assertIn("auth", dj_settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"])
+
 
 class LearningEngineTests(TestCase):
     def setUp(self):
@@ -288,6 +302,62 @@ class LearningEngineTests(TestCase):
         self.assertEqual(res_wrong.json()["score"], 0.0)
         self.assertEqual(res_wrong.json()["correct_answers"], 0)
 
+    def test_quiz_submit_rejects_malformed_payload(self):
+        self.client_student.post(f"/api/v1/courses/{self.course.slug}/enroll/")
+
+        # A list (or any non-object) payload must 400, never 500
+        res = self.client_student.post(
+            f"/api/v1/quizzes/{self.quiz.id}/submit/",
+            {"answers": [0, 1]},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+
+        # Non-numeric answers count as wrong, not as a server error
+        res = self.client_student.post(
+            f"/api/v1/quizzes/{self.quiz.id}/submit/",
+            {"answers": {self.question.id: "abc"}},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.json()["score"], 0.0)
+
+    def test_quiz_attempts_are_capped(self):
+        self.client_student.post(f"/api/v1/courses/{self.course.slug}/enroll/")
+        for _ in range(3):  # default cap
+            res = self.client_student.post(
+                f"/api/v1/quizzes/{self.quiz.id}/submit/",
+                {"answers": {self.question.id: 0}},
+                format="json",
+            )
+            self.assertEqual(res.status_code, 201)
+
+        res = self.client_student.post(
+            f"/api/v1/quizzes/{self.quiz.id}/submit/",
+            {"answers": {self.question.id: 0}},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("Attempt limit", res.json()["error"])
+
+    def test_quiz_visibility_requires_enrollment(self):
+        outsider = User.objects.create_user(
+            email="quiz-out@mentormind.dev", password="pass-123456"
+        )
+        client = APIClient()
+        client.force_authenticate(user=outsider)
+
+        # Not enrolled — the quiz is invisible in list and detail
+        res = client.get("/api/v1/quizzes/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["results"], [])
+        self.assertEqual(client.get(f"/api/v1/quizzes/{self.quiz.id}/").status_code, 404)
+
+        # Enrolled student sees it
+        self.client_student.post(f"/api/v1/courses/{self.course.slug}/enroll/")
+        res = self.client_student.get("/api/v1/quizzes/")
+        self.assertIn(self.quiz.id, [q["id"] for q in res.json()["results"]])
+
 
 class LeaderboardTests(TestCase):
     def setUp(self):
@@ -340,6 +410,21 @@ class LeaderboardTests(TestCase):
         res = APIClient().get(f"/api/v1/courses/{self.course.slug}/leaderboard/")
         self.assertEqual(res.json()[0]["student"], "Student 0")
         self.assertEqual(res.json()[0]["best_score"], 95.0)
+
+    def test_leaderboard_never_shows_email_local_part(self):
+        cache.clear()
+        anon = User.objects.create_user(
+            email="lb-anon@mentormind.dev", password="pass-123456"  # no display_name
+        )
+        enrollment = Enrollment.objects.create(student=anon, course=self.course)
+        QuizAttempt.objects.create(
+            enrollment=enrollment, quiz=self.quiz, score=99.0,
+            total_questions=10, correct_answers=9,
+        )
+        res = APIClient().get(f"/api/v1/courses/{self.course.slug}/leaderboard/")
+        students = [e["student"] for e in res.json()]
+        self.assertIn(f"Student #{anon.id}", students)
+        self.assertNotIn("lb-anon", students)
 
 
 class AvatarUploadTests(TestCase):

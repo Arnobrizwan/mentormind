@@ -50,6 +50,37 @@ class EngagementTests(TestCase):
         self.assertIn("quiz_attempt", actions)
         self.assertIn("quiz_perfect", actions)
 
+    def test_quiz_retake_awards_no_points(self):
+        enrollment = Enrollment.objects.create(student=self.student, course=self.course)
+        quiz = Quiz.objects.create(course=self.course, title="Q")
+        QuizAttempt.objects.create(
+            enrollment=enrollment, quiz=quiz, score=50.0,
+            total_questions=2, correct_answers=1,
+        )
+        total_after_first = services.total_points(self.student)
+
+        # A perfect retake must not add quiz_attempt or quiz_perfect points
+        QuizAttempt.objects.create(
+            enrollment=enrollment, quiz=quiz, score=100.0,
+            total_questions=2, correct_answers=2,
+        )
+        self.assertEqual(services.total_points(self.student), total_after_first)
+        self.assertFalse(
+            PointsEvent.objects.filter(user=self.student, action="quiz_perfect").exists()
+        )
+        self.assertEqual(
+            PointsEvent.objects.filter(user=self.student, action="quiz_attempt").count(), 1
+        )
+
+    def test_weekly_leaderboard_never_shows_email_local_part(self):
+        anon = User.objects.create_user(
+            email="eng-anon@mentormind.dev", password="pass-123456"  # no display_name
+        )
+        services.award_points(anon, "daily_challenge")
+        students = [e["student"] for e in services.weekly_leaderboard()]
+        self.assertIn(f"Student #{anon.id}", students)
+        self.assertNotIn("eng-anon", students)
+
     def test_daily_login_is_idempotent(self):
         res = self.client_student.post("/api/v1/engagement/daily-login/")
         self.assertTrue(res.json()["claimed"])

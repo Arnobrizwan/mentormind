@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -71,20 +72,33 @@ class TutorSessionViewSet(viewsets.ModelViewSet):
                 {"error": "content is required."}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        remaining = services.remaining_today(request.user)
-        if remaining is not None and remaining <= 0:
+        # cache.add is atomic — one in-flight message per user closes the
+        # check-then-create race that let parallel requests beat the quota.
+        lock_key = f"tutor-msg-lock:{request.user.id}"
+        if not cache.add(lock_key, 1, timeout=10):
             return Response(
-                {
-                    "error": "Daily message limit reached.",
-                    "limit": services.daily_limit(request.user),
-                    "upgrade": "Go premium for unlimited tutoring.",
-                },
+                {"error": "Previous message still processing — try again."},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
+        try:
+            remaining = services.remaining_today(request.user)
+            if remaining is not None and remaining <= 0:
+                return Response(
+                    {
+                        "error": "Daily message limit reached.",
+                        "limit": services.daily_limit(request.user),
+                        "upgrade": "Go premium for unlimited tutoring.",
+                    },
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
 
-        user_message = TutorMessage.objects.create(
-            session=session, role=TutorMessage.Role.USER, content=content
-        )
+            user_message = TutorMessage.objects.create(
+                session=session, role=TutorMessage.Role.USER, content=content
+            )
+        finally:
+            # Quota is counted from the persisted message, so the lock only
+            # needs to cover check + create — not the slow model call.
+            cache.delete(lock_key)
         if not session.title:
             session.title = content[:80]
         session.save(update_fields=["title", "updated_at"])

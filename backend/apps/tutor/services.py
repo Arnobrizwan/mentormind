@@ -16,6 +16,7 @@ import json
 import os
 import urllib.request
 
+from django.conf import settings
 from django.utils import timezone
 
 from apps.settings_engine.services import get_setting
@@ -23,7 +24,9 @@ from apps.settings_engine.services import get_setting
 from .models import TutorMessage
 
 DEFAULT_DAILY_LIMIT = 10
-MODEL_TIMEOUT_SECONDS = 60
+# Keep this short — the request handler blocks for the full duration when
+# the model server hangs.
+MODEL_TIMEOUT_SECONDS = int(os.getenv("TUTOR_MODEL_TIMEOUT_SECONDS", "15"))
 HISTORY_WINDOW = 10
 
 
@@ -56,10 +59,14 @@ def remaining_today(user):
 
 def _post_json(url, payload, timeout=MODEL_TIMEOUT_SECONDS):
     """Tiny JSON-over-HTTP client — kept separate so tests can stub it."""
+    headers = {"Content-Type": "application/json"}
+    # The ml-service requires its shared X-API-Key when ML_API_KEY is set
+    if getattr(settings, "ML_API_KEY", ""):
+        headers["X-API-Key"] = settings.ML_API_KEY
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:

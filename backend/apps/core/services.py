@@ -107,7 +107,8 @@ def _leaderboard_from_redis(course_id, limit):
             entries.append(
                 {
                     "rank": rank,
-                    "student": user.display_name or user.email.split("@")[0],
+                    # Public endpoint — never leak the email local-part as a name
+                    "student": user.display_name or f"Student #{user.id}",
                     "best_score": round(score, 2),
                 }
             )
@@ -122,7 +123,6 @@ def _leaderboard_from_db(course_id, limit):
         .values(
             "enrollment__student_id",
             "enrollment__student__display_name",
-            "enrollment__student__email",
         )
         .annotate(best_score=Max("score"), attempts=Count("id"))
         .order_by("-best_score")[:limit]
@@ -130,8 +130,9 @@ def _leaderboard_from_db(course_id, limit):
     return [
         {
             "rank": rank,
+            # Public endpoint — never leak the email local-part as a name
             "student": row["enrollment__student__display_name"]
-            or row["enrollment__student__email"].split("@")[0],
+            or f"Student #{row['enrollment__student_id']}",
             "best_score": round(row["best_score"], 2),
         }
         for rank, row in enumerate(rows, start=1)

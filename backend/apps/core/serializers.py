@@ -1,9 +1,15 @@
+import uuid
+
+from django.db.models import Max
 from rest_framework import serializers
 
 from apps.accounts.serializers import UserSerializer
+from .images import sniff_image_type
 from .models import Course, Enrollment, Lesson, Quiz, QuizAttempt, QuizQuestion
 
 LESSON_LOCKED_MESSAGE = "Enroll in this course to unlock this lesson's content."
+
+COVER_IMAGE_MAX_MB = 2
 
 
 class LessonSerializer(serializers.ModelSerializer):
@@ -21,6 +27,23 @@ class LessonSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("id", "created_at", "updated_at")
+
+    def validate(self, data):
+        # unique_together(course, order) would otherwise surface as a 500
+        course = data.get("course") or (self.instance.course if self.instance else None)
+        if "order" in data:
+            clash = Lesson.objects.filter(course=course, order=data["order"])
+            if self.instance:
+                clash = clash.exclude(pk=self.instance.pk)
+            if clash.exists():
+                raise serializers.ValidationError(
+                    {"order": "This course already has a lesson at this position."}
+                )
+        elif not self.instance and course:
+            # Auto-append to the end when no explicit position is given
+            current_max = course.lessons.aggregate(m=Max("order"))["m"]
+            data["order"] = (current_max or 0) + 1
+        return data
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
@@ -128,6 +151,25 @@ class CourseSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("id", "instructor", "created_at", "updated_at")
+
+    def validate_cover_image(self, file):
+        # Same hardening as avatars: size cap, magic-byte sniff, and a
+        # server-generated filename (never trust the client's).
+        if not file:
+            return file
+        if file.size > COVER_IMAGE_MAX_MB * 1024 * 1024:
+            raise serializers.ValidationError(
+                f"Cover image must be {COVER_IMAGE_MAX_MB} MB or smaller."
+            )
+        header = file.read(16)
+        file.seek(0)
+        ext = sniff_image_type(header)
+        if ext is None:
+            raise serializers.ValidationError(
+                "Cover image must be a JPEG, PNG, GIF or WebP image."
+            )
+        file.name = f"{uuid.uuid4().hex}.{ext}"
+        return file
 
 
 class QuizAttemptSerializer(serializers.ModelSerializer):

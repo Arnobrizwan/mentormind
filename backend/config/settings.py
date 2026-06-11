@@ -44,6 +44,8 @@ INSTANCE_NAME = env("INSTANCE_NAME")
 
 # ML microservice base URL (probed by /api/v1/system/)
 ML_SERVICE_URL = env("ML_SERVICE_URL", default="")
+# Shared secret sent as X-API-Key on every ml-service call (empty = no auth)
+ML_API_KEY = env("ML_API_KEY", default="")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -187,6 +189,8 @@ REST_FRAMEWORK = {
         # make assertions flaky; live in every real process.
         "anon": None if _RUNNING_TESTS else env("THROTTLE_ANON", default="60/min"),
         "user": None if _RUNNING_TESTS else env("THROTTLE_USER", default="240/min"),
+        # Tight scope for credential endpoints — slows brute-force logins
+        "auth": None if _RUNNING_TESTS else env("THROTTLE_AUTH", default="10/min"),
     },
 }
 

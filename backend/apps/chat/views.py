@@ -17,7 +17,8 @@ class CourseChatHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, slug):
-        if not flag_enabled("chat"):
+        # Absent flag means enabled — consistent with the other features
+        if not flag_enabled("chat", default=True):
             return Response(
                 {"detail": "Chat is currently disabled."},
                 status=status.HTTP_403_FORBIDDEN,

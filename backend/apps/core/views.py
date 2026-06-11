@@ -204,15 +204,22 @@ class LessonViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Filter lessons based on active course filtering or enrollment
         queryset = Lesson.objects.select_related("course")
 
-        # If user is instructor/staff, show draft and published
-        if is_instructor(user):
+        # Staff see everything
+        if user.is_staff or user.is_superuser:
             return queryset
 
-        # Standard students only see published lessons in enrolled/published courses
-        return queryset.filter(is_published=True)
+        # Published lessons of published courses the user is enrolled in
+        enrolled = models.Q(
+            is_published=True,
+            course__is_published=True,
+            course__enrollments__student=user,
+        )
+        # Instructors additionally manage their own courses' lessons (drafts included)
+        if is_instructor(user):
+            return queryset.filter(models.Q(course__instructor=user) | enrolled).distinct()
+        return queryset.filter(enrolled).distinct()
 
     def perform_create(self, serializer):
         course = serializer.validated_data["course"]
@@ -231,6 +238,29 @@ class QuizViewSet(viewsets.ModelViewSet):
         if self.action in ["list", "retrieve", "submit"]:
             return [IsAuthenticated(), IsEnrolledStudentOrInstructor()]
         return [IsInstructor()]
+
+    def get_queryset(self):
+        user = self.request.user
+        # Explicit ordering: Quiz has no Meta.ordering and paginated lists
+        # need a stable one
+        queryset = (
+            Quiz.objects.select_related("course")
+            .prefetch_related("questions")
+            .order_by("id")
+        )
+
+        # Staff see everything
+        if user.is_staff or user.is_superuser:
+            return queryset
+
+        # Quizzes of published courses the user is enrolled in
+        enrolled = models.Q(
+            course__is_published=True, course__enrollments__student=user
+        )
+        # Instructors additionally manage their own courses' quizzes
+        if is_instructor(user):
+            return queryset.filter(models.Q(course__instructor=user) | enrolled).distinct()
+        return queryset.filter(enrolled).distinct()
 
     def perform_create(self, serializer):
         course = serializer.validated_data["course"]
@@ -260,12 +290,38 @@ class QuizViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Attempt cap — a SiteSetting so operators tune it live (dynamic-first)
+        from apps.settings_engine.services import get_setting
+
+        max_attempts = get_setting("quiz_max_attempts")
+        if not isinstance(max_attempts, int) or max_attempts < 1:
+            max_attempts = 3
+        attempts_so_far = (
+            QuizAttempt.objects.using("default")
+            .filter(enrollment=enrollment, quiz=quiz)
+            .count()
+        )
+        if attempts_so_far >= max_attempts:
+            return Response(
+                {"error": f"Attempt limit reached ({max_attempts} per quiz)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         submitted_answers = request.data.get("answers", {})
+        if not isinstance(submitted_answers, dict):
+            return Response(
+                {"error": "answers must be an object mapping question id to option index."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         correct_answers = 0
         for q in questions:
             ans = submitted_answers.get(str(q.id), submitted_answers.get(q.id))
-            if ans is not None and int(ans) == q.correct_option_index:
-                correct_answers += 1
+            try:
+                # Non-numeric answers count as wrong, not as a server error
+                if ans is not None and int(ans) == q.correct_option_index:
+                    correct_answers += 1
+            except (TypeError, ValueError):
+                continue
 
         score = round((correct_answers / total_questions) * 100, 2)
 
@@ -383,7 +439,13 @@ class SystemStatusView(APIView):
             def check_ml():
                 import urllib.request
 
-                with urllib.request.urlopen(f"{ml_url.rstrip('/')}/healthz", timeout=2) as res:
+                headers = {}
+                if getattr(settings, "ML_API_KEY", ""):
+                    headers["X-API-Key"] = settings.ML_API_KEY
+                req = urllib.request.Request(
+                    f"{ml_url.rstrip('/')}/healthz", headers=headers
+                )
+                with urllib.request.urlopen(req, timeout=2) as res:
                     assert res.status == 200
 
             probe("ml_service", check_ml)

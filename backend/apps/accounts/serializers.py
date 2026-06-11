@@ -40,6 +40,8 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "email",
             "avatar",
+            # Set only by the avatar upload endpoint — not client-writable
+            "avatar_url",
             "roles",
             "is_staff",
             "is_premium",

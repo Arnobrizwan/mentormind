@@ -4,8 +4,11 @@ from django.contrib.auth import get_user_model
 from rest_framework import generics, permissions, status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
+from apps.core.images import sniff_image_type  # shared magic-byte sniffer
 from apps.settings_engine.services import get_setting
 
 from .serializers import RegisterSerializer, UserSerializer
@@ -14,30 +17,18 @@ User = get_user_model()
 
 DEFAULT_AVATAR_MB = 5
 
-# Magic-byte signatures — the Content-Type header is client-controlled and
-# trivially spoofed, so we sniff the actual file header instead.
-_IMAGE_SIGNATURES = {
-    b"\xff\xd8\xff": "jpg",
-    b"\x89PNG\r\n\x1a\n": "png",
-    b"GIF87a": "gif",
-    b"GIF89a": "gif",
-    b"RIFF": "webp",  # RIFF....WEBP — verified below
-}
-
 
 def max_avatar_mb() -> int:
     configured = get_setting("avatar-max-mb")
     return configured if isinstance(configured, int) and configured > 0 else DEFAULT_AVATAR_MB
 
 
-def sniff_image_type(header: bytes) -> str | None:
-    """Return a safe extension when `header` is a real raster image, else None."""
-    for signature, ext in _IMAGE_SIGNATURES.items():
-        if header.startswith(signature):
-            if ext == "webp" and header[8:12] != b"WEBP":
-                continue
-            return ext
-    return None
+class ThrottledTokenObtainPairView(TokenObtainPairView):
+    """Login endpoint with its own tight throttle ('auth' scope) — back-
+    pressure against credential stuffing and brute force."""
+
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth"
 
 
 class RegisterView(generics.CreateAPIView):

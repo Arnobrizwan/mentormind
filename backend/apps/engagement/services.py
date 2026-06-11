@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from django.conf import settings
+from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -35,7 +37,16 @@ def award_points(user, action, points=None):
         return None
     event = PointsEvent.objects.create(user=user, action=action, points=value)
     DailyActivity.objects.get_or_create(user=user, date=timezone.localdate())
-    check_badges(user)
+
+    # Badge checks run on the worker, after this transaction lands. Eager
+    # mode (tests, laptop dev) dispatches inline — on_commit never fires
+    # inside the test runner's wrapping transaction.
+    from .tasks import check_badges_for_user
+
+    if settings.CELERY_TASK_ALWAYS_EAGER:
+        check_badges_for_user.delay(user.id, action)
+    else:
+        transaction.on_commit(lambda: check_badges_for_user.delay(user.id, action))
     return event
 
 
@@ -63,10 +74,13 @@ def current_streak(user):
 def claim_daily_login(user):
     """Idempotent once-per-day login reward."""
     today = timezone.localdate()
-    already = PointsEvent.objects.filter(
+    # Atomic guard: unique_together(user, date) means exactly one concurrent
+    # claim creates today's row. When the day is already active (any earlier
+    # action creates the row too), the ledger check below decides.
+    _, created = DailyActivity.objects.get_or_create(user=user, date=today)
+    if not created and PointsEvent.objects.filter(
         user=user, action="daily_login", created_at__date=today
-    ).exists()
-    if already:
+    ).exists():
         return False, 0
     event = award_points(user, "daily_login")
     return True, event.points if event else 0
@@ -82,14 +96,15 @@ def weekly_leaderboard(limit=10):
     since = timezone.now() - timedelta(days=7)
     rows = (
         PointsEvent.objects.filter(created_at__gte=since)
-        .values("user_id", "user__display_name", "user__email")
+        .values("user_id", "user__display_name")
         .annotate(points=Sum("points"))
         .order_by("-points")[:limit]
     )
     return [
         {
             "rank": rank,
-            "student": row["user__display_name"] or row["user__email"].split("@")[0],
+            # Public endpoint — never leak the email local-part as a name
+            "student": row["user__display_name"] or f"Student #{row['user_id']}",
             "points": row["points"],
         }
         for rank, row in enumerate(rows, start=1)
@@ -128,13 +143,36 @@ def _metric(user, rule):
     return 0
 
 
-def check_badges(user):
-    """Award any badges whose threshold the user has now crossed."""
+# Which badge rules a points action can move. Every action bumps the points
+# total and may extend the streak; the prefix adds the action-specific rules.
+_ACTION_RULE_PREFIXES = {
+    "quiz": {Badge.Rule.QUIZZES_TAKEN, Badge.Rule.PERFECT_QUIZZES},
+    "lesson": {Badge.Rule.LESSONS_COMPLETED},
+    "enrollment": {Badge.Rule.ENROLLMENTS},
+    "chat": {Badge.Rule.CHAT_MESSAGES},
+    "tutor": {Badge.Rule.TUTOR_QUESTIONS},
+}
+
+
+def _rules_for_action(action):
+    rules = {Badge.Rule.POINTS_TOTAL, Badge.Rule.STREAK_DAYS}
+    for prefix, extra in _ACTION_RULE_PREFIXES.items():
+        if action.startswith(prefix):
+            rules |= extra
+    return rules
+
+
+def check_badges(user, action=None):
+    """Award any badges whose threshold the user has now crossed. When the
+    triggering action is known, only its affected rules are evaluated."""
     earned_ids = set(
         AwardedBadge.objects.filter(user=user).values_list("badge_id", flat=True)
     )
+    candidates = Badge.objects.exclude(id__in=earned_ids)
+    if action:
+        candidates = candidates.filter(rule__in=_rules_for_action(action))
     fresh = []
-    for badge in Badge.objects.exclude(id__in=earned_ids):
+    for badge in candidates:
         if _metric(user, badge.rule) >= badge.threshold:
             AwardedBadge.objects.get_or_create(user=user, badge=badge)
             fresh.append(badge)
