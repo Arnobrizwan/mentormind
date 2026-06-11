@@ -1,8 +1,22 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, retry, timer } from 'rxjs';
 
 import { Paginated } from './models';
+
+/**
+ * Retry policy for idempotent GETs — absorbs transient network blips and
+ * 5xx hiccups, but never retries 4xx client errors (401 is already handled
+ * by the auth interceptor's refresh-and-retry).
+ */
+const GET_RETRY = {
+  count: 2,
+  delay: (error: unknown) => {
+    const status = error instanceof HttpErrorResponse ? error.status : 0;
+    if (status >= 400 && status < 500) throw error;
+    return timer(400);
+  },
+};
 
 export interface TutorMessage {
   id: number;
@@ -35,12 +49,14 @@ export class TutorApi {
 
   listSessions(): Promise<TutorSession[]> {
     return firstValueFrom(
-      this.http.get<Paginated<TutorSession>>('/api/v1/tutor/sessions/'),
+      this.http.get<Paginated<TutorSession>>('/api/v1/tutor/sessions/').pipe(retry(GET_RETRY)),
     ).then((page) => page.results);
   }
 
   getSession(id: number): Promise<TutorSession> {
-    return firstValueFrom(this.http.get<TutorSession>(`/api/v1/tutor/sessions/${id}/`));
+    return firstValueFrom(
+      this.http.get<TutorSession>(`/api/v1/tutor/sessions/${id}/`).pipe(retry(GET_RETRY)),
+    );
   }
 
   createSession(subject: string, level: string): Promise<TutorSession> {
@@ -50,7 +66,9 @@ export class TutorApi {
   }
 
   quota(): Promise<TutorQuota> {
-    return firstValueFrom(this.http.get<TutorQuota>('/api/v1/tutor/sessions/quota/'));
+    return firstValueFrom(
+      this.http.get<TutorQuota>('/api/v1/tutor/sessions/quota/').pipe(retry(GET_RETRY)),
+    );
   }
 
   send(

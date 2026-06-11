@@ -88,6 +88,13 @@ export class AuthPage {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  constructor() {
+    // The staff guard bounces signed-in non-staff users here.
+    if (this.route.snapshot.queryParamMap.has('denied')) {
+      this.error.set('access denied — this account does not have operator rights.');
+    }
+  }
+
   protected async submit(event: Event): Promise<void> {
     event.preventDefault();
     if (this.busy()) return;

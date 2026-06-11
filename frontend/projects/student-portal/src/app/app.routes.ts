@@ -5,37 +5,45 @@ import { authGuard } from './core/auth-guard';
 export const routes: Routes = [
   {
     path: '',
+    title: 'Course Catalog · MentorMinds',
     loadComponent: () => import('./pages/catalog').then((m) => m.CatalogPage),
   },
   {
     path: 'auth',
+    title: 'Sign In · MentorMinds',
     loadComponent: () => import('./pages/auth-page').then((m) => m.AuthPage),
   },
   {
     path: 'system',
+    title: 'System Status · MentorMinds',
     loadComponent: () => import('./pages/system').then((m) => m.SystemPage),
   },
   {
     path: 'dashboard',
+    title: 'Dashboard · MentorMinds',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/dashboard').then((m) => m.DashboardPage),
   },
   {
     path: 'tutor',
+    title: 'AI Tutor · MentorMinds',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/tutor').then((m) => m.TutorPage),
   },
   {
     path: 'courses/:slug',
+    title: 'Course · MentorMinds',
     loadComponent: () => import('./pages/course-detail').then((m) => m.CourseDetailPage),
   },
   {
     path: 'courses/:slug/lessons/:id',
+    title: 'Lesson · MentorMinds',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/lesson').then((m) => m.LessonPage),
   },
   {
     path: 'courses/:slug/quiz/:id',
+    title: 'Quiz · MentorMinds',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/quiz').then((m) => m.QuizPage),
   },

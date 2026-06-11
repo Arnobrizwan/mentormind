@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { from, switchMap, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
+import { API_BASE_URL } from './api-base-url';
 import { AuthService } from './auth';
 
 const TOKEN_URLS = ['/api/v1/auth/token/'];
@@ -11,14 +12,22 @@ function withBearer(req: HttpRequest<unknown>, token: string): HttpRequest<unkno
   return req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
 }
 
+/**
+ * Attaches the JWT to API calls and transparently retries once after a
+ * refresh on 401. Also prepends API_BASE_URL to relative /api requests so
+ * the same code works from non-web origins — on the web the base is '' and
+ * requests stay same-origin relative.
+ */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
+  const baseUrl = inject(API_BASE_URL);
 
   const isApi = req.url.startsWith('/api/');
   const isTokenEndpoint = TOKEN_URLS.some((url) => req.url.startsWith(url));
-  const token = auth.accessToken;
 
-  const outgoing = isApi && !isTokenEndpoint && token ? withBearer(req, token) : req;
+  const target = isApi && baseUrl ? req.clone({ url: `${baseUrl}${req.url}` }) : req;
+  const token = auth.accessToken;
+  const outgoing = isApi && !isTokenEndpoint && token ? withBearer(target, token) : target;
 
   return next(outgoing).pipe(
     catchError((err: unknown) => {
@@ -33,7 +42,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           if (!refreshed || !fresh) {
             return throwError(() => err);
           }
-          return next(withBearer(req, fresh));
+          return next(withBearer(target, fresh));
         }),
       );
     }),

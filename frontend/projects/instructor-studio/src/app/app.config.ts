@@ -8,6 +8,7 @@ import {
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
+import { API_BASE_URL } from './core/api-base-url';
 import { AuthService } from './core/auth';
 import { authInterceptor } from './core/auth-interceptor';
 import { SiteConfig } from './core/site-config';
@@ -17,7 +18,13 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideHttpClient(withInterceptors([authInterceptor])),
-    provideAppInitializer(() => inject(AuthService).restore()),
+    // API origin override point — '' keeps requests same-origin relative.
+    { provide: API_BASE_URL, useValue: '' },
+    // Kick off the JWT session restore WITHOUT blocking the first render —
+    // auth guards await AuthService.whenReady() before deciding.
+    provideAppInitializer(() => {
+      void inject(AuthService).restore();
+    }),
     provideAppInitializer(() => inject(SiteConfig).load()),
   ],
 };

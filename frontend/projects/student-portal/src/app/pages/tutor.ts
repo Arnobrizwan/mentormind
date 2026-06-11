@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 
 import { AuthService } from '../core/auth';
+import { apiErrorMessage } from '../core/errors';
 import { TutorApi, TutorMessage, TutorQuota, TutorSession } from '../core/tutor';
 
 const SUBJECTS = ['Math', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'General'];
@@ -66,24 +67,33 @@ const STARTERS = [
           }
         }
 
-        <div class="thread">
+        @if (loadError(); as message) {
+          <p class="error-note" role="alert">
+            {{ message }}
+            <button type="button" class="retry" (click)="reload()">retry</button>
+          </p>
+        }
+
+        <div class="thread" aria-live="polite">
           @for (message of messages(); track message.id) {
             <div class="bubble" [class.bubble--mine]="message.role === 'user'">
               <div class="bubble__content">{{ message.content }}</div>
               @if (message.role === 'assistant') {
                 <div class="bubble__tools">
-                  <button type="button" (click)="copy(message)" title="Copy">⧉</button>
+                  <button type="button" (click)="copy(message)" title="Copy" aria-label="Copy message">⧉</button>
                   <button
                     type="button"
                     [class.is-picked]="message.feedback === 1"
                     (click)="rate(message, 1)"
                     title="Helpful"
+                    aria-label="Rate answer as helpful"
                   >👍</button>
                   <button
                     type="button"
                     [class.is-picked]="message.feedback === -1"
                     (click)="rate(message, -1)"
                     title="Not helpful"
+                    aria-label="Rate answer as not helpful"
                   >👎</button>
                 </div>
               }
@@ -116,6 +126,7 @@ const STARTERS = [
           <input
             type="text"
             placeholder="Ask your tutor…"
+            aria-label="Ask your tutor"
             [value]="draft()"
             (input)="draft.set($any($event.target).value)"
             [disabled]="thinking()"
@@ -356,6 +367,7 @@ export class TutorPage {
   protected readonly thinking = signal(false);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly loadError = signal<string | null>(null);
 
   private lastFailed = '';
 
@@ -363,13 +375,20 @@ export class TutorPage {
     void this.bootstrap();
   }
 
+  /** Re-runs the initial sessions/quota load after a visible failure. */
+  protected reload(): void {
+    void this.bootstrap();
+  }
+
   private async bootstrap(): Promise<void> {
-    const [sessions, quota] = await Promise.all([
-      this.api.listSessions().catch(() => []),
-      this.api.quota().catch(() => null),
-    ]);
-    this.sessions.set(sessions);
-    this.quota.set(quota);
+    this.loadError.set(null);
+    try {
+      const [sessions, quota] = await Promise.all([this.api.listSessions(), this.api.quota()]);
+      this.sessions.set(sessions);
+      this.quota.set(quota);
+    } catch (err) {
+      this.loadError.set(apiErrorMessage(err, 'Could not load your tutor sessions.'));
+    }
   }
 
   protected newChat(): void {
@@ -379,12 +398,17 @@ export class TutorPage {
   }
 
   protected async openSession(id: number): Promise<void> {
-    const full = await this.api.getSession(id);
-    this.session.set(full);
-    this.subject.set(full.subject || SUBJECTS[0]);
-    this.level.set(full.level || LEVELS[1]);
-    this.messages.set(full.messages ?? []);
-    this.error.set(null);
+    try {
+      const full = await this.api.getSession(id);
+      this.session.set(full);
+      this.subject.set(full.subject || SUBJECTS[0]);
+      this.level.set(full.level || LEVELS[1]);
+      this.messages.set(full.messages ?? []);
+      this.error.set(null);
+      this.loadError.set(null);
+    } catch (err) {
+      this.loadError.set(apiErrorMessage(err, 'Could not open that session.'));
+    }
   }
 
   protected onSubmit(event: Event): void {
@@ -407,6 +431,9 @@ export class TutorPage {
       this.messages.update((all) => [...all, result.user_message, result.assistant_message]);
       this.draft.set('');
       this.lastFailed = '';
+      // Ancillary refreshes after a successful send: deliberately keep the
+      // last-known values on failure instead of erroring a successful chat
+      // turn (the GETs already retry transient failures at the service layer).
       this.quota.set(await this.api.quota().catch(() => this.quota()));
       this.sessions.set(await this.api.listSessions().catch(() => this.sessions()));
     } catch (err) {
@@ -415,7 +442,7 @@ export class TutorPage {
         this.quota.set(await this.api.quota().catch(() => this.quota()));
         this.error.set('Daily limit reached — upgrade to keep going.');
       } else {
-        this.error.set('The tutor had trouble answering. ');
+        this.error.set(apiErrorMessage(err, 'The tutor had trouble answering.'));
       }
     } finally {
       this.thinking.set(false);
@@ -425,9 +452,11 @@ export class TutorPage {
   protected async rate(message: TutorMessage, value: 1 | -1): Promise<void> {
     const active = this.session();
     if (!active) return;
-    const updated = await this.api.feedback(active.id, message.id, value).catch(() => null);
-    if (updated) {
+    try {
+      const updated = await this.api.feedback(active.id, message.id, value);
       this.messages.update((all) => all.map((m) => (m.id === updated.id ? updated : m)));
+    } catch (err) {
+      this.error.set(apiErrorMessage(err, 'Could not record your feedback — try again.'));
     }
   }
 
@@ -442,6 +471,8 @@ export class TutorPage {
       await this.auth.loadMe();
       this.quota.set(await this.api.quota());
       this.error.set(null);
+    } catch (err) {
+      this.error.set(apiErrorMessage(err, 'Upgrade failed — try again.'));
     } finally {
       this.busy.set(false);
     }

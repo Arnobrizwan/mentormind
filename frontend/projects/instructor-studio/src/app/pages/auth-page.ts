@@ -98,6 +98,13 @@ export class AuthPage {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  constructor() {
+    // The instructor guard bounces signed-in non-instructors here.
+    if (this.route.snapshot.queryParamMap.has('denied')) {
+      this.error.set('Access denied — this account does not have instructor access.');
+    }
+  }
+
   protected async submit(event: Event): Promise<void> {
     event.preventDefault();
     if (this.busy()) return;

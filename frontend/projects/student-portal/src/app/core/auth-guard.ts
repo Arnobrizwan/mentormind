@@ -3,9 +3,14 @@ import { CanActivateFn, Router } from '@angular/router';
 
 import { AuthService } from './auth';
 
-export const authGuard: CanActivateFn = (_route, state) => {
+/**
+ * Requires a signed-in user. Waits for the boot-time session restore to
+ * finish (restore() runs without blocking public routes) before deciding.
+ */
+export const authGuard: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  await auth.whenReady();
   return auth.isLoggedIn()
     ? true
     : router.createUrlTree(['/auth'], { queryParams: { next: state.url } });
