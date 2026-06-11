@@ -23,6 +23,7 @@ export interface QuizQuestion {
   quiz: number;
   text: string;
   options: string[];
+  topic?: string;
   order: number;
   correct_option_index?: number;
 }
@@ -77,4 +78,134 @@ export interface Paginated<T> {
   next: string | null;
   previous: string | null;
   results: T[];
+}
+
+export interface ShortAnswerQuestion {
+  id: number;
+  course: number;
+  lesson: number | null;
+  prompt: string;
+  topic?: string;
+  mark_scheme: string;
+  max_score: number;
+  is_published: boolean;
+  order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShortAnswerSubmission {
+  id: number;
+  question: number;
+  enrollment: number;
+  student_email: string;
+  student_name: string;
+  answer_text: string;
+  score: number;
+  max_score: number;
+  criteria_met: string[];
+  criteria_missing: string[];
+  feedback: string;
+  engine: 'llm' | 'heuristic';
+  created_at: string;
+}
+
+export type ProctorVerdict = 'ok' | 'no_face' | 'multiple_faces';
+
+export interface ProctorLog {
+  id: number;
+  faces: number;
+  verdict: ProctorVerdict;
+  created_at: string;
+}
+
+export interface ProctorSession {
+  enrollment: number;
+  student_email: string;
+  student_name: string;
+  violations: number;
+  logs: ProctorLog[];
+}
+
+export type RiskLevel = 'high' | 'medium';
+export type RiskTicketStatus = 'open' | 'contacted' | 'resolved';
+
+export interface RiskFeatures {
+  progress_pct: number;
+  days_since_last_login: number;
+  quiz_avg: number;
+  lessons_per_week: number;
+  chat_messages: number;
+}
+
+export interface RiskTicket {
+  id: number;
+  student: number;
+  student_email: string;
+  student_name: string;
+  risk: RiskLevel;
+  probability: number;
+  features: RiskFeatures;
+  status: RiskTicketStatus;
+  note: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RiskScanQueued {
+  queued: boolean;
+  task_id: string;
+}
+
+export type FlashcardSource = 'llm' | 'heuristic' | 'instructor';
+
+export interface Flashcard {
+  id: number;
+  course: number;
+  course_title: string;
+  lesson: number | null;
+  topic: string;
+  front: string;
+  back: string;
+  source: FlashcardSource;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Async generation acknowledgement (202) from /revision/generate/. */
+export interface GenerationQueued {
+  queued: boolean;
+  task_id: string;
+}
+
+export interface QuizDraftQuestion {
+  text: string;
+  options: string[];
+  correct_option_index: number;
+}
+
+/** Synchronous AI quiz draft from /quizzes/generate-draft/ — nothing is persisted. */
+export interface QuizDraft {
+  lesson: number;
+  course: number;
+  suggested_title: string;
+  questions: QuizDraftQuestion[];
+  engine: 'llm' | 'heuristic';
+}
+
+export interface ReadinessComponents {
+  progress_pct: number;
+  quiz_avg: number;
+  practice_volume: number;
+  accuracy: number;
+}
+
+/** Per-student exam readiness (0-100), sorted weakest-first by the API. */
+export interface ReadinessRow {
+  enrollment: number;
+  student_email: string;
+  student_name: string;
+  readiness: number;
+  components: ReadinessComponents;
 }

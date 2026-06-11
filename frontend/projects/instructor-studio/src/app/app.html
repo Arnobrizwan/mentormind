@@ -6,6 +6,14 @@
     </a>
     <div class="topbar__right">
       @if (auth.user(); as user) {
+        @if (auth.isInstructor()) {
+          <nav class="topbar__nav" aria-label="Studio">
+            <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }" class="tag">
+              Courses
+            </a>
+            <a routerLink="/student-success" routerLinkActive="is-active" class="tag">Student Success</a>
+          </nav>
+        }
         <span class="tag">{{ user.display_name || user.email }}</span>
         @if (!auth.isInstructor()) {
           <span class="tag topbar__warn">no instructor role</span>

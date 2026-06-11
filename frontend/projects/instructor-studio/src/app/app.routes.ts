@@ -15,6 +15,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/auth-page').then((m) => m.AuthPage),
   },
   {
+    path: 'student-success',
+    title: 'Student Success · MentorMinds Studio',
+    canActivate: [instructorGuard],
+    loadComponent: () => import('./pages/student-success').then((m) => m.StudentSuccessPage),
+  },
+  {
     path: 'courses/:slug',
     title: 'Course Workbench · MentorMinds Studio',
     canActivate: [instructorGuard],

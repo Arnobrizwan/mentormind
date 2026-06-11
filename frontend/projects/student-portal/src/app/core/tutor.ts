@@ -74,13 +74,25 @@ export class TutorApi {
   send(
     sessionId: number,
     content: string,
+    image?: File,
   ): Promise<{ user_message: TutorMessage; assistant_message: TutorMessage; remaining: number | null }> {
+    // With an attachment we post multipart FormData; the browser sets the
+    // Content-Type (with boundary) itself — never set it manually.
+    let body: FormData | { content: string };
+    if (image) {
+      const form = new FormData();
+      form.append('content', content);
+      form.append('image', image, image.name);
+      body = form;
+    } else {
+      body = { content };
+    }
     return firstValueFrom(
       this.http.post<{
         user_message: TutorMessage;
         assistant_message: TutorMessage;
         remaining: number | null;
-      }>(`/api/v1/tutor/sessions/${sessionId}/messages/`, { content }),
+      }>(`/api/v1/tutor/sessions/${sessionId}/messages/`, body),
     );
   }
 

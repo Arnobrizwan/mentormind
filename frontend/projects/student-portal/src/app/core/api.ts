@@ -56,6 +56,24 @@ export class LearningApi {
     return updated;
   }
 
+  /**
+   * Uploads a single proctoring webcam frame for an in-progress quiz.
+   * Sent as multipart FormData — the browser sets the boundary itself.
+   */
+  sendProctorFrame(
+    quizId: number,
+    image: Blob,
+  ): Promise<{ verdict: 'ok' | 'no_face' | 'multiple_faces'; faces: number }> {
+    const form = new FormData();
+    form.append('image', image, 'frame.jpg');
+    return firstValueFrom(
+      this.http.post<{ verdict: 'ok' | 'no_face' | 'multiple_faces'; faces: number }>(
+        `/api/v1/quizzes/${quizId}/proctor-frame/`,
+        form,
+      ),
+    );
+  }
+
   async submitQuiz(quizId: number, answers: Record<number, number>): Promise<QuizAttempt> {
     const attempt = await firstValueFrom(
       this.http.post<QuizAttempt>(`/api/v1/quizzes/${quizId}/submit/`, { answers }),

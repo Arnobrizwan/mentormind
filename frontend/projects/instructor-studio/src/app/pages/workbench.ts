@@ -4,13 +4,17 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { StudioApi } from '../core/api';
 import { apiErrorMessage } from '../core/errors';
-import { Course, Enrollment, Lesson, Quiz } from '../core/models';
+import { Course, Enrollment, Lesson, Quiz, ReadinessRow } from '../core/models';
+import { FlashcardsTab } from './flashcards-tab';
+import { ProctoringTab } from './proctoring-tab';
+import { QuizAiDraft } from './quiz-ai-draft';
+import { ShortAnswersTab } from './short-answers-tab';
 
-type Tab = 'lessons' | 'quizzes' | 'roster';
+type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessions' | 'roster';
 
 @Component({
   selector: 'st-workbench',
-  imports: [RouterLink],
+  imports: [RouterLink, ShortAnswersTab, ProctoringTab, FlashcardsTab, QuizAiDraft],
   template: `
     @if (loading()) {
       <p class="tag">Unrolling the blueprint…</p>
@@ -130,6 +134,9 @@ type Tab = 'lessons' | 'quizzes' | 'roster';
                   @for (question of quiz.questions; track question.id) {
                     <li>
                       <span>{{ question.text }}</span>
+                      @if (question.topic) {
+                        <span class="tag topic-tag">{{ question.topic }}</span>
+                      }
                       <span class="tag">
                         ✓ {{ question.options[question.correct_option_index ?? 0] }}
                       </span>
@@ -142,6 +149,16 @@ type Tab = 'lessons' | 'quizzes' | 'roster';
                   <label class="field">
                     <span class="tag">New question</span>
                     <input type="text" required [value]="questionText()[quiz.id] || ''" (input)="setQuestionText(quiz.id, $any($event.target).value)" />
+                  </label>
+                  <label class="field">
+                    <span class="tag">Topic (optional)</span>
+                    <input
+                      type="text"
+                      maxlength="100"
+                      placeholder="Kinematics"
+                      [value]="questionTopic()[quiz.id] || ''"
+                      (input)="setQuestionTopic(quiz.id, $any($event.target).value)"
+                    />
                   </label>
                   <label class="field">
                     <span class="tag">Options — one per line, prefix the correct one with *</span>
@@ -157,6 +174,8 @@ type Tab = 'lessons' | 'quizzes' | 'roster';
               </div>
             }
 
+            <st-quiz-ai-draft [course]="c" (saved)="refresh()" />
+
             <div class="panel composer">
               <p class="tag">New quiz</p>
               <form (submit)="addQuiz($event)">
@@ -170,6 +189,18 @@ type Tab = 'lessons' | 'quizzes' | 'roster';
           </div>
         }
 
+        @case ('short answers') {
+          <st-short-answers-tab [course]="c" />
+        }
+
+        @case ('flashcards') {
+          <st-flashcards-tab [course]="c" />
+        }
+
+        @case ('exam sessions') {
+          <st-proctoring-tab [course]="c" />
+        }
+
         @case ('roster') {
           @if (roster().length === 0) {
             <p class="tag" style="padding: 1.2rem 0">No students enrolled yet.</p>
@@ -181,6 +212,7 @@ type Tab = 'lessons' | 'quizzes' | 'roster';
                   <th class="tag">Enrolled</th>
                   <th class="tag">Progress</th>
                   <th class="tag">Quiz attempts</th>
+                  <th class="tag">Exam readiness</th>
                 </tr>
               </thead>
               <tbody>
@@ -193,6 +225,29 @@ type Tab = 'lessons' | 'quizzes' | 'roster';
                       <span class="tag">{{ enrollment.progress_percentage }}%</span>
                     </td>
                     <td class="tag">{{ enrollment.quiz_attempts.length }}</td>
+                    <td>
+                      @if (readinessFor(enrollment.id); as r) {
+                        <div class="bar" [title]="readinessTitle(r)">
+                          <div
+                            class="bar__fill"
+                            [class.bar__fill--mid]="r.readiness >= 40 && r.readiness < 70"
+                            [class.bar__fill--low]="r.readiness < 40"
+                            [style.width.%]="r.readiness"
+                          ></div>
+                        </div>
+                        <span
+                          class="tag ready"
+                          [class.ready--ok]="r.readiness >= 70"
+                          [class.ready--mid]="r.readiness >= 40 && r.readiness < 70"
+                          [class.ready--low]="r.readiness < 40"
+                          [title]="readinessTitle(r)"
+                        >
+                          {{ r.readiness }}
+                        </span>
+                      } @else {
+                        <span class="tag">—</span>
+                      }
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -355,17 +410,38 @@ type Tab = 'lessons' | 'quizzes' | 'roster';
       height: 100%;
       background: var(--teal);
     }
+
+    .bar__fill--mid { background: var(--amber); }
+    .bar__fill--low { background: var(--red); }
+
+    .ready {
+      font-weight: 700;
+    }
+
+    .ready--ok { color: var(--teal); }
+    .ready--mid { color: var(--amber); }
+    .ready--low { color: var(--red); }
+
+    .topic-tag {
+      border: 1px solid var(--line-strong);
+      border-radius: 99px;
+      padding: 0.05rem 0.5rem;
+    }
   `,
 })
 export class WorkbenchPage {
   private readonly api = inject(StudioApi);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly tabs: Tab[] = ['lessons', 'quizzes', 'roster'];
+  protected readonly tabs: Tab[] = ['lessons', 'quizzes', 'short answers', 'flashcards', 'exam sessions', 'roster'];
   protected readonly tab = signal<Tab>('lessons');
 
   protected readonly course = signal<Course | null>(null);
   protected readonly roster = signal<Enrollment[]>([]);
+  protected readonly readinessRows = signal<ReadinessRow[]>([]);
+  private readonly readinessByEnrollment = computed(
+    () => new Map(this.readinessRows().map((row) => [row.enrollment, row])),
+  );
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -377,6 +453,7 @@ export class WorkbenchPage {
   protected readonly lessonVideo = signal('');
   protected readonly quizTitle = signal('');
   protected readonly questionText = signal<Record<number, string>>({});
+  protected readonly questionTopic = signal<Record<number, string>>({});
   protected readonly questionOptions = signal<Record<number, string>>({});
 
   constructor() {
@@ -394,6 +471,7 @@ export class WorkbenchPage {
       this.title.set(course.title);
       this.description.set(course.description);
       this.roster.set(await this.api.students(slug).catch(() => []));
+      this.readinessRows.set(await this.api.readiness(slug).catch(() => []));
     } catch {
       this.course.set(null);
     } finally {
@@ -404,6 +482,23 @@ export class WorkbenchPage {
   private async reload(): Promise<void> {
     const c = this.course();
     if (c) await this.load(c.slug);
+  }
+
+  /** Reload the course after a child tab persists something (e.g. AI quiz draft). */
+  protected refresh(): void {
+    void this.reload();
+  }
+
+  protected readinessFor(enrollmentId: number): ReadinessRow | undefined {
+    return this.readinessByEnrollment().get(enrollmentId);
+  }
+
+  protected readinessTitle(row: ReadinessRow): string {
+    const c = row.components;
+    return (
+      `Progress ${c.progress_pct}% · Quiz avg ${c.quiz_avg} · ` +
+      `Practice volume ${c.practice_volume} · Accuracy ${c.accuracy}`
+    );
   }
 
   private async run(action: () => Promise<unknown>, failure: string): Promise<void> {
@@ -488,6 +583,10 @@ export class WorkbenchPage {
     this.questionText.update((m) => ({ ...m, [quizId]: value }));
   }
 
+  protected setQuestionTopic(quizId: number, value: string): void {
+    this.questionTopic.update((m) => ({ ...m, [quizId]: value }));
+  }
+
   protected setQuestionOptions(quizId: number, value: string): void {
     this.questionOptions.update((m) => ({ ...m, [quizId]: value }));
   }
@@ -514,9 +613,11 @@ export class WorkbenchPage {
         text,
         options,
         correct_option_index: correct,
+        topic: (this.questionTopic()[quiz.id] || '').trim(),
         order: nextOrder,
       });
       this.setQuestionText(quiz.id, '');
+      this.setQuestionTopic(quiz.id, '');
       this.setQuestionOptions(quiz.id, '');
     }, 'Could not add the question.');
   }

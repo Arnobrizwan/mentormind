@@ -1,4 +1,13 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
@@ -30,6 +39,32 @@ import { SiteConfig } from '../core/site-config';
             <p class="exam__desc">{{ q.description }}</p>
           }
         </header>
+
+        @if (!result() && proctorState() !== 'idle') {
+          <aside class="proctor" aria-live="polite">
+            @if (proctorState() === 'on') {
+              <div class="proctor__status">
+                <span class="proctor__dot" aria-hidden="true"></span>
+                <span class="mono-label">Proctoring on</span>
+              </div>
+              <video
+                #proctorVideo
+                class="proctor__preview"
+                autoplay
+                muted
+                playsinline
+                aria-label="Your webcam preview"
+              ></video>
+              @if (proctorWarning(); as warning) {
+                <p class="proctor__warning" role="status">{{ warning }}</p>
+              }
+            } @else if (proctorState() === 'unavailable') {
+              <p class="proctor__notice">
+                Camera unavailable — proctoring is off. You can continue the quiz.
+              </p>
+            }
+          </aside>
+        }
 
         @if (result(); as attempt) {
           <section class="result">
@@ -123,6 +158,55 @@ import { SiteConfig } from '../core/site-config';
       color: var(--ink-soft);
       padding-bottom: 1.4rem;
       border-bottom: 2px solid var(--ink);
+    }
+
+    .proctor {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+      margin-top: 1.2rem;
+      padding: 0.7rem 0.9rem;
+      background: var(--card);
+      border: 1.5px dashed var(--line-strong);
+      border-radius: 10px;
+    }
+
+    .proctor__status {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .proctor__dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--sage);
+      animation: proctor-pulse 2s infinite;
+    }
+
+    @keyframes proctor-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    .proctor__preview {
+      width: 120px;
+      border-radius: 8px;
+      border: 1.5px solid var(--line-strong);
+      display: block;
+      background: var(--ink);
+    }
+
+    .proctor__warning {
+      color: var(--danger);
+      font-size: 0.88rem;
+    }
+
+    .proctor__notice {
+      color: var(--ink-soft);
+      font-size: 0.88rem;
     }
 
     .questions {
@@ -284,6 +368,26 @@ export class QuizPage {
 
   protected readonly answeredCount = computed(() => Object.keys(this.answers()).length);
 
+  // --- Proctoring -----------------------------------------------------------
+  private static readonly FRAME_INTERVAL_MS = 12_000;
+
+  protected readonly proctorState = signal<'idle' | 'on' | 'unavailable'>('idle');
+  private readonly proctorVerdict = signal<'ok' | 'no_face' | 'multiple_faces' | null>(null);
+  private readonly stream = signal<MediaStream | null>(null);
+  private readonly proctorVideo = viewChild<ElementRef<HTMLVideoElement>>('proctorVideo');
+  private frameTimer: number | null = null;
+
+  protected readonly proctorWarning = computed(() => {
+    switch (this.proctorVerdict()) {
+      case 'no_face':
+        return 'Make sure your face is visible.';
+      case 'multiple_faces':
+        return 'Only you should be in frame.';
+      default:
+        return null;
+    }
+  });
+
   constructor() {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const slug = params.get('slug');
@@ -293,6 +397,19 @@ export class QuizPage {
         void this.load(slug);
       }
     });
+
+    // The preview <video> lives inside an @if block, so wire the stream to it
+    // whenever both exist.
+    effect(() => {
+      const el = this.proctorVideo()?.nativeElement;
+      const stream = this.stream();
+      if (el && stream && el.srcObject !== stream) {
+        el.srcObject = stream;
+        void el.play().catch(() => undefined);
+      }
+    });
+
+    inject(DestroyRef).onDestroy(() => this.stopProctoring());
   }
 
   private async load(slug: string): Promise<void> {
@@ -304,6 +421,64 @@ export class QuizPage {
     } finally {
       this.loading.set(false);
     }
+    if (this.quiz() && !this.result()) {
+      void this.startProctoring();
+    }
+  }
+
+  private async startProctoring(): Promise<void> {
+    if (this.stream()) return;
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      this.proctorState.set('unavailable');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640 } });
+      this.stream.set(stream);
+      this.proctorState.set('on');
+      this.frameTimer = window.setInterval(
+        () => this.captureFrame(),
+        QuizPage.FRAME_INTERVAL_MS,
+      );
+    } catch {
+      // Permission denied or no camera — proctoring is optional, the quiz goes on.
+      this.proctorState.set('unavailable');
+    }
+  }
+
+  /** Fire-and-forget: a failed frame must never disrupt quiz taking. */
+  private captureFrame(): void {
+    const q = this.quiz();
+    const video = this.proctorVideo()?.nativeElement;
+    if (!q || !video || video.videoWidth === 0) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        this.api
+          .sendProctorFrame(q.id, blob)
+          .then((res) => this.proctorVerdict.set(res.verdict))
+          .catch(() => undefined);
+      },
+      'image/jpeg',
+      0.7,
+    );
+  }
+
+  private stopProctoring(): void {
+    if (this.frameTimer !== null) {
+      window.clearInterval(this.frameTimer);
+      this.frameTimer = null;
+    }
+    this.stream()?.getTracks().forEach((track) => track.stop());
+    this.stream.set(null);
+    this.proctorVerdict.set(null);
+    this.proctorState.set('idle');
   }
 
   protected letter(index: number): string {
@@ -329,6 +504,7 @@ export class QuizPage {
     this.error.set(null);
     try {
       this.result.set(await this.api.submitQuiz(q.id, this.answers()));
+      this.stopProctoring();
     } catch (err) {
       this.error.set(
         apiErrorMessage(err, 'Submission failed — are you enrolled in this course?'),
@@ -341,5 +517,6 @@ export class QuizPage {
   protected retake(): void {
     this.answers.set({});
     this.result.set(null);
+    void this.startProctoring();
   }
 }

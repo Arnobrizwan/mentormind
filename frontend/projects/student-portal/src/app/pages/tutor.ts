@@ -1,9 +1,42 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, NgZone, inject, signal } from '@angular/core';
 
 import { AuthService } from '../core/auth';
 import { apiErrorMessage } from '../core/errors';
 import { TutorApi, TutorMessage, TutorQuota, TutorSession } from '../core/tutor';
+
+/**
+ * Minimal typings for the (still prefixed in some browsers) Web Speech
+ * recognition API — TypeScript's DOM lib doesn't ship them.
+ */
+interface DictationAlternative {
+  transcript: string;
+}
+interface DictationResultEvent {
+  results: ArrayLike<ArrayLike<DictationAlternative>>;
+}
+interface DictationErrorEvent {
+  error: string;
+}
+interface Dictation {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onresult: ((event: DictationResultEvent) => void) | null;
+  onerror: ((event: DictationErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+}
+type DictationCtor = new () => Dictation;
+
+function dictationCtor(): DictationCtor | null {
+  if (typeof window === 'undefined') return null;
+  const w = window as unknown as Record<string, unknown>;
+  return (w['SpeechRecognition'] as DictationCtor | undefined) ??
+    (w['webkitSpeechRecognition'] as DictationCtor | undefined) ??
+    null;
+}
 
 const SUBJECTS = ['Math', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'General'];
 const LEVELS = ['O-Level', 'A-Level'];
@@ -80,6 +113,16 @@ const STARTERS = [
               <div class="bubble__content">{{ message.content }}</div>
               @if (message.role === 'assistant') {
                 <div class="bubble__tools">
+                  @if (ttsSupported) {
+                    <button
+                      type="button"
+                      [class.is-picked]="speakingId() === message.id"
+                      (click)="toggleSpeak(message)"
+                      [title]="speakingId() === message.id ? 'Stop reading' : 'Read aloud'"
+                      [attr.aria-label]="speakingId() === message.id ? 'Stop reading aloud' : 'Read message aloud'"
+                      [attr.aria-pressed]="speakingId() === message.id"
+                    >{{ speakingId() === message.id ? '⏹' : '🔊' }}</button>
+                  }
                   <button type="button" (click)="copy(message)" title="Copy" aria-label="Copy message">⧉</button>
                   <button
                     type="button"
@@ -122,7 +165,55 @@ const STARTERS = [
           </p>
         }
 
+        @if (attachment(); as file) {
+          <div class="attach-chip">
+            @if (previewUrl(); as url) {
+              <img class="attach-chip__thumb" [src]="url" alt="Attached image preview" />
+            }
+            <span class="attach-chip__name">{{ file.name }}</span>
+            <button
+              type="button"
+              class="attach-chip__remove"
+              (click)="clearAttachment()"
+              aria-label="Remove attached image"
+            >×</button>
+          </div>
+        }
+
         <form class="composer" (submit)="onSubmit($event)">
+          <input
+            #fileInput
+            type="file"
+            accept="image/*"
+            capture="environment"
+            hidden
+            (change)="onFileSelected($event)"
+          />
+          <button
+            type="button"
+            class="composer__attach"
+            (click)="fileInput.click()"
+            [disabled]="thinking()"
+            title="Attach a photo"
+            aria-label="Attach a photo"
+          >📎</button>
+          @if (speechSupported) {
+            <button
+              type="button"
+              class="composer__mic"
+              [class.is-listening]="listening()"
+              (click)="toggleMic()"
+              [disabled]="thinking()"
+              [title]="listening() ? 'Stop dictation' : 'Dictate your question'"
+              [attr.aria-label]="listening() ? 'Stop dictation' : 'Dictate your question'"
+              [attr.aria-pressed]="listening()"
+            >
+              🎤
+              @if (listening()) {
+                <span class="composer__mic-dot" aria-hidden="true"></span>
+              }
+            </button>
+          }
           <input
             type="text"
             placeholder="Ask your tutor…"
@@ -131,7 +222,11 @@ const STARTERS = [
             (input)="draft.set($any($event.target).value)"
             [disabled]="thinking()"
           />
-          <button class="btn btn--accent" type="submit" [disabled]="thinking() || !draft().trim()">
+          <button
+            class="btn btn--accent"
+            type="submit"
+            [disabled]="thinking() || (!draft().trim() && !attachment())"
+          >
             Send
           </button>
         </form>
@@ -315,8 +410,108 @@ const STARTERS = [
       &:hover { border-color: var(--accent); color: var(--accent); }
     }
 
+    .attach-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      max-width: 100%;
+      padding: 0.35rem 0.55rem;
+      margin-bottom: 0.6rem;
+      background: var(--card);
+      border: 1.5px dashed var(--line-strong);
+      border-radius: 10px;
+    }
+
+    .attach-chip__thumb {
+      width: 38px;
+      height: 38px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+    }
+
+    .attach-chip__name {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--ink-soft);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 26ch;
+    }
+
+    .attach-chip__remove {
+      border: 1px solid var(--line);
+      background: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      line-height: 1;
+      padding: 0.15rem 0.45rem;
+      color: var(--ink);
+
+      &:hover,
+      &:focus-visible { border-color: var(--danger); color: var(--danger); }
+    }
+
+    .composer__attach {
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      border: 1.5px solid var(--line-strong);
+      border-radius: 999px;
+      background: var(--card);
+      cursor: pointer;
+      font-size: 1.05rem;
+
+      &:hover:not(:disabled),
+      &:focus-visible { border-color: var(--accent); }
+
+      &:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+      &:disabled { opacity: 0.5; cursor: default; }
+    }
+
+    .composer__mic {
+      position: relative;
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      border: 1.5px solid var(--line-strong);
+      border-radius: 999px;
+      background: var(--card);
+      cursor: pointer;
+      font-size: 1.05rem;
+
+      &:hover:not(:disabled),
+      &:focus-visible { border-color: var(--accent); }
+
+      &:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+      &:disabled { opacity: 0.5; cursor: default; }
+
+      &.is-listening { border-color: var(--danger); }
+    }
+
+    .composer__mic-dot {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--danger);
+      animation: mic-pulse 1.1s ease-in-out infinite;
+    }
+
+    @keyframes mic-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.7); }
+    }
+
     .composer {
       display: flex;
+      align-items: center;
       gap: 0.7rem;
 
       input {
@@ -368,11 +563,33 @@ export class TutorPage {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly loadError = signal<string | null>(null);
+  protected readonly attachment = signal<File | null>(null);
+  protected readonly previewUrl = signal<string | null>(null);
+
+  // Voice in (dictation) and voice out (read-aloud) — both feature-detected.
+  protected readonly speechSupported = dictationCtor() !== null;
+  protected readonly ttsSupported =
+    typeof window !== 'undefined' && 'speechSynthesis' in window;
+  protected readonly listening = signal(false);
+  protected readonly speakingId = signal<number | null>(null);
+
+  private readonly zone = inject(NgZone);
+  private recognition: Dictation | null = null;
+  /** Draft text captured when dictation starts; transcripts append to it. */
+  private dictationBase = '';
 
   private lastFailed = '';
 
+  private static readonly MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
   constructor() {
     void this.bootstrap();
+    // Make sure the preview object URL, mic and speech never outlive the page.
+    inject(DestroyRef).onDestroy(() => {
+      this.clearAttachment();
+      this.stopMic();
+      this.stopSpeech();
+    });
   }
 
   /** Re-runs the initial sessions/quota load after a visible failure. */
@@ -395,6 +612,128 @@ export class TutorPage {
     this.session.set(null);
     this.messages.set([]);
     this.error.set(null);
+    this.clearAttachment();
+    this.stopMic();
+    this.stopSpeech();
+  }
+
+  /** Press to dictate, press again (or pause long enough) to stop. */
+  protected toggleMic(): void {
+    if (this.listening()) {
+      this.stopMic();
+      return;
+    }
+    const Ctor = dictationCtor();
+    if (!Ctor) return;
+    const recognition = new Ctor();
+    recognition.lang = navigator.language || 'en-US';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    const existing = this.draft().trimEnd();
+    this.dictationBase = existing ? `${existing} ` : '';
+    recognition.onresult = (event) => {
+      let transcript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0]?.transcript ?? '';
+      }
+      this.zone.run(() => this.draft.set(this.dictationBase + transcript));
+    };
+    recognition.onerror = (event) => {
+      this.zone.run(() => {
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          this.error.set(
+            'Microphone access was blocked — allow it in your browser settings to dictate.',
+          );
+        } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+          this.error.set('Dictation hit a snag — try again.');
+        }
+        this.listening.set(false);
+      });
+    };
+    recognition.onend = () => {
+      this.zone.run(() => {
+        this.listening.set(false);
+        this.recognition = null;
+      });
+    };
+    this.recognition = recognition;
+    try {
+      recognition.start();
+      this.error.set(null);
+      this.listening.set(true);
+    } catch {
+      this.recognition = null;
+      this.error.set('Could not start the microphone — try again.');
+    }
+  }
+
+  private stopMic(): void {
+    try {
+      this.recognition?.stop();
+    } catch {
+      // Already stopped — nothing to do.
+    }
+    this.recognition = null;
+    this.listening.set(false);
+  }
+
+  /** Read an assistant message aloud; clicking again stops it. */
+  protected toggleSpeak(message: TutorMessage): void {
+    if (!this.ttsSupported) return;
+    if (this.speakingId() === message.id) {
+      this.stopSpeech();
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(this.speechText(message.content));
+    utterance.onend = () => this.zone.run(() => this.speakingId.set(null));
+    utterance.onerror = () => this.zone.run(() => this.speakingId.set(null));
+    this.speakingId.set(message.id);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  private stopSpeech(): void {
+    if (this.ttsSupported) window.speechSynthesis.cancel();
+    this.speakingId.set(null);
+  }
+
+  /** Strip markdown punctuation so the voice doesn't read "asterisk asterisk". */
+  private speechText(markdown: string): string {
+    return markdown
+      .replace(/```[\s\S]*?```/g, ' code snippet ')
+      .replace(/`([^`]*)`/g, '$1')
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/^\s*[-*+]\s+/gm, '')
+      .replace(/^\s*>\s+/gm, '')
+      .replace(/[*_~|]/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  protected onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    // Reset so re-picking the same file fires (change) again.
+    input.value = '';
+    if (!file) return;
+    if (file.size > TutorPage.MAX_IMAGE_BYTES) {
+      this.error.set('That image is too large — the limit is 8 MB.');
+      return;
+    }
+    this.error.set(null);
+    this.setAttachment(file);
+  }
+
+  protected clearAttachment(): void {
+    this.setAttachment(null);
+  }
+
+  private setAttachment(file: File | null): void {
+    const previous = this.previewUrl();
+    if (previous) URL.revokeObjectURL(previous);
+    this.attachment.set(file);
+    this.previewUrl.set(file ? URL.createObjectURL(file) : null);
   }
 
   protected async openSession(id: number): Promise<void> {
@@ -406,6 +745,9 @@ export class TutorPage {
       this.messages.set(full.messages ?? []);
       this.error.set(null);
       this.loadError.set(null);
+      this.clearAttachment();
+      this.stopMic();
+      this.stopSpeech();
     } catch (err) {
       this.loadError.set(apiErrorMessage(err, 'Could not open that session.'));
     }
@@ -418,7 +760,8 @@ export class TutorPage {
 
   protected async send(): Promise<void> {
     const content = (this.draft().trim() || this.lastFailed).trim();
-    if (!content || this.thinking()) return;
+    const image = this.attachment();
+    if ((!content && !image) || this.thinking()) return;
     this.thinking.set(true);
     this.error.set(null);
     try {
@@ -427,10 +770,11 @@ export class TutorPage {
         active = await this.api.createSession(this.subject(), this.level());
         this.session.set(active);
       }
-      const result = await this.api.send(active.id, content);
+      const result = await this.api.send(active.id, content, image ?? undefined);
       this.messages.update((all) => [...all, result.user_message, result.assistant_message]);
       this.draft.set('');
       this.lastFailed = '';
+      this.clearAttachment();
       // Ancillary refreshes after a successful send: deliberately keep the
       // last-known values on failure instead of erroring a successful chat
       // turn (the GETs already retry transient failures at the service layer).

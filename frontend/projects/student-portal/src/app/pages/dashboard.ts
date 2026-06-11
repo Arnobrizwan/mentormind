@@ -5,6 +5,14 @@ import { LearningApi } from '../core/api';
 import { AuthService } from '../core/auth';
 import { EngagementApi } from '../core/engagement';
 import { QuizAttempt } from '../core/models';
+import { PlannerApi } from '../core/planner';
+import {
+  CourseReadiness,
+  PracticeInsightsApi,
+  PracticeRecommendations,
+  RecommendedItem,
+} from '../core/practice-insights';
+import { RevisionApi } from '../core/revision';
 
 interface CourseRef {
   course: number;
@@ -53,6 +61,75 @@ interface CourseRef {
         <span class="mono-label">quiz attempts</span>
       </div>
     </div>
+
+    <section class="quick rise" style="animation-delay: 105ms" aria-label="Study shortcuts">
+      <a routerLink="/revision" class="quick__tile">
+        <span class="quick__icon" aria-hidden="true">🃏</span>
+        <span class="quick__label">Revision</span>
+        @if (dueCards() > 0) {
+          <span class="quick__badge">{{ dueCards() }} due</span>
+        }
+      </a>
+      <a routerLink="/planner" class="quick__tile">
+        <span class="quick__icon" aria-hidden="true">🗓️</span>
+        <span class="quick__label">This week's plan</span>
+        @if (planPct() !== null) {
+          <span class="mono-label quick__note">{{ planPct() }}% done</span>
+        }
+      </a>
+    </section>
+
+    @if (focus(); as f) {
+      @if (f.topics.length > 0) {
+        <section class="block focus rise" style="animation-delay: 130ms">
+          <h2>Focus areas</h2>
+          <div class="focus__topics">
+            @for (topic of f.topics; track topic.topic) {
+              <div class="focus__row">
+                <span class="focus__name">{{ topic.topic }}</span>
+                <span
+                  class="focus__meter"
+                  role="meter"
+                  [attr.aria-valuenow]="topic.accuracy"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  [attr.aria-label]="topic.topic + ' accuracy'"
+                >
+                  <span
+                    class="focus__meter-fill"
+                    [class.focus__meter-fill--low]="topic.accuracy < 50"
+                    [style.width.%]="topic.accuracy"
+                  ></span>
+                </span>
+                <span class="focus__pct mono-label">{{ topic.accuracy }}%</span>
+                <span class="mono-label focus__samples">
+                  {{ topic.samples }} {{ topic.samples === 1 ? 'answer' : 'answers' }}
+                </span>
+              </div>
+            }
+          </div>
+          @if (recommended().length > 0) {
+            <p class="mono-label focus__label">Recommended next</p>
+            <ul class="focus__recs">
+              @for (item of recommended(); track item.type + '-' + item.id) {
+                <li>
+                  <a class="focus__rec" [routerLink]="recLink(item)">
+                    <span class="focus__rec-icon" aria-hidden="true">
+                      {{ item.type === 'quiz' ? '📝' : '🎯' }}
+                    </span>
+                    <span class="focus__rec-body">
+                      <strong>{{ item.title }}</strong>
+                      <span class="focus__rec-preview">{{ item.preview }}</span>
+                    </span>
+                    <span class="mono-label focus__rec-topic">{{ item.topic }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+    }
 
     @if (engagement.me(); as eng) {
       <section class="badges rise" style="animation-delay: 120ms">
@@ -121,6 +198,17 @@ interface CourseRef {
                 </div>
                 <span class="mono-label">{{ enrollment.progress_percentage }}%</span>
               </div>
+              @if (readinessFor(enrollment.course); as ready) {
+                <div class="ready" [title]="readinessTitle(ready)">
+                  <span class="ready__ring" [style.background]="ringBg(ready.readiness)" aria-hidden="true">
+                    <span class="ready__hole"></span>
+                  </span>
+                  <span class="mono-label">
+                    Exam readiness:
+                    <strong class="ready__num">{{ ready.readiness }}%</strong>
+                  </span>
+                </div>
+              }
               @if (slugFor(enrollment.course); as slug) {
                 <a class="btn btn--ghost enrollment__btn" [routerLink]="['/courses', slug]">
                   {{ enrollment.progress_percentage >= 100 ? 'Review' : 'Continue' }} →
@@ -293,6 +381,161 @@ interface CourseRef {
       white-space: nowrap;
     }
 
+    .quick {
+      display: flex;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+      margin-bottom: 2.2rem;
+    }
+
+    .quick__tile {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.7rem 1.1rem;
+      background: var(--card);
+      border: 1.5px solid var(--line-strong);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--ink);
+
+      &:hover { border-color: var(--accent); }
+      &:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    }
+
+    .quick__icon { font-size: 1.15rem; }
+
+    .quick__label { font-weight: 700; }
+
+    .quick__badge {
+      padding: 0.1rem 0.55rem;
+      border-radius: 999px;
+      background: var(--accent);
+      color: var(--paper);
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .quick__note { color: var(--ink-soft); }
+
+    .focus__topics {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1.1rem;
+    }
+
+    .focus__row {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 0.6rem 0.4rem;
+      border-bottom: 1px dashed var(--line);
+      flex-wrap: wrap;
+    }
+
+    .focus__name {
+      flex: 1;
+      min-width: 140px;
+      font-weight: 600;
+    }
+
+    .focus__meter {
+      width: 160px;
+      height: 8px;
+      border: 1px solid var(--ink);
+      border-radius: 99px;
+      overflow: hidden;
+      background: var(--card);
+    }
+
+    .focus__meter-fill {
+      display: block;
+      height: 100%;
+      background: var(--marker);
+      transition: width 600ms ease;
+
+      &--low { background: var(--danger); }
+    }
+
+    .focus__pct {
+      width: 3.2ch;
+      text-align: right;
+    }
+
+    .focus__samples { color: var(--ink-soft); }
+
+    .focus__label { margin-bottom: 0.6rem; }
+
+    .focus__recs {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .focus__rec {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      padding: 0.6rem 0.8rem;
+      background: var(--card);
+      border: 1.5px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--ink);
+
+      &:hover { border-color: var(--accent); }
+      &:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    }
+
+    .focus__rec-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+
+      strong { font-size: 0.92rem; }
+    }
+
+    .focus__rec-preview {
+      font-size: 0.85rem;
+      color: var(--ink-soft);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .focus__rec-topic { color: var(--sage-deep); }
+
+    .ready {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ready__ring {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .ready__hole {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--paper);
+    }
+
+    .ready__num { font-weight: 700; }
+
     .desk h1 {
       font-size: clamp(2.2rem, 5vw, 3.6rem);
       margin-top: 0.7rem;
@@ -436,9 +679,21 @@ export class DashboardPage {
   protected readonly api = inject(LearningApi);
   protected readonly engagement = inject(EngagementApi);
   private readonly auth = inject(AuthService);
+  private readonly insights = inject(PracticeInsightsApi);
+  private readonly revision = inject(RevisionApi);
+  private readonly planner = inject(PlannerApi);
 
   protected readonly loading = signal(true);
   private readonly courseRefs = signal<CourseRef[]>([]);
+
+  protected readonly focus = signal<PracticeRecommendations | null>(null);
+  private readonly readiness = signal<CourseReadiness[]>([]);
+  protected readonly dueCards = signal(0);
+  protected readonly planPct = signal<number | null>(null);
+
+  protected readonly recommended = computed<RecommendedItem[]>(
+    () => this.focus()?.recommended.slice(0, 5) ?? [],
+  );
 
   protected readonly attempts = computed<QuizAttempt[]>(() =>
     this.api
@@ -465,11 +720,53 @@ export class DashboardPage {
         this.api.listCourses(),
         this.engagement.refresh(),
         this.engagement.refreshLeaderboard(),
+        // Study aids are nice-to-haves — never block (or break) the desk.
+        this.insights
+          .recommendations()
+          .then((recs) => this.focus.set(recs))
+          .catch(() => undefined),
+        this.insights
+          .readiness()
+          .then((rows) => this.readiness.set(rows))
+          .catch(() => undefined),
+        this.revision
+          .queue()
+          .then((queue) => this.dueCards.set(queue.due_count))
+          .catch(() => undefined),
+        this.planner
+          .week()
+          .then((plan) => this.planPct.set(plan.completion_pct))
+          .catch(() => undefined),
       ]);
       this.courseRefs.set(courses.map((c) => ({ course: c.id, slug: c.slug })));
     } finally {
       this.loading.set(false);
     }
+  }
+
+  protected recLink(item: RecommendedItem): string[] {
+    return item.type === 'short_answer'
+      ? ['/courses', item.course_slug, 'practice']
+      : ['/courses', item.course_slug];
+  }
+
+  protected readinessFor(courseId: number): CourseReadiness | null {
+    return this.readiness().find((r) => r.course === courseId) ?? null;
+  }
+
+  protected readinessTitle(entry: CourseReadiness): string {
+    const c = entry.components;
+    return (
+      `Course progress ${c.progress_pct}% · Quiz average ${c.quiz_avg}% · ` +
+      `Practice volume ${c.practice_volume}% · Accuracy ${c.accuracy}%`
+    );
+  }
+
+  protected ringBg(readiness: number): string {
+    const color =
+      readiness >= 70 ? 'var(--sage)' : readiness >= 40 ? 'var(--marker)' : 'var(--danger)';
+    const pct = Math.max(0, Math.min(100, readiness));
+    return `conic-gradient(${color} ${pct}%, var(--line) ${pct}% 100%)`;
   }
 
   protected greeting(): string {

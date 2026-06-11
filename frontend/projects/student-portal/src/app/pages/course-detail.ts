@@ -6,6 +6,7 @@ import { LearningApi } from '../core/api';
 import { AuthService } from '../core/auth';
 import { apiErrorMessage } from '../core/errors';
 import { Course, Quiz } from '../core/models';
+import { ShortAnswerApi } from '../core/short-answers';
 
 @Component({
   selector: 'mm-course-detail',
@@ -105,6 +106,33 @@ import { Course, Quiz } from '../core/models';
                   }
                 </li>
               }
+            </ol>
+          </section>
+        }
+
+        @if (practiceCount() > 0) {
+          <section class="syllabus rise" style="animation-delay: 260ms">
+            <div class="section-head">
+              <h2>Practice</h2>
+              <span class="mono-label">
+                {{ practiceCount() }} short-answer {{ practiceCount() === 1 ? 'question' : 'questions' }}
+              </span>
+            </div>
+            <ol class="lesson-list">
+              <li class="lesson">
+                <span class="lesson__index mono-label">SA</span>
+                <div class="lesson__body">
+                  <span class="lesson__title">Short-answer practice</span>
+                  <span class="lesson__check">graded by AI with instant feedback</span>
+                </div>
+                @if (enrollment()) {
+                  <a class="btn btn--ghost lesson__open" [routerLink]="['/courses', c.slug, 'practice']">
+                    Practise
+                  </a>
+                } @else {
+                  <span class="lesson__lock mono-label">enroll to unlock</span>
+                }
+              </li>
             </ol>
           </section>
         }
@@ -252,6 +280,7 @@ import { Course, Quiz } from '../core/models';
 })
 export class CourseDetailPage {
   private readonly api = inject(LearningApi);
+  private readonly shortAnswers = inject(ShortAnswerApi);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -260,6 +289,7 @@ export class CourseDetailPage {
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly practiceCount = signal(0);
 
   protected readonly enrollment = computed(() => {
     const c = this.course();
@@ -277,10 +307,26 @@ export class CourseDetailPage {
     this.loading.set(true);
     try {
       this.course.set(await this.api.getCourse(slug));
+      void this.loadPracticeCount();
     } catch {
       this.course.set(null);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /** Practice is a quiet extra — if the lookup fails we simply hide the section. */
+  private async loadPracticeCount(): Promise<void> {
+    const c = this.course();
+    if (!c || !this.auth.isLoggedIn()) {
+      this.practiceCount.set(0);
+      return;
+    }
+    try {
+      const questions = await this.shortAnswers.list(c.id);
+      this.practiceCount.set(questions.filter((q) => q.is_published).length);
+    } catch {
+      this.practiceCount.set(0);
     }
   }
 

@@ -31,6 +31,18 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/tutor').then((m) => m.TutorPage),
   },
   {
+    path: 'revision',
+    title: 'Revision · MentorMinds',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/revision').then((m) => m.RevisionPage),
+  },
+  {
+    path: 'planner',
+    title: 'Study Plan · MentorMinds',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/planner').then((m) => m.PlannerPage),
+  },
+  {
     path: 'courses/:slug',
     title: 'Course · MentorMinds',
     loadComponent: () => import('./pages/course-detail').then((m) => m.CourseDetailPage),
@@ -46,6 +58,12 @@ export const routes: Routes = [
     title: 'Quiz · MentorMinds',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/quiz').then((m) => m.QuizPage),
+  },
+  {
+    path: 'courses/:slug/practice',
+    title: 'Practice · MentorMinds',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/short-answers').then((m) => m.ShortAnswersPage),
   },
   { path: '**', redirectTo: '' },
 ];
