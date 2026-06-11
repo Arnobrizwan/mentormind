@@ -30,6 +30,13 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            # Explicit (also present via envFrom backend-secrets): the key
+            # the backend forwards as X-API-Key to ml-service.
+            - name: ML_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: ML_API_KEY
           readinessProbe:
             httpGet:
               path: /api/v1/health/

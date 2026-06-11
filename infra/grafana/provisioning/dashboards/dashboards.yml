@@ -1,0 +1,15 @@
+# File-based dashboard provisioning: every *.json in this directory is
+# loaded at startup and re-scanned every 30s.
+apiVersion: 1
+
+providers:
+  - name: mentormind
+    orgId: 1
+    folder: MentorMind
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false

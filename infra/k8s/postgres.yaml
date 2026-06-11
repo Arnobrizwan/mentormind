@@ -24,7 +24,10 @@ spec:
             - name: POSTGRES_USER
               value: mentormind
             - name: POSTGRES_PASSWORD
-              value: mentormind
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: POSTGRES_PASSWORD
             - name: POSTGRES_DB
               value: mentormind
           ports:

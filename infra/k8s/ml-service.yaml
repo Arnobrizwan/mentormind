@@ -21,12 +21,24 @@ spec:
           env:
             - name: FLAGS_URL
               value: http://api:8000/api/v1/flags/
+            # Inference auth: callers must send X-API-Key matching this.
+            - name: ML_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: ML_API_KEY
           readinessProbe:
             httpGet:
               path: /healthz
               port: 9000
             initialDelaySeconds: 5
             periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 30
           resources:
             requests:
               cpu: 100m

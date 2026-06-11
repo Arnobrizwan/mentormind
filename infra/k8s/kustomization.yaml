@@ -4,7 +4,6 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - configmap.yaml
-  - secret.yaml
   - postgres.yaml
   - redis.yaml
   - migrate-job.yaml
@@ -13,6 +12,16 @@ resources:
   - ml-service.yaml
   - ingress.yaml
   - hpa.yaml
+
+# Secrets come from an untracked env file (gitignored — see .gitignore):
+#   cp secrets.env.example secrets.env   # fill in real values first
+# Kustomize appends a content hash to the generated Secret name and rewrites
+# every secretRef/secretKeyRef, so a changed secret rolls the deployments.
+secretGenerator:
+  - name: backend-secrets
+    namespace: mentormind
+    envs:
+      - secrets.env
 
 # Point at your registry-pushed builds:
 #   kustomize edit set image mentormind-backend=ghcr.io/you/mentormind-backend:sha

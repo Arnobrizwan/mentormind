@@ -25,6 +25,24 @@ spec:
           env:
             - name: INSTANCE_NAME
               value: worker
+            # Explicit (also present via envFrom backend-secrets): the key
+            # the backend forwards as X-API-Key to ml-service.
+            - name: ML_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: ML_API_KEY
+          # Celery has no HTTP server — ping the worker over the broker.
+          # $HOSTNAME needs a shell to expand, hence sh -c.
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - celery -A config inspect ping -d celery@$HOSTNAME
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 30
           resources:
             requests:
               cpu: 50m

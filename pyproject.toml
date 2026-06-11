@@ -1,0 +1,20 @@
+# Repo-root tooling config (no root Python package — backend/ and
+# ml-service/ are separate apps; this file only carries shared lint config).
+
+[tool.ruff]
+# Lowest interpreter in the repo: ml-service runs 3.13 (backend runs 3.14).
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+# Baseline: pycodestyle errors + pyflakes. Import sorting (I) and the
+# ignores below are excluded deliberately so linting passes on the current
+# codebase without touching application code — tighten incrementally by
+# removing entries and fixing the findings in dedicated commits.
+select = ["E", "F"]
+ignore = [
+    "E501", # line-too-long: long docstrings/comments predate the linter
+    "E741", # ambiguous-variable-name: one existing use of `l`
+    "F401", # unused-import: a few re-export style imports
+    "F841", # unused-variable: existing intentional placeholders
+]

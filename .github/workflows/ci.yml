@@ -6,16 +6,30 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install ruff
+        run: pip install ruff
+      # Rule selection lives in the repo-root pyproject.toml ([tool.ruff]).
+      - name: Ruff lint (backend + ml-service)
+        run: ruff check backend ml-service --output-format=github
+
   backend:
     runs-on: ubuntu-latest
     services:
       redis:
-        image: redis:latest
+        image: redis:7-alpine
         ports: ["6379:6379"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
+          # Matches backend/Dockerfile (python:3.14-slim) and the local venv.
           python-version: "3.14"
       - name: Install dependencies
         working-directory: backend
@@ -25,6 +39,43 @@ jobs:
         env:
           REDIS_URL: redis://localhost:6379/0
         run: python manage.py test
+
+  ml-service:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          # Matches ml-service/Dockerfile (python:3.13-slim).
+          python-version: "3.13"
+      - name: Install tesseract (OCR endpoint dependency)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr
+      - name: Install dependencies
+        working-directory: ml-service
+        run: pip install -r requirements.txt pytest
+      - name: Run tests
+        working-directory: ml-service
+        env:
+          # Explicit local/CI opt-out of the X-API-Key guard.
+          ML_ALLOW_UNAUTHENTICATED: "1"
+        run: pytest tests/ -q
+
+  docker-build:
+    # Build-only (no push): catches Dockerfile rot before it reaches compose/k8s.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: false
+      - name: Build ml-service image
+        uses: docker/build-push-action@v6
+        with:
+          context: ml-service
+          push: false
 
   frontend:
     runs-on: ubuntu-latest

@@ -17,10 +17,13 @@ x-backend-env: &backend-env
   REDIS_URL: redis://redis:6379/0
   ML_SERVICE_URL: http://ml-service:9000
   TUTOR_MODEL_URL: http://ml-service:9000/v1/tutor/answer
+  # Shared key the backend forwards as X-API-Key on every ml-service call.
+  ML_API_KEY: ${ML_API_KEY:-mentormind-dev-ml-key}
 
 services:
   postgres-primary:
-    image: bitnami/postgresql:latest
+    image: bitnami/postgresql:17
+    restart: unless-stopped
     environment:
       POSTGRESQL_REPLICATION_MODE: master
       POSTGRESQL_REPLICATION_USER: replicator
@@ -37,7 +40,8 @@ services:
       retries: 10
 
   postgres-replica:
-    image: bitnami/postgresql:latest
+    image: bitnami/postgresql:17
+    restart: unless-stopped
     depends_on:
       postgres-primary:
         condition: service_healthy
@@ -55,7 +59,13 @@ services:
       retries: 10
 
   redis:
-    image: redis:latest
+    image: redis:7-alpine
+    restart: unless-stopped
+    # AOF persistence so the Celery broker/result backlog and cache survive
+    # container restarts.
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -72,6 +82,7 @@ services:
 
   api-1:
     build: ../backend
+    restart: unless-stopped
     environment:
       <<: *backend-env
       INSTANCE_NAME: api-1
@@ -83,6 +94,7 @@ services:
 
   api-2:
     build: ../backend
+    restart: unless-stopped
     environment:
       <<: *backend-env
       INSTANCE_NAME: api-2
@@ -94,6 +106,7 @@ services:
 
   worker:
     build: ../backend
+    restart: unless-stopped
     command: celery -A config worker --loglevel=info
     environment:
       <<: *backend-env
@@ -104,16 +117,26 @@ services:
       redis:
         condition: service_healthy
 
+  # Internal-only: no host port. Reachable on the compose network as
+  # ml-service:9000 and externally via nginx under /ml/.
   ml-service:
     build: ../ml-service
+    restart: unless-stopped
     environment:
       INSTANCE_NAME: ml-1
-      FLAGS_URL: http://nginx/api/v1/flags/
-    ports:
-      - "9000:9000"
+      # Direct to an API instance — routing through nginx would be circular
+      # (nginx depends on the APIs, the APIs call ml-service).
+      FLAGS_URL: http://api-1:8000/api/v1/flags/
+      ML_API_KEY: ${ML_API_KEY:-mentormind-dev-ml-key}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/healthz', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
+    restart: unless-stopped
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
@@ -123,14 +146,17 @@ services:
       - api-2
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.4.1
+    restart: unless-stopped
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
     ports:
       - "9090:9090"
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.6.1
+    restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
     volumes:
@@ -143,4 +169,6 @@ services:
 
 volumes:
   pg_primary_data:
+  redis_data:
+  prometheus_data:
   grafana_data:

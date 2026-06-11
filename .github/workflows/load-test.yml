@@ -1,0 +1,56 @@
+name: Load test
+
+# Manual-only: spins up the full compose stack on the runner and fires the
+# k6 catalog read scenario at it through nginx.
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "k6 scenario file (under load-tests/)"
+        type: choice
+        default: catalog-read.js
+        options:
+          - catalog-read.js
+          - student-journey.js
+
+jobs:
+  k6:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start compose stack
+        working-directory: infra
+        run: docker compose up --build -d
+
+      - name: Wait for the stack to become healthy
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/api/v1/health/ > /dev/null; then
+              echo "Stack is up."
+              exit 0
+            fi
+            echo "Waiting for http://localhost:8080/api/v1/health/ ($i/60)..."
+            sleep 5
+          done
+          echo "Stack failed to become healthy in time."
+          docker compose -f infra/docker-compose.yml ps
+          docker compose -f infra/docker-compose.yml logs --tail 100
+          exit 1
+
+      - name: Run k6 scenario
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/load-tests:/scripts:ro" \
+            -e BASE_URL=http://localhost:8080 \
+            grafana/k6:0.57.0 run "/scripts/${{ inputs.scenario || 'catalog-read.js' }}"
+
+      - name: Stack logs on failure
+        if: failure()
+        run: docker compose -f infra/docker-compose.yml logs --tail 200
+
+      - name: Tear down
+        if: always()
+        working-directory: infra
+        run: docker compose down -v

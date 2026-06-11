@@ -1,4 +1,4 @@
-.PHONY: backend-test backend-run worker frontend infra-up infra-down ml-run ml-test pipeline k8s-apply load-test
+.PHONY: backend-test backend-run worker frontend infra-up infra-down ml-run ml-test pipeline k8s-apply load-test load-test-journey
 
 backend-test:
 	cd backend && .venv/bin/python manage.py test
@@ -32,3 +32,6 @@ k8s-apply:
 
 load-test:
 	k6 run load-tests/catalog-read.js
+
+load-test-journey:
+	k6 run load-tests/student-journey.js
