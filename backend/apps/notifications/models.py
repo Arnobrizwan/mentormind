@@ -10,6 +10,8 @@ class Notification(models.Model):
     class Kind(models.TextChoices):
         ENROLLMENT = "enrollment", "Enrollment"
         QUIZ_RESULT = "quiz_result", "Quiz result"
+        PROCTORING = "proctoring", "Proctoring alert"
+        RISK = "risk", "Dropout risk"
         SYSTEM = "system", "System"
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")

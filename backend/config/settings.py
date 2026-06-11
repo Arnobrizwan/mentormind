@@ -73,6 +73,8 @@ INSTALLED_APPS = [
     "apps.chat",
     "apps.engagement",
     "apps.tutor",
+    "apps.revision",
+    "apps.planner",
 ]
 
 MIDDLEWARE = [
@@ -171,6 +173,29 @@ CELERY_RESULT_BACKEND = env("REDIS_URL", default="") or None
 CELERY_TASK_ALWAYS_EAGER = _RUNNING_TESTS or env.bool(
     "CELERY_TASK_ALWAYS_EAGER", default=not bool(env("REDIS_URL"))
 )
+# Periodic jobs (celery beat). The dropout-risk sweep flags disengaging
+# students and opens remediation tickets for instructors every Monday.
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BEAT_SCHEDULE = {
+    "weekly-dropout-risk-scan": {
+        "task": "apps.engagement.tasks.scan_dropout_risk",
+        "schedule": crontab(
+            day_of_week=env("DROPOUT_SCAN_DAY", default="mon"),
+            hour=env.int("DROPOUT_SCAN_HOUR", default=6),
+            minute=0,
+        ),
+    },
+    # Plans build before the risk scan so Monday's nudge reflects them.
+    "weekly-study-plans": {
+        "task": "apps.planner.tasks.build_weekly_plans",
+        "schedule": crontab(
+            day_of_week=env("PLANNER_DAY", default="mon"),
+            hour=env.int("PLANNER_HOUR", default=5),
+            minute=0,
+        ),
+    },
+}
 
 # --- DRF / Auth ------------------------------------------------------------
 REST_FRAMEWORK = {

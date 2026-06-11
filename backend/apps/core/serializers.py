@@ -5,7 +5,17 @@ from rest_framework import serializers
 
 from apps.accounts.serializers import UserSerializer
 from .images import sniff_image_type
-from .models import Course, Enrollment, Lesson, Quiz, QuizAttempt, QuizQuestion
+from .models import (
+    Course,
+    Enrollment,
+    Lesson,
+    ProctoringLog,
+    Quiz,
+    QuizAttempt,
+    QuizQuestion,
+    ShortAnswerQuestion,
+    ShortAnswerSubmission,
+)
 
 LESSON_LOCKED_MESSAGE = "Enroll in this course to unlock this lesson's content."
 
@@ -74,7 +84,7 @@ class LessonSerializer(serializers.ModelSerializer):
 class QuizQuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuizQuestion
-        fields = ("id", "quiz", "text", "options", "correct_option_index", "order")
+        fields = ("id", "quiz", "text", "options", "correct_option_index", "topic", "order")
         read_only_fields = ("id",)
 
     def validate(self, data):
@@ -170,6 +180,69 @@ class CourseSerializer(serializers.ModelSerializer):
             )
         file.name = f"{uuid.uuid4().hex}.{ext}"
         return file
+
+
+class ShortAnswerQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShortAnswerQuestion
+        fields = (
+            "id",
+            "course",
+            "lesson",
+            "prompt",
+            "mark_scheme",
+            "topic",
+            "max_score",
+            "is_published",
+            "order",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("id", "created_at", "updated_at")
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        request = self.context.get("request")
+        user = request.user if request else None
+        # The mark scheme is the answer key — instructors/staff only.
+        if not (
+            user
+            and user.is_authenticated
+            and (user.is_staff or user.is_superuser or instance.course.instructor == user)
+        ):
+            rep.pop("mark_scheme", None)
+        return rep
+
+
+class ShortAnswerSubmissionSerializer(serializers.ModelSerializer):
+    student_email = serializers.ReadOnlyField(source="enrollment.student.email")
+    student_name = serializers.ReadOnlyField(source="enrollment.student.display_name")
+
+    class Meta:
+        model = ShortAnswerSubmission
+        fields = (
+            "id",
+            "question",
+            "enrollment",
+            "student_email",
+            "student_name",
+            "answer_text",
+            "score",
+            "max_score",
+            "criteria_met",
+            "criteria_missing",
+            "feedback",
+            "engine",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
+class ProctoringLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProctoringLog
+        fields = ("id", "faces", "verdict", "created_at")
+        read_only_fields = fields
 
 
 class QuizAttemptSerializer(serializers.ModelSerializer):

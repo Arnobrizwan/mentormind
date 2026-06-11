@@ -67,6 +67,27 @@ class TutorSessionViewSet(viewsets.ModelViewSet):
 
         session = self.get_object()
         content = str(request.data.get("content", "")).strip()[:4000]
+
+        # Multimodal: a photographed question is OCR'd by the ml-service and
+        # joined with whatever the student typed.
+        image = request.FILES.get("image")
+        if image is not None:
+            try:
+                extracted = services.extract_image_text(image)
+            except services.TutorError as exc:
+                return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            if extracted:
+                prefix = f"{content}\n\n" if content else ""
+                content = f"{prefix}[From my photo]\n{extracted}"[:4000]
+            elif not content:
+                return Response(
+                    {
+                        "error": "Couldn't read any text from that photo — "
+                        "try a clearer, well-lit shot, or type the question."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         if not content:
             return Response(
                 {"error": "content is required."}, status=status.HTTP_400_BAD_REQUEST

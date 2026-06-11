@@ -124,3 +124,111 @@ class EngagementTests(TestCase):
         board = services.weekly_leaderboard()
         self.assertEqual(board[0]["student"], "Engager")
         self.assertEqual(board[0]["rank"], 1)
+
+
+class DropoutRiskTests(TestCase):
+    """The weekly risk scan: feature building, ticketing, nudges, and the
+    instructor-only Student Success API."""
+
+    def setUp(self):
+        from django.contrib.auth.models import Group
+
+        from apps.core.models import Course, Enrollment
+
+        group, _ = Group.objects.get_or_create(name="Instructors")
+        self.instructor = User.objects.create_user(
+            email="risk-instructor@mentormind.dev", password="password123"
+        )
+        self.instructor.groups.add(group)
+        self.student = User.objects.create_user(
+            email="risk-student@mentormind.dev", password="password123"
+        )
+        course = Course.objects.create(
+            title="Risky Business", slug="risk-101", description="d",
+            instructor=self.instructor, is_published=True,
+        )
+        Enrollment.objects.create(student=self.student, course=course)
+
+    def test_features_have_the_model_contract_shape(self):
+        from .risk import engagement_features
+
+        features = engagement_features(self.student)
+        self.assertEqual(
+            set(features),
+            {
+                "progress_pct",
+                "days_since_last_login",
+                "quiz_avg",
+                "lessons_per_week",
+                "chat_messages",
+            },
+        )
+        for value in features.values():
+            self.assertIsInstance(value, float)
+
+    def test_scan_flags_high_risk_idempotently(self):
+        from unittest.mock import patch
+
+        from apps.notifications.models import Notification
+
+        from .models import RemediationTicket
+        from .risk import scan_students
+
+        with patch(
+            "apps.core.ml_client.post_json",
+            return_value={"probability": 0.91, "risk": "high"},
+        ):
+            scanned, flagged = scan_students()
+            # second sweep must not duplicate tickets or nudges
+            scan_students()
+
+        self.assertEqual(flagged, 1)
+        tickets = RemediationTicket.objects.filter(student=self.student)
+        self.assertEqual(tickets.count(), 1)
+        self.assertEqual(tickets.get().risk, "high")
+        nudges = Notification.objects.filter(
+            user=self.student, kind=Notification.Kind.RISK
+        )
+        self.assertEqual(nudges.count(), 1)
+
+    def test_low_risk_creates_nothing(self):
+        from unittest.mock import patch
+
+        from .models import RemediationTicket
+        from .risk import scan_students
+
+        with patch(
+            "apps.core.ml_client.post_json",
+            return_value={"probability": 0.1, "risk": "low"},
+        ):
+            scan_students()
+        self.assertEqual(RemediationTicket.objects.count(), 0)
+
+    def test_ticket_api_is_instructor_only(self):
+        from rest_framework.test import APIClient
+
+        from .models import RemediationTicket
+
+        ticket = RemediationTicket.objects.create(
+            student=self.student, risk="high", probability=0.9, features={}
+        )
+        as_student = APIClient()
+        as_student.force_authenticate(user=self.student)
+        self.assertEqual(
+            as_student.get("/api/v1/engagement/risk/tickets/").status_code, 403
+        )
+
+        as_instructor = APIClient()
+        as_instructor.force_authenticate(user=self.instructor)
+        res = as_instructor.get("/api/v1/engagement/risk/tickets/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["count"], 1)
+
+        res = as_instructor.patch(
+            f"/api/v1/engagement/risk/tickets/{ticket.id}/",
+            {"status": "contacted", "note": "Emailed today."},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, "contacted")

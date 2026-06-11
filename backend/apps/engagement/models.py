@@ -68,3 +68,40 @@ class AwardedBadge(models.Model):
 
     class Meta:
         unique_together = ("user", "badge")
+
+
+class RemediationTicket(models.Model):
+    """A flagged at-risk student awaiting human outreach — created by the
+    weekly dropout-risk scan, worked from the instructor studio's Student
+    Success view. One open ticket per student at a time."""
+
+    class Risk(models.TextChoices):
+        MEDIUM = "medium", "Medium"
+        HIGH = "high", "High"
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Open"
+        CONTACTED = "contacted", "Contacted"
+        RESOLVED = "resolved", "Resolved"
+
+    student = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="remediation_tickets"
+    )
+    risk = models.CharField(max_length=10, choices=Risk.choices)
+    probability = models.FloatField(help_text="Model dropout probability (0-1).")
+    features = models.JSONField(
+        default=dict, help_text="Engagement features the prediction was made from."
+    )
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.OPEN
+    )
+    note = models.TextField(blank=True, help_text="Outreach notes from the instructor.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["status", "-created_at"])]
+
+    def __str__(self):
+        return f"{self.student.email} [{self.risk}] {self.status}"

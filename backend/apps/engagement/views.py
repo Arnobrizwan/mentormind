@@ -1,12 +1,15 @@
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.permissions import IsInstructor
+
 from . import services
-from .models import Badge, PointsEvent
-from .serializers import BadgeSerializer
+from .models import Badge, PointsEvent, RemediationTicket
+from .serializers import BadgeSerializer, RemediationTicketSerializer
 
 
 class MyEngagementView(APIView):
@@ -73,3 +76,39 @@ class PointsHistoryView(APIView):
             {"action": e.action, "points": e.points, "at": e.created_at} for e in page
         ]
         return paginator.get_paginated_response(data)
+
+
+class RemediationTicketViewSet(viewsets.ModelViewSet):
+    """The Student Success queue — tickets opened by the weekly dropout-risk
+    scan. Instructors triage them (open → contacted → resolved) and can
+    trigger an on-demand scan."""
+
+    serializer_class = RemediationTicketSerializer
+    permission_classes = [IsInstructor]
+    http_method_names = ["get", "patch", "post"]
+    filterset_fields = ["status", "risk"]
+
+    def get_queryset(self):
+        return (
+            RemediationTicket.objects.using("default")
+            .select_related("student")
+            .all()
+        )
+
+    def create(self, request, *args, **kwargs):
+        # Tickets are opened by the risk scan, never by hand.
+        return Response(
+            {"detail": "Tickets are created by the dropout-risk scan."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
+    @action(detail=False, methods=["post"])
+    def scan(self, request):
+        """Run the dropout-risk sweep now instead of waiting for Monday."""
+        from .tasks import scan_dropout_risk
+
+        result = scan_dropout_risk.delay()
+        return Response(
+            {"queued": True, "task_id": result.id},
+            status=status.HTTP_202_ACCEPTED,
+        )

@@ -20,6 +20,7 @@ DEFAULT_POINT_VALUES = {
     "chat_message": 1,
     "tutor_question": 2,
     "daily_challenge": 20,
+    "revision_review": 2,
 }
 
 

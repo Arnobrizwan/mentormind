@@ -8,17 +8,35 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import services
-from .models import Course, Enrollment, Lesson, Quiz, QuizAttempt, QuizQuestion
+from . import ml_client, services
+from .models import (
+    Course,
+    Enrollment,
+    Lesson,
+    ProctoringLog,
+    Quiz,
+    QuizAttempt,
+    QuizQuestion,
+    ShortAnswerQuestion,
+    ShortAnswerSubmission,
+)
 from .permissions import IsEnrolledStudentOrInstructor, IsInstructor, is_instructor
 from .serializers import (
     CourseSerializer,
     EnrollmentSerializer,
     LessonSerializer,
+    ProctoringLogSerializer,
     QuizSerializer,
     QuizAttemptSerializer,
     QuizQuestionSerializer,
+    ShortAnswerQuestionSerializer,
+    ShortAnswerSubmissionSerializer,
 )
+
+MAX_PROCTOR_IMAGE_BYTES = 8 * 1024 * 1024
+# Consecutive flagged frames before the instructor is alerted — edge-triggered
+# so one long violation produces one notification, not one per frame.
+PROCTOR_ALERT_STREAK = 3
 
 
 class HealthView(APIView):
@@ -170,6 +188,20 @@ class CourseViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(detail=True, methods=["get"], permission_classes=[IsInstructor])
+    def readiness(self, request, slug=None):
+        """Exam-readiness per enrolled student — weakest first. Only for
+        this course's instructor/staff."""
+        course = self.get_object()
+        if course.instructor != request.user and not request.user.is_staff:
+            return Response(
+                {"detail": "Only this course's instructor can view readiness."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        from . import readiness as readiness_module
+
+        return Response(readiness_module.course_readiness(course))
+
+    @action(detail=True, methods=["get"], permission_classes=[IsInstructor])
     def students(self, request, slug=None):
         """Roster with progress — only for this course's instructor/staff."""
         course = self.get_object()
@@ -235,7 +267,7 @@ class QuizViewSet(viewsets.ModelViewSet):
     serializer_class = QuizSerializer
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve", "submit"]:
+        if self.action in ["list", "retrieve", "submit", "proctor_frame"]:
             return [IsAuthenticated(), IsEnrolledStudentOrInstructor()]
         return [IsInstructor()]
 
@@ -314,14 +346,25 @@ class QuizViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         correct_answers = 0
+        answers_detail = {}
         for q in questions:
             ans = submitted_answers.get(str(q.id), submitted_answers.get(q.id))
+            correct = False
+            selected = None
             try:
                 # Non-numeric answers count as wrong, not as a server error
-                if ans is not None and int(ans) == q.correct_option_index:
-                    correct_answers += 1
+                if ans is not None:
+                    selected = int(ans)
+                    correct = selected == q.correct_option_index
             except (TypeError, ValueError):
-                continue
+                selected = None
+            if correct:
+                correct_answers += 1
+            answers_detail[str(q.id)] = {
+                "selected": selected,
+                "correct": correct,
+                "topic": q.topic,
+            }
 
         score = round((correct_answers / total_questions) * 100, 2)
 
@@ -331,10 +374,327 @@ class QuizViewSet(viewsets.ModelViewSet):
             score=score,
             total_questions=total_questions,
             correct_answers=correct_answers,
+            answers=answers_detail,
         )
 
         serializer = QuizAttemptSerializer(attempt)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="generate-draft",
+        permission_classes=[IsInstructor],
+    )
+    def generate_draft(self, request):
+        """Draft MCQs from a lesson with the ml-service generator. Returns
+        suggestions only — the instructor reviews/edits and saves through
+        the normal quiz/question endpoints, so AI output is never published
+        unreviewed."""
+        lesson_id = request.data.get("lesson")
+        try:
+            lesson = (
+                Lesson.objects.using("default")
+                .select_related("course")
+                .get(id=lesson_id)
+            )
+        except (Lesson.DoesNotExist, ValueError, TypeError):
+            return Response(
+                {"error": "lesson is required and must exist."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if lesson.course.instructor != request.user and not request.user.is_staff:
+            return Response(
+                {"detail": "Only this course's instructor can generate quizzes."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not lesson.content.strip():
+            return Response(
+                {"error": "This lesson has no content to generate from."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Generous timeout: generation may run the in-process LLM
+            result = ml_client.post_json(
+                "/v1/generate/quiz",
+                {
+                    "content": lesson.content[:16000],
+                    "topic": lesson.title,
+                    "count": 5,
+                },
+                timeout=90,
+            )
+        except ml_client.MLServiceError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        questions = result.get("questions") or []
+        return Response(
+            {
+                "lesson": lesson.id,
+                "course": lesson.course_id,
+                "suggested_title": f"{lesson.title} — checkpoint quiz",
+                "questions": questions,
+                "engine": result.get("engine", "heuristic"),
+            }
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="proctor-frame",
+        permission_classes=[IsAuthenticated],
+    )
+    def proctor_frame(self, request, pk=None):
+        """Check one webcam snapshot during a quiz. The frame goes to the
+        ml-service face detector; only the verdict is stored — never the
+        image. After PROCTOR_ALERT_STREAK consecutive flagged frames the
+        course instructor gets one notification."""
+        quiz = self.get_object()
+        enrollment = (
+            Enrollment.objects.using("default")
+            .filter(student=request.user, course=quiz.course)
+            .first()
+        )
+        if not enrollment:
+            return Response(
+                {"error": "You must be enrolled in the course to be proctored."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        image = request.FILES.get("image")
+        if image is None or not (image.content_type or "").startswith("image/"):
+            return Response(
+                {"error": "An image file is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        raw = image.read()
+        if len(raw) > MAX_PROCTOR_IMAGE_BYTES:
+            return Response(
+                {"error": "Image too large (8 MB max)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            result = ml_client.post_image(
+                "/v1/proctor/check",
+                raw,
+                filename=image.name or "frame.jpg",
+                content_type=image.content_type,
+            )
+        except ml_client.MLServiceError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        verdict = result.get("verdict")
+        if verdict not in ProctoringLog.Verdict.values:
+            return Response(
+                {"error": "Proctoring service returned an unknown verdict."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        log = ProctoringLog.objects.using("default").create(
+            enrollment=enrollment,
+            quiz=quiz,
+            faces=int(result.get("faces", 0)),
+            verdict=verdict,
+        )
+
+        recent = list(
+            ProctoringLog.objects.using("default")
+            .filter(enrollment=enrollment, quiz=quiz)
+            .order_by("-created_at")[: PROCTOR_ALERT_STREAK + 1]
+        )
+        streak_now = len(recent) >= PROCTOR_ALERT_STREAK and all(
+            entry.is_violation for entry in recent[:PROCTOR_ALERT_STREAK]
+        )
+        # Edge trigger: the frame before the streak was clean (or absent).
+        streak_is_new = len(recent) == PROCTOR_ALERT_STREAK or (
+            len(recent) > PROCTOR_ALERT_STREAK
+            and not recent[PROCTOR_ALERT_STREAK].is_violation
+        )
+        if streak_now and streak_is_new:
+            from apps.notifications.models import Notification
+            from apps.notifications.services import notify
+
+            student = request.user.display_name or request.user.email
+            notify(
+                quiz.course.instructor,
+                Notification.Kind.PROCTORING,
+                title=f"Proctoring alert: {student}",
+                body=(
+                    f"{PROCTOR_ALERT_STREAK} consecutive flagged webcam frames "
+                    f"({log.get_verdict_display().lower()}) during '{quiz.title}'."
+                ),
+                link=f"/courses/{quiz.course.slug}",
+            )
+
+        return Response(
+            {"verdict": verdict, "faces": log.faces},
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=["get"], permission_classes=[IsInstructor])
+    def proctoring(self, request, pk=None):
+        """Exam-integrity timeline — every student's frame verdicts for this
+        quiz, grouped per student. Instructor/staff only."""
+        quiz = self.get_object()
+        if quiz.course.instructor != request.user and not request.user.is_staff:
+            return Response(
+                {"detail": "Only this course's instructor can view proctoring logs."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        logs = (
+            ProctoringLog.objects.using("default")
+            .filter(quiz=quiz)
+            .select_related("enrollment__student")
+            .order_by("enrollment_id", "created_at")
+        )
+        sessions = {}
+        for log in logs:
+            student = log.enrollment.student
+            entry = sessions.setdefault(
+                log.enrollment_id,
+                {
+                    "enrollment": log.enrollment_id,
+                    "student_email": student.email,
+                    "student_name": student.display_name,
+                    "violations": 0,
+                    "logs": [],
+                },
+            )
+            entry["logs"].append(ProctoringLogSerializer(log).data)
+            if log.is_violation:
+                entry["violations"] += 1
+        return Response(list(sessions.values()))
+
+
+class ShortAnswerQuestionViewSet(viewsets.ModelViewSet):
+    """Free-text questions with ml-service rubric grading. Instructors
+    author them (mark scheme included); enrolled students see only the
+    prompt and submit answers for instant criteria-by-criteria feedback."""
+
+    serializer_class = ShortAnswerQuestionSerializer
+    filterset_fields = ["course", "lesson"]
+
+    def get_permissions(self):
+        if self.action in ["list", "retrieve", "submit", "submissions"]:
+            return [IsAuthenticated()]
+        return [IsInstructor()]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = ShortAnswerQuestion.objects.using("default").select_related("course")
+        if user.is_staff or user.is_superuser:
+            return queryset
+        enrolled = models.Q(
+            is_published=True,
+            course__is_published=True,
+            course__enrollments__student=user,
+        )
+        if is_instructor(user):
+            return queryset.filter(
+                models.Q(course__instructor=user) | enrolled
+            ).distinct()
+        return queryset.filter(enrolled).distinct()
+
+    def perform_create(self, serializer):
+        course = serializer.validated_data["course"]
+        if course.instructor != self.request.user and not self.request.user.is_staff:
+            raise PermissionDenied("You are not the instructor of this course.")
+        serializer.save()
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
+    def submit(self, request, pk=None):
+        """Grade the student's free-text answer against the mark scheme."""
+        question = self.get_object()
+        enrollment = (
+            Enrollment.objects.using("default")
+            .filter(student=request.user, course=question.course)
+            .first()
+        )
+        if not enrollment:
+            return Response(
+                {"error": "You must be enrolled in the course to submit an answer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        answer_text = str(request.data.get("answer", "")).strip()[:8000]
+        if not answer_text:
+            return Response(
+                {"error": "answer is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Attempt cap — same live-tunable pattern as quizzes
+        from apps.settings_engine.services import get_setting
+
+        max_attempts = get_setting("short_answer_max_attempts")
+        if not isinstance(max_attempts, int) or max_attempts < 1:
+            max_attempts = 3
+        attempts_so_far = (
+            ShortAnswerSubmission.objects.using("default")
+            .filter(question=question, enrollment=enrollment)
+            .count()
+        )
+        if attempts_so_far >= max_attempts:
+            return Response(
+                {"error": f"Attempt limit reached ({max_attempts} per question)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Generous timeout: grading may run the in-process LLM
+            result = ml_client.post_json(
+                "/v1/grade/short-answer",
+                {
+                    "question": question.prompt,
+                    "student_answer": answer_text,
+                    "mark_scheme": question.mark_scheme,
+                    "max_score": question.max_score,
+                },
+                timeout=60,
+            )
+        except ml_client.MLServiceError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        try:
+            score = max(0, min(int(result.get("score", 0)), question.max_score))
+        except (TypeError, ValueError):
+            score = 0
+        engine = result.get("engine")
+        if engine not in ShortAnswerSubmission.Engine.values:
+            engine = ShortAnswerSubmission.Engine.HEURISTIC
+
+        submission = ShortAnswerSubmission.objects.using("default").create(
+            question=question,
+            enrollment=enrollment,
+            answer_text=answer_text,
+            score=score,
+            max_score=question.max_score,
+            criteria_met=[str(c) for c in result.get("criteria_met") or []],
+            criteria_missing=[str(c) for c in result.get("criteria_missing") or []],
+            feedback=str(result.get("feedback", "")),
+            engine=engine,
+        )
+        return Response(
+            ShortAnswerSubmissionSerializer(submission).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=["get"])
+    def submissions(self, request, pk=None):
+        """A student sees their own attempts; the course instructor sees all."""
+        question = self.get_object()
+        queryset = (
+            ShortAnswerSubmission.objects.using("default")
+            .filter(question=question)
+            .select_related("enrollment__student")
+        )
+        user = request.user
+        if not (user.is_staff or user.is_superuser or question.course.instructor == user):
+            queryset = queryset.filter(enrollment__student=user)
+        return Response(
+            ShortAnswerSubmissionSerializer(queryset, many=True).data
+        )
 
 
 class EnrollmentViewSet(viewsets.ReadOnlyModelViewSet):
@@ -487,6 +847,29 @@ class QuizQuestionViewSet(viewsets.ModelViewSet):
         if quiz.course.instructor != user and not user.is_staff:
             raise PermissionDenied("You are not the instructor of this course.")
         serializer.save()
+
+
+class PracticeRecommendationsView(APIView):
+    """Weak-topic practice feed: the student's per-topic accuracy plus the
+    questions they should attempt next, weakest topic first."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from . import adaptive
+
+        return Response(adaptive.recommendations(request.user))
+
+
+class StudentReadinessView(APIView):
+    """The student's own exam-readiness score per enrolled course."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from . import readiness as readiness_module
+
+        return Response(readiness_module.student_readiness(request.user))
 
 
 class SearchView(APIView):

@@ -15,3 +15,15 @@ def check_badges_for_user(user_id, action=""):
         return "user gone"
     fresh = check_badges(user, action=action)
     return f"awarded {len(fresh)} badge(s)"
+
+
+@shared_task
+def scan_dropout_risk():
+    """Weekly student-success sweep (Celery beat): score every active
+    enrolled student against the ml-service dropout model; nudge and
+    ticket the high-risk ones. Also runnable on demand from the
+    instructor studio."""
+    from .risk import scan_students
+
+    scanned, flagged = scan_students()
+    return f"scanned {scanned} student(s), flagged {flagged} high-risk"

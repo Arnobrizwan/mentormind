@@ -7,9 +7,12 @@ from .views import (
     EnrollmentViewSet,
     HealthView,
     LessonViewSet,
+    PracticeRecommendationsView,
     QuizQuestionViewSet,
     QuizViewSet,
     SearchView,
+    ShortAnswerQuestionViewSet,
+    StudentReadinessView,
     SystemStatusView,
 )
 
@@ -18,12 +21,23 @@ router.register("courses", CourseViewSet, basename="course")
 router.register("lessons", LessonViewSet, basename="lesson")
 router.register("quizzes", QuizViewSet, basename="quiz")
 router.register("questions", QuizQuestionViewSet, basename="question")
+router.register("short-answers", ShortAnswerQuestionViewSet, basename="short-answer")
 router.register("enrollments", EnrollmentViewSet, basename="enrollment")
 
 urlpatterns = [
     path("health/", HealthView.as_view(), name="health"),
     path("system/", SystemStatusView.as_view(), name="system-status"),
     path("search/", SearchView.as_view(), name="search"),
+    path(
+        "practice/recommendations/",
+        PracticeRecommendationsView.as_view(),
+        name="practice-recommendations",
+    ),
+    path(
+        "practice/readiness/",
+        StudentReadinessView.as_view(),
+        name="practice-readiness",
+    ),
     path("admin/stats/", AdminStatsView.as_view(), name="admin-stats"),
     path("", include(router.urls)),
 ]

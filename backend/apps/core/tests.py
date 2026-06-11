@@ -704,3 +704,454 @@ class AdminStatsTests(TestCase):
         self.assertIn("premium_users", res.json())
 
         self.assertEqual(as_student.get("/api/v1/admin/stats/").status_code, 403)
+
+
+class ShortAnswerGradingTests(TestCase):
+    """LLM rubric grading — questions, permissions, and the ml-service call."""
+
+    def setUp(self):
+        cache.clear()
+        group, _ = Group.objects.get_or_create(name="Instructors")
+        self.instructor = User.objects.create_user(
+            email="sa-instructor@mentormind.dev", password="password123"
+        )
+        self.instructor.groups.add(group)
+        self.student = User.objects.create_user(
+            email="sa-student@mentormind.dev", password="password123"
+        )
+        self.outsider = User.objects.create_user(
+            email="sa-outsider@mentormind.dev", password="password123"
+        )
+        self.course = Course.objects.create(
+            title="Physics",
+            slug="sa-physics",
+            description="Forces and motion.",
+            instructor=self.instructor,
+            is_published=True,
+        )
+        Enrollment.objects.create(student=self.student, course=self.course)
+        from .models import ShortAnswerQuestion
+
+        self.question = ShortAnswerQuestion.objects.create(
+            course=self.course,
+            prompt="Define acceleration and calculate it for 0 to 20 m/s in 8 s.",
+            mark_scheme="- rate of change of velocity\n- a = (v-u)/t\n- 2.5 m/s^2",
+            max_score=5,
+        )
+        self.as_student = APIClient()
+        self.as_student.force_authenticate(user=self.student)
+        self.as_instructor = APIClient()
+        self.as_instructor.force_authenticate(user=self.instructor)
+
+    def test_mark_scheme_hidden_from_students(self):
+        res = self.as_student.get(f"/api/v1/short-answers/{self.question.id}/")
+        self.assertEqual(res.status_code, 200)
+        self.assertNotIn("mark_scheme", res.json())
+        res = self.as_instructor.get(f"/api/v1/short-answers/{self.question.id}/")
+        self.assertIn("mark_scheme", res.json())
+
+    def test_submit_grades_and_stores_breakdown(self):
+        from unittest.mock import patch
+
+        graded = {
+            "score": 4,
+            "max_score": 5,
+            "criteria_met": ["rate of change of velocity", "a = (v-u)/t"],
+            "criteria_missing": ["2.5 m/s^2"],
+            "feedback": "Show the final value with units.",
+            "engine": "llm",
+        }
+        with patch("apps.core.ml_client.post_json", return_value=graded) as mocked:
+            res = self.as_student.post(
+                f"/api/v1/short-answers/{self.question.id}/submit/",
+                {"answer": "Acceleration is the rate of change of velocity, a=(v-u)/t."},
+                format="json",
+            )
+        self.assertEqual(res.status_code, 201)
+        body = res.json()
+        self.assertEqual(body["score"], 4)
+        self.assertEqual(body["engine"], "llm")
+        self.assertEqual(len(body["criteria_missing"]), 1)
+        mocked.assert_called_once()
+        sent = mocked.call_args.args[1]
+        self.assertEqual(sent["max_score"], 5)
+        self.assertIn("mark_scheme", sent)
+
+    def test_submit_requires_enrollment(self):
+        as_outsider = APIClient()
+        as_outsider.force_authenticate(user=self.outsider)
+        res = as_outsider.post(
+            f"/api/v1/short-answers/{self.question.id}/submit/",
+            {"answer": "An answer."},
+            format="json",
+        )
+        # Outsiders can't even see the question (404) or submit (400)
+        self.assertIn(res.status_code, (400, 404))
+
+    def test_attempt_cap_enforced(self):
+        from .models import ShortAnswerSubmission
+
+        enrollment = Enrollment.objects.get(student=self.student, course=self.course)
+        for _ in range(3):
+            ShortAnswerSubmission.objects.create(
+                question=self.question,
+                enrollment=enrollment,
+                answer_text="x",
+                score=1,
+                max_score=5,
+            )
+        res = self.as_student.post(
+            f"/api/v1/short-answers/{self.question.id}/submit/",
+            {"answer": "Another go."},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("Attempt limit", res.json()["error"])
+
+    def test_grader_outage_returns_502_and_stores_nothing(self):
+        from unittest.mock import patch
+
+        from apps.core import ml_client
+        from .models import ShortAnswerSubmission
+
+        with patch(
+            "apps.core.ml_client.post_json",
+            side_effect=ml_client.MLServiceError("down"),
+        ):
+            res = self.as_student.post(
+                f"/api/v1/short-answers/{self.question.id}/submit/",
+                {"answer": "An answer."},
+                format="json",
+            )
+        self.assertEqual(res.status_code, 502)
+        self.assertEqual(ShortAnswerSubmission.objects.count(), 0)
+
+    def test_students_see_only_their_own_submissions(self):
+        from .models import ShortAnswerSubmission
+
+        enrollment = Enrollment.objects.get(student=self.student, course=self.course)
+        other = User.objects.create_user(
+            email="sa-other@mentormind.dev", password="password123"
+        )
+        other_enrollment = Enrollment.objects.create(student=other, course=self.course)
+        ShortAnswerSubmission.objects.create(
+            question=self.question, enrollment=enrollment,
+            answer_text="mine", score=2, max_score=5,
+        )
+        ShortAnswerSubmission.objects.create(
+            question=self.question, enrollment=other_enrollment,
+            answer_text="theirs", score=3, max_score=5,
+        )
+        res = self.as_student.get(
+            f"/api/v1/short-answers/{self.question.id}/submissions/"
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.json()), 1)
+        self.assertEqual(res.json()[0]["answer_text"], "mine")
+        res = self.as_instructor.get(
+            f"/api/v1/short-answers/{self.question.id}/submissions/"
+        )
+        self.assertEqual(len(res.json()), 2)
+
+    def test_only_course_instructor_creates_questions(self):
+        res = self.as_student.post(
+            "/api/v1/short-answers/",
+            {"course": self.course.id, "prompt": "Q?", "mark_scheme": "M", "max_score": 3},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 403)
+        res = self.as_instructor.post(
+            "/api/v1/short-answers/",
+            {"course": self.course.id, "prompt": "Q?", "mark_scheme": "M", "max_score": 3},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 201)
+
+
+class ProctoringTests(TestCase):
+    """Webcam-frame logging, the consecutive-violation alert, and the
+    instructor timeline."""
+
+    def setUp(self):
+        cache.clear()
+        group, _ = Group.objects.get_or_create(name="Instructors")
+        self.instructor = User.objects.create_user(
+            email="proc-instructor@mentormind.dev", password="password123"
+        )
+        self.instructor.groups.add(group)
+        self.student = User.objects.create_user(
+            email="proc-student@mentormind.dev", password="password123",
+            display_name="Proctored Pat",
+        )
+        self.course = Course.objects.create(
+            title="Maths", slug="proc-maths", description="d",
+            instructor=self.instructor, is_published=True,
+        )
+        self.enrollment = Enrollment.objects.create(
+            student=self.student, course=self.course
+        )
+        self.quiz = Quiz.objects.create(course=self.course, title="Final")
+        QuizQuestion.objects.create(
+            quiz=self.quiz, text="1+1?", options=["1", "2"], correct_option_index=1
+        )
+        self.as_student = APIClient()
+        self.as_student.force_authenticate(user=self.student)
+        self.as_instructor = APIClient()
+        self.as_instructor.force_authenticate(user=self.instructor)
+
+    def _frame(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        return SimpleUploadedFile("frame.jpg", b"jpegbytes", content_type="image/jpeg")
+
+    def _post_frame(self, verdict="ok", faces=1):
+        from unittest.mock import patch
+
+        with patch(
+            "apps.core.ml_client.post_image",
+            return_value={"faces": faces, "verdict": verdict, "boxes": []},
+        ):
+            return self.as_student.post(
+                f"/api/v1/quizzes/{self.quiz.id}/proctor-frame/",
+                {"image": self._frame()},
+                format="multipart",
+            )
+
+    def test_frame_is_logged_without_storing_the_image(self):
+        from .models import ProctoringLog
+
+        res = self._post_frame()
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.json()["verdict"], "ok")
+        log = ProctoringLog.objects.get()
+        self.assertEqual(log.enrollment, self.enrollment)
+        self.assertEqual(log.quiz, self.quiz)
+        self.assertFalse(log.is_violation)
+
+    def test_three_consecutive_violations_alert_instructor_once(self):
+        from apps.notifications.models import Notification
+
+        for _ in range(2):
+            self._post_frame(verdict="no_face", faces=0)
+        self.assertEqual(
+            Notification.objects.filter(kind=Notification.Kind.PROCTORING).count(), 0
+        )
+        self._post_frame(verdict="no_face", faces=0)
+        alerts = Notification.objects.filter(kind=Notification.Kind.PROCTORING)
+        self.assertEqual(alerts.count(), 1)
+        self.assertEqual(alerts.get().user, self.instructor)
+        self.assertIn("Proctored Pat", alerts.get().title)
+        # A continuing streak doesn't re-alert
+        self._post_frame(verdict="multiple_faces", faces=2)
+        self.assertEqual(alerts.count(), 1)
+
+    def test_timeline_is_instructor_only_and_grouped(self):
+        self._post_frame()
+        self._post_frame(verdict="no_face", faces=0)
+        res = self.as_student.get(f"/api/v1/quizzes/{self.quiz.id}/proctoring/")
+        self.assertEqual(res.status_code, 403)
+        res = self.as_instructor.get(f"/api/v1/quizzes/{self.quiz.id}/proctoring/")
+        self.assertEqual(res.status_code, 200)
+        sessions = res.json()
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0]["student_email"], self.student.email)
+        self.assertEqual(sessions[0]["violations"], 1)
+        self.assertEqual(len(sessions[0]["logs"]), 2)
+
+    def test_rejects_missing_or_oversized_image(self):
+        res = self.as_student.post(
+            f"/api/v1/quizzes/{self.quiz.id}/proctor-frame/", {}, format="multipart"
+        )
+        self.assertEqual(res.status_code, 400)
+
+
+class AdaptivePracticeTests(TestCase):
+    """Topic stats and the weak-topic recommendation feed."""
+
+    def setUp(self):
+        cache.clear()
+        Group.objects.get_or_create(name="Instructors")
+        self.instructor = User.objects.create_user(
+            email="ap-instructor@mentormind.dev", password="password123"
+        )
+        self.student = User.objects.create_user(
+            email="ap-student@mentormind.dev", password="password123"
+        )
+        self.course = Course.objects.create(
+            title="Mechanics", slug="ap-mechanics", description="d",
+            instructor=self.instructor, is_published=True,
+        )
+        self.enrollment = Enrollment.objects.create(
+            student=self.student, course=self.course
+        )
+        self.quiz = Quiz.objects.create(course=self.course, title="Motion check")
+        self.kinematics = QuizQuestion.objects.create(
+            quiz=self.quiz, text="v=u+at?", options=["yes", "no"],
+            correct_option_index=0, topic="Kinematics",
+        )
+        self.dynamics = QuizQuestion.objects.create(
+            quiz=self.quiz, text="F=ma?", options=["yes", "no"],
+            correct_option_index=0, topic="Dynamics", order=1,
+        )
+        self.as_student = APIClient()
+        self.as_student.force_authenticate(user=self.student)
+
+    def _attempt(self, kinematics_correct):
+        res = self.as_student.post(
+            f"/api/v1/quizzes/{self.quiz.id}/submit/",
+            {
+                "answers": {
+                    str(self.kinematics.id): 0 if kinematics_correct else 1,
+                    str(self.dynamics.id): 0,
+                }
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 201)
+
+    def test_submit_records_per_question_topic_detail(self):
+        self._attempt(kinematics_correct=False)
+        attempt = QuizAttempt.objects.get()
+        detail = attempt.answers[str(self.kinematics.id)]
+        self.assertEqual(detail["topic"], "Kinematics")
+        self.assertFalse(detail["correct"])
+        self.assertTrue(attempt.answers[str(self.dynamics.id)]["correct"])
+
+    def test_recommendations_surface_weak_topics_first(self):
+        # Two attempts: Kinematics 0/2, Dynamics 2/2
+        self._attempt(kinematics_correct=False)
+        self._attempt(kinematics_correct=False)
+        res = self.as_student.get("/api/v1/practice/recommendations/")
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        topics = [t["topic"] for t in body["topics"]]
+        self.assertIn("Kinematics", topics)
+        self.assertNotIn("Dynamics", topics)  # 100% accurate — not weak
+        self.assertTrue(body["recommended"])
+        self.assertEqual(body["recommended"][0]["topic"], "Kinematics")
+
+    def test_no_data_means_empty_feed(self):
+        res = self.as_student.get("/api/v1/practice/recommendations/")
+        self.assertEqual(res.json(), {"topics": [], "recommended": []})
+
+
+class ReadinessTests(TestCase):
+    """The exam-readiness blend and its two API surfaces."""
+
+    def setUp(self):
+        cache.clear()
+        group, _ = Group.objects.get_or_create(name="Instructors")
+        self.instructor = User.objects.create_user(
+            email="rd-instructor@mentormind.dev", password="password123"
+        )
+        self.instructor.groups.add(group)
+        self.student = User.objects.create_user(
+            email="rd-student@mentormind.dev", password="password123"
+        )
+        self.course = Course.objects.create(
+            title="Waves", slug="rd-waves", description="d",
+            instructor=self.instructor, is_published=True,
+        )
+        self.lesson = Lesson.objects.create(
+            course=self.course, title="Superposition", content="c",
+            order=1, is_published=True,
+        )
+        self.enrollment = Enrollment.objects.create(
+            student=self.student, course=self.course
+        )
+
+    def test_fresh_enrollment_scores_zero(self):
+        from .readiness import enrollment_readiness
+
+        result = enrollment_readiness(self.enrollment)
+        self.assertEqual(result["readiness"], 0.0)
+
+    def test_progress_and_quizzes_raise_the_score(self):
+        from .readiness import enrollment_readiness
+
+        self.enrollment.completed_lessons.add(self.lesson)
+        quiz = Quiz.objects.create(course=self.course, title="W1")
+        QuizAttempt.objects.create(
+            enrollment=self.enrollment, quiz=quiz, score=90.0,
+            total_questions=2, correct_answers=2,
+            answers={"1": {"selected": 0, "correct": True, "topic": ""},
+                     "2": {"selected": 1, "correct": True, "topic": ""}},
+        )
+        result = enrollment_readiness(self.enrollment)
+        self.assertGreater(result["readiness"], 60)
+        self.assertEqual(result["components"]["progress_pct"], 100.0)
+        self.assertEqual(result["components"]["quiz_avg"], 90.0)
+
+    def test_student_and_instructor_endpoints(self):
+        as_student = APIClient()
+        as_student.force_authenticate(user=self.student)
+        res = as_student.get("/api/v1/practice/readiness/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()[0]["course_slug"], "rd-waves")
+
+        # students can't see the roster view
+        self.assertEqual(
+            as_student.get(f"/api/v1/courses/{self.course.slug}/readiness/").status_code,
+            403,
+        )
+        as_instructor = APIClient()
+        as_instructor.force_authenticate(user=self.instructor)
+        res = as_instructor.get(f"/api/v1/courses/{self.course.slug}/readiness/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()[0]["student_email"], self.student.email)
+
+
+class QuizDraftGenerationTests(TestCase):
+    """AI quiz drafting — instructor-only, suggestions never auto-saved."""
+
+    def setUp(self):
+        cache.clear()
+        group, _ = Group.objects.get_or_create(name="Instructors")
+        self.instructor = User.objects.create_user(
+            email="qg-instructor@mentormind.dev", password="password123"
+        )
+        self.instructor.groups.add(group)
+        self.student = User.objects.create_user(
+            email="qg-student@mentormind.dev", password="password123"
+        )
+        self.course = Course.objects.create(
+            title="Optics", slug="qg-optics", description="d",
+            instructor=self.instructor, is_published=True,
+        )
+        self.lesson = Lesson.objects.create(
+            course=self.course, title="Refraction",
+            content="Refraction: bending of light between media.",
+            order=1, is_published=True,
+        )
+        self.as_instructor = APIClient()
+        self.as_instructor.force_authenticate(user=self.instructor)
+
+    def test_draft_returns_suggestions_without_saving(self):
+        from unittest.mock import patch
+
+        generated = {
+            "questions": [
+                {"text": "Q?", "options": ["a", "b", "c", "d"], "correct_option_index": 1}
+            ],
+            "engine": "llm",
+        }
+        with patch("apps.core.ml_client.post_json", return_value=generated):
+            res = self.as_instructor.post(
+                "/api/v1/quizzes/generate-draft/",
+                {"lesson": self.lesson.id},
+                format="json",
+            )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(len(body["questions"]), 1)
+        self.assertEqual(body["engine"], "llm")
+        self.assertIn("Refraction", body["suggested_title"])
+        self.assertEqual(Quiz.objects.count(), 0)  # nothing persisted
+
+    def test_students_cannot_generate(self):
+        as_student = APIClient()
+        as_student.force_authenticate(user=self.student)
+        res = as_student.post(
+            "/api/v1/quizzes/generate-draft/", {"lesson": self.lesson.id}, format="json"
+        )
+        self.assertEqual(res.status_code, 403)

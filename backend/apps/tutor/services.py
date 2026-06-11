@@ -34,6 +34,33 @@ class TutorError(Exception):
     pass
 
 
+# Mirrors the ml-service's own MAX_IMAGE_BYTES cap.
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+
+
+def extract_image_text(uploaded_file):
+    """OCR a photographed question through the ml-service, so a student can
+    snap a textbook problem instead of typing it. Returns extracted text
+    (possibly empty); raises TutorError on bad input or a dead ml-service."""
+    from apps.core import ml_client
+
+    if not (uploaded_file.content_type or "").startswith("image/"):
+        raise TutorError("Only image uploads are supported.")
+    raw = uploaded_file.read()
+    if len(raw) > MAX_IMAGE_BYTES:
+        raise TutorError("Image too large (8 MB max).")
+    try:
+        body = ml_client.post_image(
+            "/v1/ocr/extract",
+            raw,
+            filename=uploaded_file.name or "question.jpg",
+            content_type=uploaded_file.content_type,
+        )
+    except ml_client.MLServiceError as exc:
+        raise TutorError(f"Could not read the photo: {exc}") from exc
+    return str(body.get("text", "")).strip()
+
+
 def daily_limit(user):
     """None means unlimited (premium)."""
     if getattr(user, "is_premium", False):

@@ -6,11 +6,13 @@ from .views import (
     DailyLoginView,
     MyEngagementView,
     PointsHistoryView,
+    RemediationTicketViewSet,
     WeeklyLeaderboardView,
 )
 
 router = DefaultRouter()
 router.register("badges/manage", BadgeViewSet, basename="badge-manage")
+router.register("risk/tickets", RemediationTicketViewSet, basename="remediation-ticket")
 
 urlpatterns = [
     path("me/", MyEngagementView.as_view(), name="engagement-me"),

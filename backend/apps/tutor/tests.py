@@ -204,3 +204,86 @@ class CustomModelProviderTests(TestCase):
                 )
         self.assertEqual(res.status_code, 502)
         self.assertEqual(TutorMessage.objects.filter(session_id=session_id).count(), 0)
+
+
+class TutorImageTests(TestCase):
+    """Multimodal tutoring — a photographed question is OCR'd via the
+    ml-service and answered like typed text."""
+
+    def setUp(self):
+        cache.clear()
+        self.student = User.objects.create_user(
+            email="tutor-photo@mentormind.dev", password="pass-123456"
+        )
+        self.client_student = APIClient()
+        self.client_student.force_authenticate(user=self.student)
+        res = self.client_student.post(
+            "/api/v1/tutor/sessions/", {"subject": "Maths"}, format="json"
+        )
+        self.session_id = res.json()["id"]
+
+    def _photo(self, content_type="image/jpeg"):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        return SimpleUploadedFile("question.jpg", b"img", content_type=content_type)
+
+    def test_photo_question_is_ocrd_and_answered(self):
+        from unittest.mock import patch
+
+        with patch(
+            "apps.core.ml_client.post_image",
+            return_value={"text": "Solve 2x + 3 = 11", "characters": 17},
+        ) as mocked:
+            res = self.client_student.post(
+                f"/api/v1/tutor/sessions/{self.session_id}/messages/",
+                {"image": self._photo()},
+                format="multipart",
+            )
+        self.assertEqual(res.status_code, 201)
+        content = res.json()["user_message"]["content"]
+        self.assertIn("[From my photo]", content)
+        self.assertIn("Solve 2x + 3 = 11", content)
+        self.assertEqual(res.json()["assistant_message"]["role"], "assistant")
+        mocked.assert_called_once()
+
+    def test_typed_text_and_photo_are_combined(self):
+        from unittest.mock import patch
+
+        with patch(
+            "apps.core.ml_client.post_image",
+            return_value={"text": "x^2 + 2x", "characters": 8},
+        ):
+            res = self.client_student.post(
+                f"/api/v1/tutor/sessions/{self.session_id}/messages/",
+                {"content": "Differentiate this:", "image": self._photo()},
+                format="multipart",
+            )
+        content = res.json()["user_message"]["content"]
+        self.assertTrue(content.startswith("Differentiate this:"))
+        self.assertIn("x^2 + 2x", content)
+
+    def test_unreadable_photo_without_text_is_rejected(self):
+        from unittest.mock import patch
+
+        with patch(
+            "apps.core.ml_client.post_image",
+            return_value={"text": "", "characters": 0},
+        ):
+            res = self.client_student.post(
+                f"/api/v1/tutor/sessions/{self.session_id}/messages/",
+                {"image": self._photo()},
+                format="multipart",
+            )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("photo", res.json()["error"])
+        self.assertEqual(
+            TutorMessage.objects.filter(session_id=self.session_id).count(), 0
+        )
+
+    def test_non_image_upload_is_rejected(self):
+        res = self.client_student.post(
+            f"/api/v1/tutor/sessions/{self.session_id}/messages/",
+            {"image": self._photo(content_type="application/pdf")},
+            format="multipart",
+        )
+        self.assertEqual(res.status_code, 400)
