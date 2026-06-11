@@ -14,6 +14,15 @@ def open_auth(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_local_llm(monkeypatch):
+    """Tests must be hermetic: a developer's .env (loaded by app.main) may
+    set LOCAL_LLM=1, which would run real model inference inside the suite
+    and change retrieval-fallback answers. Tests that cover the local path
+    set LOCAL_LLM explicitly."""
+    monkeypatch.delenv("LOCAL_LLM", raising=False)
+
+
+@pytest.fixture(autouse=True)
 def fresh_token_cache():
     """Each test gets a fresh DB, so row ids repeat — drop cached tokens."""
     answering._token_cache.clear()

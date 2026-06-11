@@ -8,12 +8,18 @@ Plus: the Cambridge past-paper OCR + alignment training pipeline.
 import json
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 
-from . import dropout, vision
+# Must run before the local imports below — pastpapers.local_llm and
+# pastpapers.answering read their env knobs at import time.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+from . import dropout, flashcards, grading, quizgen, vision  # noqa: E402
 from .auth import require_api_key
 from .flags import flag_enabled
 from .pastpapers import answering
@@ -151,6 +157,65 @@ async def ocr_extract(image: UploadFile = File(...)):
         )
     page = await _read_image(image)
     return vision.ocr_extract(page)
+
+
+class ShortAnswerGradeRequest(BaseModel):
+    # bounded so one giant submission can't hog the grader
+    question: str = Field(..., max_length=4000)
+    student_answer: str = Field(..., min_length=1, max_length=8000)
+    mark_scheme: str = Field(..., min_length=1, max_length=8000)
+    max_score: int = Field(5, ge=1, le=100)
+
+
+@app.post("/v1/grade/short-answer", dependencies=[Depends(require_api_key)])
+async def grade_short_answer(request: ShortAnswerGradeRequest):
+    """Rubric-based grading of a free-text answer against a mark scheme.
+    Returns {score, max_score, criteria_met, criteria_missing, feedback,
+    engine} — engine is 'llm' or 'heuristic' (criterion-overlap fallback)."""
+    await require_flag("short_answer_grading")
+    if not request.student_answer.strip():
+        raise HTTPException(status_code=400, detail="student_answer is required.")
+    return await grading.grade_short_answer(
+        request.question,
+        request.student_answer,
+        request.mark_scheme,
+        request.max_score,
+    )
+
+
+class FlashcardGenerateRequest(BaseModel):
+    content: str = Field(..., min_length=1, max_length=16000)
+    topic: str = Field("", max_length=200)
+    count: int = Field(10, ge=1, le=20)
+
+
+@app.post("/v1/generate/flashcards", dependencies=[Depends(require_api_key)])
+async def generate_flashcards(request: FlashcardGenerateRequest):
+    """Draft spaced-repetition flashcards from lesson content. Returns
+    {cards: [{front, back}], engine: 'llm'|'heuristic'} — the caller is
+    expected to hold drafts for human review."""
+    await require_flag("flashcard_generation")
+    if not request.content.strip():
+        raise HTTPException(status_code=400, detail="content is required.")
+    return await flashcards.generate_flashcards(
+        request.content, request.topic, request.count
+    )
+
+
+class QuizGenerateRequest(BaseModel):
+    content: str = Field(..., min_length=1, max_length=16000)
+    topic: str = Field("", max_length=200)
+    count: int = Field(5, ge=1, le=15)
+
+
+@app.post("/v1/generate/quiz", dependencies=[Depends(require_api_key)])
+async def generate_quiz(request: QuizGenerateRequest):
+    """Draft MCQs from lesson content for instructor review. Returns
+    {questions: [{text, options, correct_option_index}], engine}."""
+    await require_flag("quiz_generation")
+    if not request.content.strip():
+        raise HTTPException(status_code=400, detail="content is required.")
+    return await quizgen.generate_quiz(request.content, request.topic, request.count)
 
 
 class TutorAnswerRequest(BaseModel):

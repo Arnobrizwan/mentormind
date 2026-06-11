@@ -16,6 +16,7 @@ No third-party AI APIs are involved anywhere in this path.
 
 from __future__ import annotations
 
+import asyncio
 import math
 import os
 import re
@@ -113,8 +114,10 @@ async def _generate_answer(question: str, subject: str, level: str, context: str
     """Generate from the fine-tuned model. Tries fully-offline in-process
     inference first (LOCAL_LLM=1), then an OpenAI-compatible server
     (CUSTOM_LLM_URL). Returns None if neither is available."""
-    local = local_llm.generate(
-        question, _system_prompt(subject, level, ""), context
+    # In-process inference is CPU/GPU-bound and takes seconds — run it in a
+    # worker thread so it can't stall the event loop.
+    local = await asyncio.to_thread(
+        local_llm.generate, question, _system_prompt(subject, level, ""), context
     )
     if local:
         return local

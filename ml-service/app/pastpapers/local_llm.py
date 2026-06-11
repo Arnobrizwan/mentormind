@@ -63,7 +63,7 @@ def _load():
     tokenizer_source = source if has_adapter else BASE_MODEL
 
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_source)
-    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, torch_dtype=dtype)
+    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, dtype=dtype)
 
     if has_adapter:
         from peft import PeftModel
@@ -84,6 +84,9 @@ def generate(question: str, system_prompt: str, context: str = "") -> str | None
     if not is_enabled() or _load_failed:
         return None
 
+    # One generation at a time: callers invoke this from worker threads
+    # (asyncio.to_thread), and concurrent generate() on a single MPS/CUDA
+    # model corrupts state and spikes memory.
     with _lock:
         if _pipeline is None:
             try:
@@ -93,31 +96,31 @@ def generate(question: str, system_prompt: str, context: str = "") -> str | None
                 _load_failed = True
                 return None
 
-    import torch
+        import torch
 
-    model, tokenizer, device = _pipeline
-    system = system_prompt
-    if context:
-        system += "\n\nReference material:\n" + context
+        model, tokenizer, device = _pipeline
+        system = system_prompt
+        if context:
+            system += "\n\nReference material:\n" + context
 
-    messages = [
-        {"role": "system", "content": system},
-        {"role": "user", "content": question},
-    ]
-    prompt = tokenizer.apply_chat_template(
-        messages, tokenize=False, add_generation_prompt=True
-    )
-    inputs = tokenizer(prompt, return_tensors="pt").to(device)
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_new_tokens=MAX_NEW_TOKENS,
-            do_sample=True,
-            temperature=TEMPERATURE,
-            top_p=TOP_P,
-            pad_token_id=tokenizer.eos_token_id,
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": question},
+        ]
+        prompt = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
         )
-    text = tokenizer.decode(
-        output[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
-    )
-    return text.strip() or None
+        inputs = tokenizer(prompt, return_tensors="pt").to(device)
+        with torch.no_grad():
+            output = model.generate(
+                **inputs,
+                max_new_tokens=MAX_NEW_TOKENS,
+                do_sample=True,
+                temperature=TEMPERATURE,
+                top_p=TOP_P,
+                pad_token_id=tokenizer.eos_token_id,
+            )
+        text = tokenizer.decode(
+            output[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
+        )
+        return text.strip() or None
