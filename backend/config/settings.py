@@ -166,7 +166,11 @@ DEFAULT_FROM_EMAIL = env(
 # --- Celery ----------------------------------------------------------------
 CELERY_BROKER_URL = env("REDIS_URL", default="") or "memory://"
 CELERY_RESULT_BACKEND = env("REDIS_URL", default="") or None
-CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=not bool(env("REDIS_URL")))
+# Tests must run tasks inline even when a broker is available (CI provides
+# Redis but no worker, so queued tasks would never execute).
+CELERY_TASK_ALWAYS_EAGER = _RUNNING_TESTS or env.bool(
+    "CELERY_TASK_ALWAYS_EAGER", default=not bool(env("REDIS_URL"))
+)
 
 # --- DRF / Auth ------------------------------------------------------------
 REST_FRAMEWORK = {
