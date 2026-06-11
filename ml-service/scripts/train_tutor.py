@@ -56,7 +56,25 @@ def load_dataset(extra: list[str]) -> list[dict]:
         added = _read_jsonl(extra_path)
         print(f"merged {len(added)} examples from {extra_path.name}")
         rows.extend(added)
-    return rows
+    return _dedupe(rows)
+
+
+def _dedupe(rows: list[dict]) -> list[dict]:
+    # The corpus repeats questions across paper variants (_11/_12/_13), which
+    # would over-weight them during SFT. Key on user+assistant content only —
+    # the system prompt differs per subject but the example is the same.
+    seen: set[tuple[str, str]] = set()
+    unique: list[dict] = []
+    for row in rows:
+        contents = {m["role"]: m["content"] for m in row.get("messages", [])}
+        key = (contents.get("user", ""), contents.get("assistant", ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(row)
+    if len(unique) < len(rows):
+        print(f"dropped {len(rows) - len(unique)} duplicate examples")
+    return unique
 
 
 def dataset_stats(rows: list[dict]) -> dict:
@@ -196,7 +214,10 @@ def main() -> int:
     parser.add_argument(
         "--extra",
         nargs="*",
-        default=[str(ROOT / "data" / "supplementary.jsonl")],
+        default=[
+            str(ROOT / "data" / "supplementary.jsonl"),
+            str(ROOT / "data" / "extra_science.jsonl"),
+        ],
         help="Extra chat-format JSONL files to merge (skipped when missing)",
     )
     args = parser.parse_args()

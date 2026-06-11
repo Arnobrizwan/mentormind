@@ -118,12 +118,18 @@ async def export(subject: str | None, min_chars: int) -> tuple[int, dict]:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     per_subject: dict[str, int] = {}
     written = 0
+    # Identical questions recur across paper variants (_11/_12/_13); emit
+    # each Q&A pair once so training doesn't over-weight them.
+    seen: set[tuple[str, str]] = set()
     with OUT.open("w", encoding="utf-8") as fh:
         for question, paper in rows:
             q = question.question_markdown.strip()
             a = question.mark_scheme_markdown.strip()
             if len(q) < min_chars or len(a) < min_chars:
                 continue
+            if (q, a) in seen:
+                continue
+            seen.add((q, a))
             record = {
                 "messages": [
                     {"role": "system", "content": system_for(paper.subject_code)},
