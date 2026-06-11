@@ -5,17 +5,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Unbounded:wght@600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,500..800;1,500..700&family=Spline+Sans+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --magenta: #e6007e;
-    --magenta-deep: #b80064;
+    --magenta: #ff5ca3;
+    --magenta-deep: #e84e92;
     --purple: #7c3aed;
     --ink: #140f1a;
     --cyan: #22d3ee;
     --yellow: #ffd23f;
+    --paper: #fff5fa;
+    --muted: #3a2f42;
     --chip-pink: #fbdcea;
     --chip-mint: #c8f0d8;
     --chip-mint-text: #0e9659;
     --chip-yellow: #ffe9a8;
     --chip-lav: #e7d6ff;
+    --sdg4: #c5192d;
+    --sdg10: #dd1367;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -32,152 +36,224 @@
   .comic-bg {
     position:absolute; left:60px; right:60px; top:430px; bottom:300px;
     background-image:
-      radial-gradient(circle at 50% 38%, rgba(255,210,63,0.18) 0%, transparent 42%),
-      radial-gradient(rgba(230,0,126,0.16) 2.4px, transparent 2.6px);
+      radial-gradient(circle at 50% 30%, rgba(255,210,63,0.16) 0%, transparent 44%),
+      radial-gradient(rgba(255,92,163,0.16) 2.2px, transparent 2.5px);
     background-size: 100% 100%, 26px 26px;
     z-index:0;
   }
-  .ink-outline { box-shadow: 0 0 0 6px var(--ink); }
+
+  /* ---------- reusable comic panel ---------- */
+  .panel {
+    position:absolute; z-index:3; background:#fff;
+    border:6px solid var(--ink); border-radius:26px;
+    box-shadow:10px 12px 0 var(--ink);
+    padding:28px 32px;
+  }
+  .ptitle {
+    font-family:'Unbounded'; font-weight:800; font-size:39px; color:var(--magenta);
+    display:flex; align-items:center; gap:18px; line-height:1;
+  }
+  .ptitle .num {
+    flex:0 0 auto; width:56px; height:56px; border-radius:50%;
+    background:var(--magenta); color:#fff; border:4px solid var(--ink);
+    box-shadow:3px 4px 0 var(--ink);
+    display:flex; align-items:center; justify-content:center; font-size:33px;
+  }
+  .lead { font-size:25px; line-height:1.42; color:var(--muted); margin-top:16px; }
 
   /* ---------- header ---------- */
   .kicker {
-    position:absolute; left:150px; top:470px; z-index:3;
-    font-weight:800; letter-spacing:0.3em; font-size:34px; color:var(--magenta); text-transform:uppercase;
+    position:absolute; left:132px; top:466px; z-index:3;
+    font-weight:800; letter-spacing:0.22em; font-size:29px; color:var(--magenta); text-transform:uppercase;
   }
   .title {
-    position:absolute; left:138px; top:520px; z-index:3;
-    font-family:'Unbounded'; font-weight:900; font-size:208px; line-height:0.9; letter-spacing:-0.03em;
+    position:absolute; left:122px; top:506px; z-index:3;
+    font-family:'Unbounded'; font-weight:900; font-size:150px; line-height:0.9; letter-spacing:-0.03em;
     color:var(--magenta);
-    -webkit-text-stroke: 7px var(--ink);
+    -webkit-text-stroke: 6px var(--ink);
     paint-order: stroke fill;
-    text-shadow: 10px 10px 0 var(--ink);
+    text-shadow: 8px 8px 0 var(--ink);
   }
   .title .minds { color: var(--purple); }
   .subtitle {
-    position:absolute; left:150px; top:790px; z-index:3;
-    font-family:'Unbounded'; font-weight:700; font-size:60px; color:var(--ink);
+    position:absolute; left:134px; top:678px; z-index:3; max-width:1500px;
+    font-family:'Unbounded'; font-weight:700; font-size:42px; color:var(--ink);
   }
-  .subtitle .wave { text-decoration: underline wavy var(--magenta) 5px; text-underline-offset: 12px; }
-  .scribble {
-    position:absolute; left:150px; top:910px; z-index:3;
-    font-style:italic; font-weight:700; font-size:38px; color:var(--purple); transform:rotate(-3deg);
+  .subtitle .wave { text-decoration: underline wavy var(--magenta) 4px; text-underline-offset: 10px; }
+
+  /* QR card (top-right) */
+  .qrcard {
+    position:absolute; right:128px; top:468px; z-index:4; width:344px;
+    background:#fff; border:6px solid var(--ink); border-radius:24px;
+    box-shadow:9px 11px 0 var(--ink); padding:22px 22px 18px; text-align:center;
   }
-  /* BANG burst star */
-  .burst {
-    position:absolute; right:120px; top:720px; z-index:4;
-    width:330px; height:330px;
-    background:var(--purple);
-    display:flex; align-items:center; justify-content:center; text-align:center;
-    font-family:'Bangers'; font-size:64px; line-height:0.9; color:#fff; letter-spacing:2px;
-    -webkit-text-stroke:2px var(--ink);
-    clip-path: polygon(50% 0,60% 20%,79% 8%,75% 30%,98% 28%,82% 47%,100% 62%,76% 65%,84% 90%,59% 76%,52% 100%,42% 76%,17% 90%,25% 64%,2% 60%,20% 46%,3% 28%,26% 30%,22% 8%,40% 20%);
-    animation: pop 1.8s ease-in-out infinite;
+  .qrcard img { width:212px; height:212px; display:block; margin:0 auto; image-rendering:pixelated; }
+  .qrcard .qh { font-family:'Unbounded'; font-weight:800; font-size:24px; color:var(--magenta); margin-bottom:12px; }
+  .qrcard .qc { font-family:'Spline Sans Mono'; font-weight:700; font-size:18px; color:var(--ink); margin-top:12px; }
+  .qrcard .qc b { color:var(--purple); }
+
+  /* ---------- problem cards ---------- */
+  .problem-cards { display:flex; gap:26px; margin-top:22px; }
+  .pcard { flex:1; background:var(--paper); border:4px solid var(--ink); border-radius:18px; padding:22px 24px; box-shadow:5px 6px 0 var(--ink); }
+  .pcard .h { font-family:'Unbounded'; font-weight:700; font-size:27px; color:var(--ink); display:flex; align-items:center; gap:12px; }
+  .pcard .h .i { font-size:36px; }
+  .pcard p { font-size:23px; line-height:1.38; margin-top:12px; color:var(--muted); }
+
+  /* ---------- innovation panel ---------- */
+  .novel {
+    margin-top:18px; background:linear-gradient(120deg,var(--magenta),var(--purple)); color:#fff;
+    border:4px solid var(--ink); border-radius:16px; padding:20px 22px; box-shadow:5px 6px 0 var(--ink);
+    font-size:25px; line-height:1.45;
   }
+  .novel .tag { font-family:'Spline Sans Mono'; font-weight:700; font-size:18px; letter-spacing:.08em; display:block; margin-bottom:8px; color:var(--yellow); }
+  .vs { margin-top:16px; display:flex; flex-direction:column; gap:8px; }
+  .vrow { font-size:24px; line-height:1.32; color:var(--muted); }
+  .vrow .tag { display:block; font-family:'Unbounded'; font-weight:700; font-size:22px; color:var(--purple); margin-bottom:0; }
+  .vrow .tag .ok { color:var(--chip-mint-text); }
+  .vrow { animation: rise .55s ease both; }
+  .vrow.d1 { animation-delay:.35s; }
+  .vrow.d2 { animation-delay:.5s; }
+  .vrow.d3 { animation-delay:.65s; }
+
+  /* ---------- tech panel ---------- */
+  .techlist { display:flex; flex-direction:column; gap:12px; margin-top:16px; }
+  .titem { display:flex; gap:18px; align-items:flex-start; animation: rise .55s ease both; }
+  .titem.d1 { animation-delay:.35s; }
+  .titem.d2 { animation-delay:.48s; }
+  .titem.d3 { animation-delay:.61s; }
+  .titem.d4 { animation-delay:.74s; }
+  .titem .i {
+    flex:0 0 auto; width:70px; height:70px; border-radius:16px; border:4px solid var(--ink);
+    display:flex; align-items:center; justify-content:center; font-size:38px; box-shadow:3px 4px 0 var(--ink);
+  }
+  .titem:nth-child(1) .i { background:var(--chip-lav); }
+  .titem:nth-child(2) .i { background:var(--chip-mint); }
+  .titem:nth-child(3) .i { background:var(--chip-yellow); }
+  .titem:nth-child(4) .i { background:var(--chip-pink); }
+  .titem .h { font-family:'Unbounded'; font-weight:700; font-size:26px; color:var(--ink); }
+  .titem p { font-size:22px; line-height:1.36; color:var(--muted); margin-top:6px; }
 
   /* ---------- phone (real app screen) ---------- */
   .phone {
-    position:absolute; left:762px; top:1000px; z-index:3;
-    width:720px; height:1480px;
-    background:#fff; border:12px solid var(--ink); border-radius:78px;
-    box-shadow: 14px 16px 0 rgba(20,15,26,0.9);
+    position:absolute; left:850px; top:1238px; z-index:3;
+    width:545px; height:980px;
+    background:#fff; border:11px solid var(--ink); border-radius:62px;
+    box-shadow: 13px 15px 0 rgba(20,15,26,0.9);
     overflow:hidden;
     animation: float 4s ease-in-out infinite;
   }
-  .notch { position:absolute; left:50%; top:18px; transform:translateX(-50%); width:230px; height:34px; background:var(--ink); border-radius:0 0 22px 22px; z-index:5; }
-  .app { position:absolute; inset:0; display:flex; flex-direction:column; font-size:25px; }
-  .app-top { background:var(--magenta); color:#fff; padding:70px 34px 24px; display:flex; align-items:center; gap:18px; border-bottom:4px solid var(--ink); }
-  .app-logo { width:64px;height:64px;border-radius:18px;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:34px; }
-  .app-top .name { font-family:'Unbounded'; font-weight:700; font-size:32px; }
-  .app-top .status { font-size:21px; opacity:.9; }
-  .streak { margin-left:auto; background:#fff; color:var(--magenta); font-weight:800; font-size:21px; padding:8px 18px; border-radius:999px; border:3px solid var(--ink); }
-  .app-body { flex:1; background:#fff5fa; padding:30px; display:flex; flex-direction:column; gap:24px; overflow:hidden; }
-  .bubble { max-width:80%; padding:24px 28px; border-radius:28px; font-size:25px; line-height:1.4; border:3px solid var(--ink); }
-  .bubble.me { align-self:flex-end; background:var(--ink); color:#fff; border-bottom-right-radius:8px; }
-  .bubble.ai { align-self:flex-start; background:#fff; border-bottom-left-radius:8px; box-shadow:5px 6px 0 rgba(20,15,26,0.85); }
-  .bubble.ai .steps { font-family:'Spline Sans Mono'; font-size:23px; line-height:1.7; margin-top:10px; }
+  .notch { position:absolute; left:50%; top:16px; transform:translateX(-50%); width:180px; height:28px; background:var(--ink); border-radius:0 0 18px 18px; z-index:5; }
+  .app { position:absolute; inset:0; display:flex; flex-direction:column; }
+  .app-top { background:var(--magenta); color:#fff; padding:54px 26px 18px; display:flex; align-items:center; gap:14px; border-bottom:4px solid var(--ink); }
+  .app-logo { width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:28px; }
+  .app-top .name { font-family:'Unbounded'; font-weight:700; font-size:25px; }
+  .app-top .status { font-size:17px; opacity:.92; }
+  .streak { margin-left:auto; background:#fff; color:var(--magenta); font-weight:800; font-size:17px; padding:6px 14px; border-radius:999px; border:3px solid var(--ink); }
+  .app-body { flex:1; background:var(--paper); padding:24px; display:flex; flex-direction:column; gap:18px; overflow:hidden; }
+  .bubble { max-width:84%; padding:18px 22px; border-radius:24px; font-size:21px; line-height:1.4; border:3px solid var(--ink); }
+  .bubble.me { align-self:flex-end; background:var(--ink); color:#fff; border-bottom-right-radius:6px; }
+  .bubble.ai { align-self:flex-start; background:#fff; border-bottom-left-radius:6px; box-shadow:4px 5px 0 rgba(20,15,26,0.85); }
+  .bubble.ai .steps { font-family:'Spline Sans Mono'; font-size:20px; line-height:1.65; margin-top:8px; }
   .bubble.ai .ok { color:var(--chip-mint-text); font-weight:800; }
-  .src { display:inline-block; margin-top:14px; font-size:18px; color:var(--purple); font-weight:800; }
-  .typing { align-self:flex-start; display:flex; gap:8px; padding:20px 26px; background:#fff; border:3px solid var(--ink); border-radius:28px; }
-  .typing span { width:14px; height:14px; border-radius:50%; background:var(--magenta); animation: blink 1.2s infinite; }
-  .typing span:nth-child(2){ animation-delay:.2s } .typing span:nth-child(3){ animation-delay:.4s }
-  .quizcard { background:linear-gradient(120deg,var(--magenta),var(--purple)); color:#fff; border-radius:26px; padding:24px 28px; border:3px solid var(--ink); box-shadow:5px 6px 0 rgba(20,15,26,0.85); }
-  .quizcard .qh { font-family:'Spline Sans Mono'; font-size:17px; letter-spacing:.1em; opacity:.95; }
-  .quizcard .opt { background:rgba(255,255,255,0.18); border-radius:14px; padding:13px 18px; margin-top:12px; font-size:23px; display:flex; justify-content:space-between; border:2px solid rgba(255,255,255,0.5); }
+  .src { display:inline-block; margin-top:12px; font-size:16px; color:var(--purple); font-weight:800; }
+  .quizcard { background:linear-gradient(120deg,var(--magenta),var(--purple)); color:#fff; border-radius:22px; padding:20px 22px; border:3px solid var(--ink); box-shadow:4px 5px 0 rgba(20,15,26,0.85); }
+  .quizcard .qh { font-family:'Spline Sans Mono'; font-size:15px; letter-spacing:.08em; opacity:.95; }
+  .quizcard .opt { background:rgba(255,255,255,0.18); border-radius:12px; padding:11px 16px; margin-top:10px; font-size:20px; display:flex; justify-content:space-between; border:2px solid rgba(255,255,255,0.5); }
   .quizcard .opt.correct { background:#fff; color:var(--magenta); font-weight:800; border-color:#fff; }
-  .mastery { margin-top:16px; }
-  .mastery .bar { height:18px; background:rgba(255,255,255,0.3); border-radius:999px; overflow:hidden; border:2px solid rgba(255,255,255,0.6); }
+  .mastery { margin-top:14px; }
+  .mastery .bar { height:15px; background:rgba(255,255,255,0.3); border-radius:999px; overflow:hidden; border:2px solid rgba(255,255,255,0.6); }
   .mastery .fill { height:100%; width:0; background:#fff; animation: fillbar 2.5s ease-out forwards; }
-  .app-input { background:#fff; padding:22px 28px; display:flex; align-items:center; gap:16px; border-top:4px solid var(--ink); }
-  .app-input .box { flex:1; background:#fff0f7; border-radius:999px; padding:16px 24px; color:#a07e92; font-size:23px; border:2px solid var(--ink); }
-  .app-input .snap,.app-input .send { width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:27px;border:3px solid var(--ink); }
+  .app-input { background:#fff; padding:18px 24px; display:flex; align-items:center; gap:14px; border-top:4px solid var(--ink); }
+  .app-input .box { flex:1; background:#fff0f7; border-radius:999px; padding:13px 20px; color:#a07e92; font-size:20px; border:2px solid var(--ink); }
+  .app-input .snap,.app-input .send { width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:23px;border:3px solid var(--ink); }
   .app-input .snap { background:var(--yellow); }
   .app-input .send { background:var(--magenta); color:#fff; }
+  .phone-tip { position:absolute; left:850px; top:2228px; z-index:3; width:545px; text-align:center; font-family:'Spline Sans Mono'; font-weight:700; font-size:20px; color:var(--purple); }
 
-  /* ---------- comic feature chips ---------- */
-  .chip {
-    position:absolute; z-index:3; display:flex; align-items:center; gap:14px;
-    padding:20px 30px; border-radius:18px; border:5px solid var(--ink);
-    font-family:'Unbounded'; font-weight:700; font-size:29px;
-    box-shadow:8px 9px 0 var(--ink);
-    animation: bobble 3.2s ease-in-out infinite;
-  }
-  .chip .ico { font-size:33px; }
-  .c1 { left:120px; top:1120px; background:var(--chip-yellow); transform:rotate(-3deg); animation-delay:0s; }
-  .c2 { left:90px;  top:1320px; background:var(--chip-lav);   transform:rotate(2deg); animation-delay:.3s; }
-  .c3 { left:120px; top:1520px; background:var(--chip-mint); color:var(--chip-mint-text); transform:rotate(-2deg); animation-delay:.6s; }
-  .c4 { left:95px;  top:1720px; background:#fff; transform:rotate(2deg); animation-delay:.9s; }
-  .c5 { left:120px; top:1920px; background:var(--chip-pink); transform:rotate(-3deg); animation-delay:1.2s; }
-  .c6 { right:120px; top:1120px; background:#fff; transform:rotate(3deg); animation-delay:.15s; }
-  .c7 { right:90px;  top:1320px; background:var(--chip-mint); color:var(--chip-mint-text); transform:rotate(-2deg); animation-delay:.45s; }
-  .c8 { right:120px; top:1520px; background:var(--chip-yellow); transform:rotate(3deg); animation-delay:.75s; }
-  .c9 { right:90px;  top:1720px; background:var(--chip-lav); transform:rotate(-2deg); animation-delay:1.05s; }
-  .c10{ right:120px; top:1920px; background:var(--chip-pink); transform:rotate(2deg); animation-delay:1.35s; }
+  /* ---------- impact panel ---------- */
+  .metrics { display:flex; gap:24px; margin-top:20px; }
+  .metric { flex:1; text-align:center; background:var(--paper); border:4px solid var(--ink); border-radius:16px; padding:14px 8px 16px; box-shadow:4px 5px 0 var(--ink); }
+  .metric .big { font-family:'Bangers'; font-size:68px; line-height:0.95; color:var(--magenta); letter-spacing:1px; -webkit-text-stroke:3px var(--ink); text-shadow:4px 4px 0 rgba(20,15,26,0.9); }
+  .metric .big.p { color:var(--purple); } .metric .big.c { color:var(--cyan); }
+  .metric .cap { font-size:21px; font-weight:700; margin-top:6px; color:var(--ink); }
+  .impact-foot { margin-top:18px; font-size:21px; line-height:1.4; color:var(--muted); }
+  .impact-foot .tag { font-family:'Unbounded'; font-weight:700; font-size:21px; color:var(--purple); }
+  .impact-foot .note { display:block; margin-top:6px; font-family:'Spline Sans Mono'; font-size:16px; color:#8a7a96; }
 
-  .donut {
-    position:absolute; right:165px; top:2110px; z-index:3; width:200px; height:200px; border-radius:50%;
-    background: conic-gradient(var(--magenta) 0% 78%, #f3d3e4 78% 100%);
-    display:flex; align-items:center; justify-content:center; transform:rotate(5deg); border:5px solid var(--ink);
-    box-shadow:7px 8px 0 var(--ink); animation: spinwob 5s ease-in-out infinite;
-  }
-  .donut .inner { width:140px;height:140px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center; }
-  .donut .pct { font-family:'Unbounded'; font-weight:800; font-size:44px; color:var(--magenta); }
-  .donut .lbl { font-family:'Spline Sans Mono'; font-size:17px; letter-spacing:.1em; }
+  /* ---------- SDG panel ---------- */
+  .sdg { display:flex; gap:22px; margin-top:20px; }
+  .sdgcard { flex:1; border:5px solid var(--ink); border-radius:16px; padding:18px 20px; color:#fff; box-shadow:5px 6px 0 var(--ink); }
+  .sdgcard.g4 { background:var(--sdg4); } .sdgcard.g10 { background:var(--sdg10); }
+  .sdgcard .row { display:flex; align-items:baseline; gap:12px; }
+  .sdgcard .num { font-family:'Unbounded'; font-weight:900; font-size:60px; line-height:1; }
+  .sdgcard .ico { margin-left:auto; font-size:40px; }
+  .sdgcard .goal { font-family:'Unbounded'; font-weight:800; font-size:23px; margin-top:8px; }
+  .sdgcard p { font-size:20px; line-height:1.32; margin-top:8px; }
 
-  /* ---------- stats ---------- */
-  .stats { position:absolute; left:0; top:2430px; z-index:3; width:100%; display:flex; justify-content:center; gap:160px; }
-  .stat { text-align:center; }
-  .stat .big {
-    font-family:'Bangers'; font-size:150px; color:var(--magenta); line-height:0.9; letter-spacing:3px;
-    -webkit-text-stroke:4px var(--ink); text-shadow:7px 7px 0 rgba(20,15,26,0.9);
-  }
-  .stat .big.p { color:var(--purple); }
-  .stat .big.c { color:var(--cyan); }
-  .stat .cap { font-size:33px; color:var(--ink); font-weight:700; margin-top:8px; }
-
+  /* ---------- footer ---------- */
   .techstrip {
-    position:absolute; left:0; top:2700px; z-index:3; width:100%; text-align:center;
-    font-family:'Spline Sans Mono'; font-weight:500; font-size:27px; color:var(--ink); letter-spacing:.02em;
+    position:absolute; left:0; top:2664px; z-index:3; width:100%; text-align:center;
+    font-family:'Spline Sans Mono'; font-weight:500; font-size:26px; color:var(--ink); letter-spacing:.02em;
   }
   .techstrip b { color:var(--magenta); }
-  .author { position:absolute; left:0; top:2762px; z-index:3; width:100%; text-align:center; font-weight:800; font-size:33px; color:var(--ink); }
+  .author { position:absolute; left:0; top:2724px; z-index:3; width:100%; text-align:center; font-weight:800; font-size:31px; color:var(--ink); }
+  .author .mentor { display:block; margin-top:6px; font-weight:700; font-size:27px; color:var(--purple); }
 
   /* confetti */
   .confetti { position:absolute; z-index:2; }
 
   /* ---------- animations ---------- */
-  @keyframes float { 0%,100%{ transform:translateY(0) rotate(0) } 50%{ transform:translateY(-22px) rotate(-1deg) } }
-  @keyframes bobble { 0%,100%{ transform:translateY(0) rotate(var(--r,0)) } 50%{ transform:translateY(-12px) } }
-  @keyframes pop { 0%,100%{ transform:rotate(-8deg) scale(1) } 50%{ transform:rotate(-4deg) scale(1.08) } }
+  @keyframes float { 0%,100%{ transform:translateY(0) rotate(0) } 50%{ transform:translateY(-18px) rotate(-1deg) } }
   @keyframes blink { 0%,100%{ opacity:.25; transform:translateY(0) } 50%{ opacity:1; transform:translateY(-6px) } }
   @keyframes fillbar { from{ width:0 } to{ width:78% } }
-  @keyframes spinwob { 0%,100%{ transform:rotate(5deg) } 50%{ transform:rotate(-5deg) } }
   @keyframes confetti-fall { 0%{ transform:translateY(-20px) rotate(0); opacity:1 } 100%{ transform:translateY(40px) rotate(180deg); opacity:.6 } }
   .confetti { animation: confetti-fall 2.4s ease-in-out infinite alternate; }
 
-  /* static render mode: freeze animations at a good frame */
-  .poster.static *, .poster.static { animation: none !important; }
+  /* ---------- entrance + ambient motion (browser only; frozen by ?static=1) ---------- */
+  .comic-bg { animation: drift 7s linear infinite; }
+  .kicker   { animation: rise .6s ease both; }
+  .title    { animation: rise .7s ease both .05s; }
+  .subtitle { animation: rise .7s ease both .15s; }
+  .qrcard   { animation: rise .7s ease both .2s, qrpulse 3s ease-in-out 1.4s infinite; }
+  .panel    { animation: rise .7s ease both; }
+  .phone    { animation: rise .8s ease both, float 4s ease-in-out .9s infinite; }
+  .phone-tip{ animation: rise .7s ease both .9s; }
+  .ptitle .num { animation: badgePop 3.2s ease-in-out infinite; }
+  .streak   { animation: pulse 2.2s ease-in-out infinite; }
+  .pcard .h .i { display:inline-block; animation: iconBob 2.8s ease-in-out infinite; }
+  .pcard:nth-child(2) .h .i { animation-delay:.35s; }
+  .pcard:nth-child(3) .h .i { animation-delay:.7s; }
+  .titem .i { animation: iconBob 2.6s ease-in-out infinite; }
+  .titem:nth-child(2) .i { animation-delay:.3s; }
+  .titem:nth-child(3) .i { animation-delay:.6s; }
+  .titem:nth-child(4) .i { animation-delay:.9s; }
+  .sdgcard .ico { display:inline-block; animation: sway 2.6s ease-in-out infinite; }
+  .sdgcard.g10 .ico { animation-delay:.4s; }
+  .metric .big { animation: pulse 2.6s ease-in-out infinite; }
+  .metric:nth-child(2) .big { animation-delay:.25s; }
+  .metric:nth-child(3) .big { animation-delay:.5s; }
+  .novel { position:relative; overflow:hidden; }
+  .novel::after {
+    content:''; position:absolute; top:0; left:-60%; width:45%; height:100%;
+    background:linear-gradient(100deg, transparent, rgba(255,255,255,.4), transparent);
+    transform:skewX(-18deg); pointer-events:none;
+    animation: shimmer 4s ease-in-out 1.5s infinite;
+  }
+
+  @keyframes rise { from { opacity:0; transform:translateY(32px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes qrpulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.035); } }
+  @keyframes badgePop { 0%,100%{ transform:scale(1) rotate(0); } 50%{ transform:scale(1.13) rotate(-7deg); } }
+  @keyframes iconBob { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-8px); } }
+  @keyframes sway { 0%,100%{ transform:rotate(-6deg); } 50%{ transform:rotate(10deg); } }
+  @keyframes pulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.06); } }
+  @keyframes shimmer { 0%{ left:-60%; } 55%,100%{ left:130%; } }
+  @keyframes drift { from{ background-position:0 0, 0 0; } to{ background-position:0 0, 26px 26px; } }
+
+  /* static render mode: freeze animations at a good, fully-visible frame */
+  .poster.static *, .poster.static { animation: none !important; opacity:1 !important; }
+  .poster.static .novel::after { animation: none !important; left:-60%; }
   .poster.static .mastery .fill { width:78%; }
-  .poster.static .phone { transform: translateY(-10px) rotate(-1deg); }
+  .poster.static .phone { transform: translateY(-8px) rotate(-1deg); }
 </style>
 </head>
 <body>
@@ -185,22 +261,59 @@
   <div class="comic-bg"></div>
 
   <!-- confetti -->
-  <div class="confetti" style="left:380px;top:560px;width:22px;height:22px;background:var(--yellow);transform:rotate(20deg);animation-delay:.1s"></div>
-  <div class="confetti" style="left:300px;top:660px;width:18px;height:18px;background:var(--purple);border-radius:50%;animation-delay:.5s"></div>
-  <div class="confetti" style="left:660px;top:600px;width:20px;height:20px;background:var(--magenta);transform:rotate(45deg);animation-delay:.9s"></div>
-  <div class="confetti" style="left:1560px;top:980px;width:22px;height:22px;background:var(--cyan);border-radius:50%;animation-delay:.3s"></div>
-  <div class="confetti" style="left:1640px;top:1060px;width:20px;height:20px;background:var(--yellow);transform:rotate(30deg);animation-delay:.7s"></div>
-  <div class="confetti" style="left:1140px;top:2470px;width:20px;height:20px;background:var(--purple);transform:rotate(45deg);animation-delay:.2s"></div>
-  <div class="confetti" style="left:1000px;top:2520px;width:18px;height:18px;background:var(--magenta);border-radius:50%;animation-delay:.6s"></div>
+  <div class="confetti" style="left:430px;top:560px;width:20px;height:20px;background:var(--yellow);transform:rotate(20deg);animation-delay:.1s"></div>
+  <div class="confetti" style="left:350px;top:640px;width:16px;height:16px;background:var(--purple);border-radius:50%;animation-delay:.5s"></div>
+  <div class="confetti" style="left:700px;top:600px;width:18px;height:18px;background:var(--magenta);transform:rotate(45deg);animation-delay:.9s"></div>
+  <div class="confetti" style="left:1120px;top:2250px;width:18px;height:18px;background:var(--purple);transform:rotate(45deg);animation-delay:.2s"></div>
+  <div class="confetti" style="left:1020px;top:2300px;width:16px;height:16px;background:var(--magenta);border-radius:50%;animation-delay:.6s"></div>
 
-  <!-- header -->
-  <div class="kicker">AI-Powered Personal Tutoring App</div>
+  <!-- ===================== HEADER ===================== -->
+  <div class="kicker">AI-Powered Personal Tutor · Grounded in Real Exam Mark Schemes</div>
   <div class="title">Mentor<span class="minds">Minds</span></div>
-  <div class="subtitle"><span class="wave">the AI tutor that never sleeps.</span></div>
-  <div class="scribble">trained on real past papers fr 🔥</div>
-  <div class="burst">BUILT<br/>DIFFERENT!</div>
+  <div class="subtitle"><span class="wave">An examiner-grade AI tutor for every learner — available 24/7.</span></div>
 
-  <!-- real app screen -->
+  <!-- QR -->
+  <div class="qrcard">
+    <div class="qh">Scan for live demo &amp; source</div>
+    <img src="qr.png" alt="QR code linking to the MentorMinds GitHub repository" />
+    <div class="qc">github.com/<b>Arnobrizwan/mentormind</b></div>
+  </div>
+
+  <!-- ===================== 1 · PROBLEM ===================== -->
+  <div class="panel" style="left:110px; top:828px; width:2025px; height:352px; animation-delay:.15s;">
+    <div class="ptitle"><span class="num">1</span> The Problem</div>
+    <div class="lead">Most students cannot get help the moment they are stuck. Quality tutoring remains expensive, scarce, and one-size-fits-all — so doubts pile up and learning gaps widen.</div>
+    <div class="problem-cards">
+      <div class="pcard">
+        <div class="h"><span class="i">🎓</span> No personalized tutoring</div>
+        <p>One teacher to 40+ students means individual questions go unanswered, and weaker learners fall behind.</p>
+      </div>
+      <div class="pcard">
+        <div class="h"><span class="i">💸</span> High tuition costs</div>
+        <p>Private tutoring runs RM50–150 per hour — out of reach for the families who need support the most.</p>
+      </div>
+      <div class="pcard">
+        <div class="h"><span class="i">📡</span> Limited access to support</div>
+        <p>Rural and low-income learners lack reliable, on-demand help after school hours or offline.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== 2 · INNOVATION (left) ===================== -->
+  <div class="panel" style="left:110px; top:1210px; width:660px; height:1008px; animation-delay:.3s;">
+    <div class="ptitle"><span class="num">2</span> Why It&#39;s Different</div>
+    <div class="novel">
+      <span class="tag">NOVEL CONTRIBUTION</span>
+      A tutor that <b>grounds every answer in real Cambridge mark schemes</b> — a self-hosted retrieval model returns examiner working and cites the exact paper, with an optional fine-tuned (LoRA) model. No third-party AI APIs.
+    </div>
+    <div class="vs">
+      <div class="vrow d1"><span class="tag">vs. general chatbots <span class="ok">(ChatGPT)</span></span> Replies are drawn from the official mark scheme and cite their source — not hallucinated — and cost $0 in AI API fees.</div>
+      <div class="vrow d2"><span class="tag">vs. Khan Academy</span> Built around the exact Cambridge syllabus (20 subjects) with examiner-grade worked solutions, on a fully self-hosted, free-tier stack.</div>
+      <div class="vrow d3"><span class="tag">vs. Duolingo</span> Covers full academic subjects — Maths &amp; Sciences — with step-by-step solutions, not just language drills.</div>
+    </div>
+  </div>
+
+  <!-- ===================== PHONE (center hero) ===================== -->
   <div class="phone">
     <div class="notch"></div>
     <div class="app">
@@ -213,26 +326,24 @@
         <div class="streak">🔥 7-day</div>
       </div>
       <div class="app-body">
-        <div class="bubble me">I'm stuck on this one 😩</div>
-        <div class="bubble me" style="font-size:22px;">Solve 2x + 3 = 11</div>
+        <div class="bubble me">Solve 2x + 3 = 11</div>
         <div class="bubble ai">
-          Got it! Step by step 👇
+          Here is the full working 👇
           <div class="steps">
             1&nbsp;&nbsp;2x + 3 = 11<br/>
             2&nbsp;&nbsp;2x = 11 − 3 = 8<br/>
             3&nbsp;&nbsp;x = 8 / 2<br/>
             <span class="ok">x = 4 ✓</span>
           </div>
-          <span class="src">📑 Source: 9709 mark scheme · M1 A1</span>
+          <span class="src">📑 Source: Cambridge 9709 mark scheme</span>
         </div>
-        <div class="typing"><span></span><span></span><span></span></div>
         <div class="quizcard">
-          <div class="qh">ADAPTIVE QUIZ · Q1 of 5 · SPM-aligned</div>
-          <div style="font-size:25px;margin-top:10px;">Solve: 3x − 4 = 11</div>
+          <div class="qh">QUIZ · Q1 of 5 · Cambridge 9709</div>
+          <div style="font-size:21px;margin-top:8px;">Solve: 3x − 4 = 11</div>
           <div class="opt correct">x = 5 ✓</div>
           <div class="opt">x = 7</div>
           <div class="mastery">
-            <div style="display:flex;justify-content:space-between;font-size:21px;"><span>Weekly mastery</span><span>78%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:18px;"><span>Course progress</span><span>78%</span></div>
             <div class="bar"><div class="fill"></div></div>
           </div>
         </div>
@@ -244,32 +355,67 @@
       </div>
     </div>
   </div>
+  <div class="phone-tip">↑ The live app: a mark-scheme-grounded solution, a quiz, and progress tracking</div>
 
-  <!-- comic feature chips -->
-  <div class="chip c1"><span class="ico">📷</span> Snap &amp; Solve</div>
-  <div class="chip c2"><span class="ico">🎙️</span> Voice Tutor</div>
-  <div class="chip c3"><span class="ico">🌐</span> Bahasa + English</div>
-  <div class="chip c4"><span class="ico">⚡</span> +120 XP earned!</div>
-  <div class="chip c5"><span class="ico">📴</span> Works Offline</div>
-  <div class="chip c6"><span class="ico">🎯</span> Adaptive Quizzes</div>
-  <div class="chip c7"><span class="ico">🏆</span> XP · Streaks · Badges</div>
-  <div class="chip c8"><span class="ico">🧠</span> Custom-Trained Model</div>
-  <div class="chip c9"><span class="ico">📚</span> Real Past Papers</div>
-  <div class="chip c10"><span class="ico">📱</span> iOS · Android · Web</div>
-
-  <div class="donut"><div class="inner"><div class="pct">78%</div><div class="lbl">MASTERY</div></div></div>
-
-  <!-- stats -->
-  <div class="stats">
-    <div class="stat"><div class="big">24/7</div><div class="cap">always online</div></div>
-    <div class="stat"><div class="big p">&lt;3s</div><div class="cap">avg AI reply</div></div>
-    <div class="stat"><div class="big c">$0</div><div class="cap">API keys needed</div></div>
+  <!-- ===================== 3 · TECHNOLOGY (right) ===================== -->
+  <div class="panel" style="left:1475px; top:1210px; width:660px; height:1008px; animation-delay:.4s;">
+    <div class="ptitle"><span class="num">3</span> AI Under the Hood</div>
+    <div class="techlist">
+      <div class="titem d1">
+        <div class="i">🧠</div>
+        <div><div class="h">Machine Learning</div><p>A self-hosted retrieval model matches questions to the mark-scheme corpus, with an optional LoRA fine-tune (Qwen2.5) — no third-party AI APIs.</p></div>
+      </div>
+      <div class="titem d2">
+        <div class="i">💬</div>
+        <div><div class="h">Natural Language Processing</div><p>Understands a typed question, finds the closest Cambridge mark scheme, and explains the answer clearly, step by step.</p></div>
+      </div>
+      <div class="titem d3">
+        <div class="i">📷</div>
+        <div><div class="h">Computer Vision</div><p>OpenCV powers exam proctoring (face detection), OMR bubble-sheet auto-grading, and Tesseract OCR for scanned work.</p></div>
+      </div>
+      <div class="titem d4">
+        <div class="i">📈</div>
+        <div><div class="h">Predictive Analytics &amp; MLOps</div><p>A dropout-risk model flags at-risk learners and recommends courses, shipped through a DVC + MLflow pipeline with a drift gate.</p></div>
+      </div>
+    </div>
   </div>
 
+  <!-- ===================== 4 · IMPACT (left) ===================== -->
+  <div class="panel" style="left:110px; top:2252px; width:1230px; height:368px; animation-delay:.5s;">
+    <div class="ptitle"><span class="num">4</span> Evidence &amp; Impact</div>
+    <div class="metrics">
+      <div class="metric"><div class="big">1,142</div><div class="cap">mark-scheme answers</div></div>
+      <div class="metric"><div class="big p">20</div><div class="cap">Cambridge subjects</div></div>
+      <div class="metric"><div class="big c">$0</div><div class="cap">third-party AI cost</div></div>
+    </div>
+    <div class="impact-foot">
+      <span class="tag">Evidence:</span> 1,521 Cambridge past-paper documents ingested · every answer cites its exact mark scheme · k6 load-tested · 100% self-hosted on a free-tier stack, available 24/7.
+      <span class="note">Classroom pilot in progress — learning-gain &amp; satisfaction results to follow.</span>
+    </div>
+  </div>
+
+  <!-- ===================== 5 · SDG (right) ===================== -->
+  <div class="panel" style="left:1380px; top:2252px; width:755px; height:368px; animation-delay:.6s;">
+    <div class="ptitle"><span class="num">5</span> UN SDG Alignment</div>
+    <div class="sdg">
+      <div class="sdgcard g4">
+        <div class="row"><span class="num">4</span><span class="ico">📚</span></div>
+        <div class="goal">Quality Education</div>
+        <p>Free, examiner-grade tutoring for every learner, any time.</p>
+      </div>
+      <div class="sdgcard g10">
+        <div class="row"><span class="num">10</span><span class="ico">⚖️</span></div>
+        <div class="goal">Reduced Inequalities</div>
+        <p>The same support for rural &amp; low-income students as elite tutoring.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== FOOTER ===================== -->
   <div class="techstrip">
-    Full-stack: <b>Django</b> · <b>FastAPI</b> · <b>Angular</b> · Offline fine-tuned AI · Mistral-OCR pipeline · Redis · Postgres · Docker · K8s
+    Full-stack: <b>Django</b> · <b>FastAPI</b> · <b>Angular</b> · self-hosted retrieval + LoRA tutor · OpenCV · Tesseract · Mistral-OCR ingest · DVC + MLflow · Redis · Postgres · Docker · Kubernetes
   </div>
-  <div class="author">Arnob Rizwan Ahmad · A22EC4005 · Faculty of Computing, UTM</div>
+  <div class="author">Arnob Rizwan Ahmad · A22EC4005 · Faculty of Computing, UTM<span class="mentor">Mentor: Dr. Ruhaidah Binti Samsudin</span></div>
 </div>
 
 <script>
