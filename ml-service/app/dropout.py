@@ -25,7 +25,10 @@ class DropoutModel:
     def __init__(self, artifact: dict):
         self.features: list[str] = artifact["features"]
         self.mean = np.array(artifact["scaler_mean"])
-        self.scale = np.array(artifact["scaler_scale"])
+        # a zero scale (constant training feature) would divide to NaN —
+        # treat it as 1, matching sklearn's StandardScaler behaviour
+        scale = np.array(artifact["scaler_scale"], dtype=float)
+        self.scale = np.where(scale == 0, 1.0, scale)
         self.coef = np.array(artifact["coef"])
         self.intercept = float(artifact["intercept"])
 

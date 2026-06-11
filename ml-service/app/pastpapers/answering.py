@@ -16,12 +16,11 @@ No third-party AI APIs are involved anywhere in this path.
 
 from __future__ import annotations
 
-import json
 import math
 import os
 import re
-import urllib.request
 
+import httpx
 from sqlalchemy import select
 
 from . import local_llm, models
@@ -39,7 +38,12 @@ WEAK_MATCH = float(os.getenv("TUTOR_WEAK_MATCH", "0.18"))
 # Corpus rows scanned per query — plenty for CAIE scale.
 MAX_CANDIDATES = int(os.getenv("TUTOR_MAX_CANDIDATES", "5000"))
 
-CUSTOM_LLM_TIMEOUT = float(os.getenv("CUSTOM_LLM_TIMEOUT", "90"))
+CUSTOM_LLM_TIMEOUT = float(os.getenv("CUSTOM_LLM_TIMEOUT", "30"))
+
+# Token sets per aligned-question row id, built lazily on first retrieval.
+# The corpus is append-mostly and capped at MAX_CANDIDATES rows, so caching
+# every row is cheap; the size guard only trips if the DB is swapped out.
+_token_cache: dict[int, set[str]] = {}
 
 
 def _allowed_llm_url(url: str) -> bool:
@@ -85,10 +89,14 @@ async def _ranked_matches(question_text: str, limit: int = 3) -> list[tuple[floa
                 .limit(MAX_CANDIDATES)
             )
         ).all()
-    scored = [
-        (_similarity(query, _tokens(aligned.question_markdown)), aligned, paper)
-        for aligned, paper in rows
-    ]
+    if len(_token_cache) > 2 * MAX_CANDIDATES:
+        _token_cache.clear()  # only on a corpus swap; normal growth never trips this
+    scored = []
+    for aligned, paper in rows:
+        candidate = _token_cache.get(aligned.id)
+        if candidate is None:
+            candidate = _token_cache[aligned.id] = _tokens(aligned.question_markdown)
+        scored.append((_similarity(query, candidate), aligned, paper))
     scored.sort(key=lambda item: item[0], reverse=True)
     return scored[:limit]
 
@@ -101,7 +109,7 @@ def _system_prompt(subject: str, level: str, context: str) -> str:
     )
 
 
-def _generate_answer(question: str, subject: str, level: str, context: str) -> str | None:
+async def _generate_answer(question: str, subject: str, level: str, context: str) -> str | None:
     """Generate from the fine-tuned model. Tries fully-offline in-process
     inference first (LOCAL_LLM=1), then an OpenAI-compatible server
     (CUSTOM_LLM_URL). Returns None if neither is available."""
@@ -123,14 +131,13 @@ def _generate_answer(question: str, subject: str, level: str, context: str) -> s
         "temperature": 0.2,
     }
     try:
-        request = urllib.request.Request(
-            url.rstrip("/") + "/v1/chat/completions",
-            data=json.dumps(payload).encode(),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(request, timeout=CUSTOM_LLM_TIMEOUT) as response:
-            body = json.load(response)
+        # async client — a slow LLM server must not block the event loop
+        async with httpx.AsyncClient(timeout=CUSTOM_LLM_TIMEOUT) as client:
+            response = await client.post(
+                url.rstrip("/") + "/v1/chat/completions", json=payload
+            )
+            response.raise_for_status()
+            body = response.json()
         return body["choices"][0]["message"]["content"]
     except Exception:
         return None
@@ -160,7 +167,7 @@ async def answer_question(question: str, subject: str = "", level: str = "") -> 
         for score, aligned, paper in matches
         if score >= WEAK_MATCH
     )
-    generated = _generate_answer(question, subject, level, context)
+    generated = await _generate_answer(question, subject, level, context)
     if generated:
         source = _source_of(matches[0][2], matches[0][1]) if context else None
         return {"answer": generated, "matched": False, "source": source}

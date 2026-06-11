@@ -1,7 +1,9 @@
 """ML service tests — synthetic images keep these hermetic and fast."""
 
+import asyncio
 import io
 import json
+import math
 
 import cv2
 import numpy as np
@@ -102,6 +104,17 @@ class TestOmr:
         )
         assert res.status_code == 400
 
+    def test_out_of_range_answer_key_rejected(self):
+        sheet = make_bubble_sheet([0])
+        for bad_key in ([4], [-1], [0, 7]):
+            res = client.post(
+                "/v1/omr/grade",
+                files={"image": ("sheet.png", encode_png(sheet), "image/png")},
+                data={"answer_key": json.dumps(bad_key), "num_options": "4"},
+            )
+            assert res.status_code == 400
+            assert "within" in res.json()["detail"]
+
 
 class TestOcr:
     @pytest.mark.skipif(not vision.ocr_available(), reason="tesseract not installed")
@@ -139,11 +152,27 @@ class TestDropoutRisk:
         assert res.json()["risk"] == "low"
         assert res.json()["probability"] < 0.2
 
+    def test_zero_scaler_scale_does_not_nan(self):
+        """A constant training feature exports scale=0 — must not divide
+        to NaN; treated as 1 like sklearn's StandardScaler."""
+        from app.dropout import DropoutModel
+
+        model = DropoutModel({
+            "features": ["a", "b"],
+            "scaler_mean": [0.0, 1.0],
+            "scaler_scale": [0.0, 2.0],
+            "coef": [1.0, 1.0],
+            "intercept": 0.0,
+        })
+        probability = model.predict_proba({"a": 3.0, "b": 5.0})
+        assert math.isfinite(probability)
+        assert 0.0 < probability < 1.0
+
 
 class TestFlagGating:
     def test_fail_open_without_flags_url(self):
         from app import flags
-        assert flags.flag_enabled("proctoring") is True
+        assert asyncio.run(flags.flag_enabled("proctoring")) is True
 
     def test_disabled_flag_blocks_endpoint(self, monkeypatch):
         from app import flags

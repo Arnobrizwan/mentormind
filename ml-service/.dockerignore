@@ -1,0 +1,11 @@
+# Keep the image lean: no raw papers/datasets, local DBs, venvs or caches.
+data/
+pastpapers.db
+.venv/
+tests/
+.pytest_cache/
+__pycache__/
+*.pyc
+.env
+.env.example
+.DS_Store

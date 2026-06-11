@@ -11,10 +11,13 @@ kill switch, not an allow-list.
 
 from __future__ import annotations
 
-import json
+import logging
 import os
 import time
-import urllib.request
+
+import httpx
+
+logger = logging.getLogger(__name__)
 
 FLAGS_URL = os.getenv("FLAGS_URL", "")
 FLAGS_TTL_SECONDS = float(os.getenv("FLAGS_TTL_SECONDS", "30"))
@@ -22,17 +25,21 @@ FLAGS_TTL_SECONDS = float(os.getenv("FLAGS_TTL_SECONDS", "30"))
 _cache: dict = {"at": 0.0, "flags": {}}
 
 
-def flag_enabled(key: str, default: bool = True) -> bool:
+async def flag_enabled(key: str, default: bool = True) -> bool:
     if not FLAGS_URL:
         return default
 
     now = time.monotonic()
     if now - _cache["at"] > FLAGS_TTL_SECONDS:
         try:
-            with urllib.request.urlopen(FLAGS_URL, timeout=2) as res:
-                _cache["flags"] = json.load(res)
-        except Exception:
-            pass  # keep the last known flags; fail open on first failure
+            async with httpx.AsyncClient(timeout=2) as client:
+                res = await client.get(FLAGS_URL)
+                res.raise_for_status()
+                _cache["flags"] = res.json()
+        except Exception as exc:
+            # keep the last known flags; fail open — but make a dead
+            # FLAGS_URL visible in the logs instead of silently swallowed
+            logger.warning("flags fetch from %s failed: %s", FLAGS_URL, exc)
         _cache["at"] = now
 
     return bool(_cache["flags"].get(key, default))
