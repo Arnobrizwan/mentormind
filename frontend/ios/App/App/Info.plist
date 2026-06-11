@@ -47,5 +47,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>MentorMind uses the camera for exam proctoring and to photograph questions for the AI tutor.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>MentorMind uses the microphone so you can dictate questions to the AI tutor.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MentorMind lets you attach a saved photo of a question for the AI tutor.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>MentorMind transcribes your voice when you dictate questions to the AI tutor.</string>
 </dict>
 </plist>

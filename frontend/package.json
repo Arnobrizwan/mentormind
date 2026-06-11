@@ -7,11 +7,11 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "build:mobile": "ng build student-portal --configuration production && cap sync",
+    "build:mobile": "ng build student-portal --configuration production && node scripts/inject-api-base.mjs && cap sync",
     "open:android": "cap open android",
     "open:ios": "cap open ios",
-    "run:android": "ng build student-portal --configuration production && cap sync android && cap run android",
-    "run:ios": "ng build student-portal --configuration production && cap sync ios && cap run ios"
+    "run:android": "npm run build:mobile && cap run android",
+    "run:ios": "npm run build:mobile && cap run ios"
   },
   "private": true,
   "packageManager": "npm@11.16.0",

@@ -38,4 +38,15 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Webcam proctoring during quizzes + photographing questions for the
+         AI tutor (getUserMedia / file capture in the WebView) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Voice dictation to the AI tutor (Web Speech API) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Camera/mic are enhancements, not requirements — keep the app
+         installable on devices without them -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>
