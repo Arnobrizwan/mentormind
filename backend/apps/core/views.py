@@ -1,3 +1,5 @@
+import json
+
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connections, models
@@ -956,6 +958,71 @@ class SearchView(APIView):
                 ],
             }
         )
+
+
+class OmrGradeView(APIView):
+    """Grade a photographed bubble sheet via the ml-service OMR engine.
+
+    Instructors upload a scan plus a JSON answer key; the ml-service returns
+    per-question detections and an overall score. Images are not stored."""
+    permission_classes = [IsInstructor]
+
+    def post(self, request):
+        from apps.flags.services import flag_enabled
+
+        if not flag_enabled("omr_grading", default=True):
+            return Response(
+                {"detail": "OMR grading is currently disabled."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        image = request.FILES.get("image")
+        if image is None or not (image.content_type or "").startswith("image/"):
+            return Response(
+                {"error": "An image file is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        raw = image.read()
+        if len(raw) > MAX_PROCTOR_IMAGE_BYTES:
+            return Response(
+                {"error": "Image too large (8 MB max)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        answer_key_raw = request.data.get("answer_key", "")
+        try:
+            key = json.loads(answer_key_raw) if isinstance(answer_key_raw, str) else answer_key_raw
+            assert isinstance(key, list) and all(isinstance(i, int) for i in key)
+            assert key
+        except (json.JSONDecodeError, AssertionError, TypeError):
+            return Response(
+                {"error": "answer_key must be a non-empty JSON array of integers."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            num_options = int(request.data.get("num_options", 4))
+        except (TypeError, ValueError):
+            return Response(
+                {"error": "num_options must be an integer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            result = ml_client.post_image(
+                "/v1/omr/grade",
+                raw,
+                filename=image.name or "sheet.jpg",
+                content_type=image.content_type,
+                fields={
+                    "answer_key": json.dumps(key),
+                    "num_options": str(num_options),
+                },
+            )
+        except ml_client.MLServiceError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response(result)
 
 
 class AdminStatsView(APIView):

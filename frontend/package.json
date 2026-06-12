@@ -8,6 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "build:mobile": "ng build student-portal --configuration production && node scripts/inject-api-base.mjs && cap sync",
+    "build:android:demo": "MM_API_BASE_URL=https://mentormind-api.onrender.com npm run build:mobile",
+    "apk:demo": "bash scripts/build-android-demo.sh",
     "open:android": "cap open android",
     "open:ios": "cap open ios",
     "run:android": "npm run build:mobile && cap run android",

@@ -7,15 +7,23 @@ import { StudioApi } from '../core/api';
 import { apiErrorMessage } from '../core/errors';
 import { Course, Enrollment, Lesson, Quiz, ReadinessRow } from '../core/models';
 import { FlashcardsTab } from './flashcards-tab';
+import { OmrTab } from './omr-tab';
 import { ProctoringTab } from './proctoring-tab';
 import { QuizAiDraft, parseTimeLimit } from './quiz-ai-draft';
 import { ShortAnswersTab } from './short-answers-tab';
 
-type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessions' | 'roster';
+type Tab =
+  | 'lessons'
+  | 'quizzes'
+  | 'short answers'
+  | 'flashcards'
+  | 'exam sessions'
+  | 'omr grading'
+  | 'roster';
 
 @Component({
   selector: 'st-workbench',
-  imports: [RouterLink, ShortAnswersTab, ProctoringTab, FlashcardsTab, QuizAiDraft, CountUp],
+  imports: [RouterLink, ShortAnswersTab, ProctoringTab, OmrTab, FlashcardsTab, QuizAiDraft, CountUp],
   template: `
     @if (loading()) {
       <p class="tag">Unrolling the blueprint…</p>
@@ -229,6 +237,10 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
 
         @case ('exam sessions') {
           <div class="tab-pane"><st-proctoring-tab [course]="c" /></div>
+        }
+
+        @case ('omr grading') {
+          <div class="tab-pane"><st-omr-tab /></div>
         }
 
         @case ('roster') {
@@ -516,7 +528,15 @@ export class WorkbenchPage {
   private readonly api = inject(StudioApi);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly tabs: Tab[] = ['lessons', 'quizzes', 'short answers', 'flashcards', 'exam sessions', 'roster'];
+  protected readonly tabs: Tab[] = [
+    'lessons',
+    'quizzes',
+    'short answers',
+    'flashcards',
+    'exam sessions',
+    'omr grading',
+    'roster',
+  ];
   protected readonly tab = signal<Tab>('lessons');
 
   protected readonly course = signal<Course | null>(null);

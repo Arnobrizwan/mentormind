@@ -1,7 +1,6 @@
 /* ============================================================
-   MentorMind Student Portal — "Fresh Air" design system
-   Light, airy palette: cool near-white surfaces, fresh teal
-   primary, sky secondary, pastel chips, soft diffuse shadows.
+   MentorMind Student Portal — aligned with DIGITEX poster brand
+   Light surfaces, soft magenta primary, purple secondary, pastel chips.
    Variable names are kept stable so every component adopts the
    new look without template changes.
    ============================================================ */
@@ -17,10 +16,10 @@
   --ink-soft: #5c7079;
   --line: rgba(22, 40, 47, 0.1);
   --line-strong: rgba(22, 40, 47, 0.16);   /* gentle outline (was sticker black) */
-  /* accents — fresh teal / sky */
-  --accent: #0d9488;         /* fresh teal (primary) */
-  --accent-deep: #0f766e;
-  --accent-2: #0284c7;       /* clear sky (secondary) */
+  /* accents — poster magenta / purple */
+  --accent: #ff5ca3;
+  --accent-deep: #e84e92;
+  --accent-2: #7c3aed;
   --sage: #0e8a58;           /* leaf green (chip text) */
   --sage-deep: #0b6e47;
   --marker: #ffe177;         /* soft highlighter yellow */
@@ -32,17 +31,17 @@
   --chip-yellow: #fdf1cd;
   --chip-lav: #e8ecfb;
 
-  --grad-hero: linear-gradient(115deg, #0d9488 0%, #0e9aa7 52%, #0284c7 100%);
-  --grad-btn: linear-gradient(120deg, #0d9488 0%, #0f766e 100%);
+  --grad-hero: linear-gradient(115deg, #ff5ca3 0%, #e84e92 52%, #7c3aed 100%);
+  --grad-btn: linear-gradient(120deg, #ff5ca3 0%, #e84e92 100%);
 
   --font-display: 'Unbounded', 'Arial Black', sans-serif;
   --font-body: 'Plus Jakarta Sans', 'Avenir Next', sans-serif;
   --font-mono: 'Spline Sans Mono', 'SFMono-Regular', monospace;
 
   /* soft, diffuse, low-alpha shadows */
-  --shadow-card: 0 1px 2px rgba(22, 40, 47, 0.04), 0 10px 24px -16px rgba(13, 148, 136, 0.18);
-  --shadow-lift: 0 2px 4px rgba(22, 40, 47, 0.05), 0 18px 36px -18px rgba(13, 148, 136, 0.28);
-  --glow: 0 6px 20px -6px rgba(13, 148, 136, 0.35);
+  --shadow-card: 0 1px 2px rgba(22, 40, 47, 0.04), 0 10px 24px -16px rgba(255, 92, 163, 0.16);
+  --shadow-lift: 0 2px 4px rgba(22, 40, 47, 0.05), 0 18px 36px -18px rgba(255, 92, 163, 0.22);
+  --glow: 0 6px 20px -6px rgba(255, 92, 163, 0.32);
 
   /* shared motion */
   --speed: 160ms;
@@ -63,9 +62,9 @@ body {
   background-color: var(--paper);
   /* gentle teal/sky glows top + bottom */
   background-image:
-    radial-gradient(70% 38% at 8% -4%, rgba(13, 148, 136, 0.08) 0%, transparent 60%),
-    radial-gradient(60% 34% at 96% 2%, rgba(2, 132, 199, 0.07) 0%, transparent 60%),
-    radial-gradient(80% 30% at 50% 104%, rgba(13, 148, 136, 0.06) 0%, transparent 65%);
+    radial-gradient(70% 38% at 8% -4%, rgba(255, 92, 163, 0.09) 0%, transparent 60%),
+    radial-gradient(60% 34% at 96% 2%, rgba(124, 58, 237, 0.07) 0%, transparent 60%),
+    radial-gradient(80% 30% at 50% 104%, rgba(255, 92, 163, 0.06) 0%, transparent 65%);
   background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-body);

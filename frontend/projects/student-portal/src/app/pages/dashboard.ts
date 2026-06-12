@@ -188,9 +188,9 @@ interface ContinueHero {
       </section>
     }
 
-    @if (engagement.leaderboard().length > 0) {
-      <section class="leaderboard rise" style="animation-delay: 150ms">
-        <h2>This week's leaderboard</h2>
+    <section class="leaderboard rise" style="animation-delay: 150ms">
+      <h2>This week's leaderboard</h2>
+      @if (engagement.leaderboard().length > 0) {
         <ol class="leaderboard__list">
           @for (row of engagement.leaderboard(); track row.rank) {
             <li class="leaderboard__row" [class.leaderboard__row--top]="row.rank === 1">
@@ -200,8 +200,10 @@ interface ContinueHero {
             </li>
           }
         </ol>
-      </section>
-    }
+      } @else {
+        <p class="leaderboard__empty mono-label">No points logged yet this week — take a quiz to claim the top spot.</p>
+      }
+    </section>
 
     @if (loading()) {
       <div class="skeletons" role="status" aria-label="Loading your desk">
@@ -424,6 +426,12 @@ interface ContinueHero {
         font-size: 1.5rem;
         margin-bottom: 0.9rem;
       }
+    }
+
+    .leaderboard__empty {
+      color: var(--ink-soft);
+      margin: 0.25rem 0 0;
+      max-width: 42ch;
     }
 
     .leaderboard__list {

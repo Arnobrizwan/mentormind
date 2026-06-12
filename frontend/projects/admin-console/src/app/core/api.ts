@@ -62,6 +62,17 @@ export interface SystemStatus {
   components: Record<string, ComponentStatus>;
 }
 
+export interface AdminStats {
+  users_total: number;
+  premium_users: number;
+  courses_total: number;
+  courses_published: number;
+  enrollments_total: number;
+  quiz_attempts_today: number;
+  tutor_sessions_today: number;
+  points_awarded_today: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private readonly http = inject(HttpClient);
@@ -124,5 +135,9 @@ export class AdminApi {
 
   leaderboard(): Promise<LeaderboardRow[]> {
     return firstValueFrom(this.http.get<LeaderboardRow[]>('/api/v1/engagement/leaderboard/'));
+  }
+
+  stats(): Promise<AdminStats> {
+    return firstValueFrom(this.http.get<AdminStats>('/api/v1/admin/stats/'));
   }
 }

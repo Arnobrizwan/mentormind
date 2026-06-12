@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { LearningApi } from '../core/api';
 import { AuthService } from '../core/auth';
 import { Course } from '../core/models';
+import { SiteConfig } from '../core/site-config';
 
 @Component({
   selector: 'mm-catalog',
@@ -33,6 +34,29 @@ import { Course } from '../core/models';
         <p>No published courses yet — check back soon, the mentors are writing.</p>
       </div>
     } @else {
+      @if (recommended().length > 0) {
+        <section class="recs rise">
+          <div class="ledger-row">
+            <span class="mono-label">Picked for you</span>
+            <hr class="hairline" style="flex:1" />
+          </div>
+          <div class="grid grid--recs">
+            @for (course of recommended(); track course.id; let i = $index) {
+              <a
+                class="card card--rec rise"
+                [routerLink]="['/courses', course.slug]"
+                [style.animation-delay.ms]="stagger(i)"
+              >
+                <span class="mono-label">Recommended</span>
+                <h2 class="card__title">{{ course.title }}</h2>
+                <p class="card__desc">{{ course.description }}</p>
+                <span class="card__arrow" aria-hidden="true">→</span>
+              </a>
+            }
+          </div>
+        </section>
+      }
+
       <div class="ledger-row">
         <span class="mono-label">{{ courses().length }} course(s) on record</span>
         <hr class="hairline" style="flex:1" />
@@ -177,13 +201,26 @@ import { Course } from '../core/models';
       color: var(--accent);
       transition: transform 0.2s ease;
     }
+
+    .recs { margin-bottom: 2rem; }
+
+    .grid--recs {
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+
+    .card--rec {
+      border-color: color-mix(in srgb, var(--accent) 35%, var(--line-strong));
+      background: color-mix(in srgb, var(--chip-pink) 35%, var(--card));
+    }
   `,
 })
 export class CatalogPage {
   private readonly learningApi = inject(LearningApi);
   protected readonly auth = inject(AuthService);
+  private readonly config = inject(SiteConfig);
 
   protected readonly courses = signal<Course[]>([]);
+  protected readonly recommended = signal<Course[]>([]);
   protected readonly loading = signal(true);
   protected readonly skeletonSlots = [0, 1, 2, 3, 4, 5];
 
@@ -193,7 +230,24 @@ export class CatalogPage {
 
   private async load(): Promise<void> {
     try {
-      this.courses.set(await this.learningApi.listCourses());
+      if (this.auth.isLoggedIn()) {
+        await this.learningApi.refreshEnrollments();
+      }
+      const courses = await this.learningApi.listCourses();
+      this.courses.set(courses);
+      if (this.auth.isLoggedIn() && this.config.flagEnabled('recommendations')) {
+        try {
+          const recs = await this.learningApi.listRecommended();
+          const enrolled = new Set(
+            this.learningApi.enrollments().map((e) => e.course),
+          );
+          this.recommended.set(recs.filter((c) => !enrolled.has(c.id)).slice(0, 3));
+        } catch {
+          this.recommended.set([]);
+        }
+      } else {
+        this.recommended.set([]);
+      }
     } finally {
       this.loading.set(false);
     }

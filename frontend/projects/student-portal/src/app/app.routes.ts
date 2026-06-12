@@ -72,5 +72,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./pages/short-answers').then((m) => m.ShortAnswersPage),
   },
+  {
+    path: 'courses/:slug/chat',
+    title: 'Course Chat · MentorMinds',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/course-chat').then((m) => m.CourseChatPage),
+  },
   { path: '**', redirectTo: '' },
 ];

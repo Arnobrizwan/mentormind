@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { LearningApi } from '../core/api';
 import { apiErrorMessage } from '../core/errors';
+import { renderMarkdown } from '../core/markdown';
 import { Course, Lesson } from '../core/models';
 
 @Component({
@@ -33,7 +34,7 @@ import { Course, Lesson } from '../core/models';
             <a class="btn btn--accent" [routerLink]="['/courses', course()!.slug]">Go enroll</a>
           </div>
         } @else {
-          <div class="sheet__content">{{ l.content }}</div>
+          <div class="sheet__content" [innerHTML]="renderedContent(l.content)"></div>
 
           @if (l.video_url) {
             <a class="btn btn--ghost sheet__video" [href]="l.video_url" target="_blank" rel="noopener">
@@ -116,7 +117,22 @@ import { Course, Lesson } from '../core/models';
       padding: 1.6rem 0;
       font-size: 1.05rem;
       line-height: 1.75;
-      white-space: pre-wrap;
+
+      :global(strong) { font-weight: 700; }
+      :global(code) {
+        font-family: var(--font-mono);
+        font-size: 0.92em;
+        background: var(--paper-deep);
+        padding: 0.1em 0.35em;
+        border-radius: 4px;
+      }
+      :global(.md-quote) {
+        display: block;
+        border-left: 3px solid var(--accent);
+        padding-left: 0.9rem;
+        color: var(--ink-soft);
+        margin: 0.5rem 0;
+      }
     }
 
     .sheet__video {
@@ -205,6 +221,10 @@ export class LessonPage {
 
   protected pad(n: number): string {
     return String(n).padStart(2, '0');
+  }
+
+  protected renderedContent(content: string): string {
+    return renderMarkdown(content);
   }
 
   protected isComplete(): boolean {

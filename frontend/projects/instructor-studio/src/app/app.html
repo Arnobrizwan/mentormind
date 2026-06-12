@@ -7,20 +7,38 @@
     <div class="topbar__right">
       @if (auth.user(); as user) {
         @if (auth.isInstructor()) {
-          <nav class="topbar__nav" aria-label="Studio">
+          <nav class="topbar__nav topbar__nav--desktop" aria-label="Studio">
             <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }" class="tag">
               Courses
             </a>
             <a routerLink="/student-success" routerLinkActive="is-active" class="tag">Student Success</a>
           </nav>
         }
-        <span class="tag">{{ user.display_name || user.email }}</span>
+        <span class="tag tag--user">{{ user.display_name || user.email }}</span>
         @if (!auth.isInstructor()) {
           <span class="tag topbar__warn">no instructor role</span>
         }
         <button type="button" class="btn btn--line btn--sm" (click)="logout()">Sign out</button>
+        @if (auth.isInstructor()) {
+          <button
+            type="button"
+            class="hamburger"
+            [class.is-open]="menuOpen()"
+            (click)="toggleMenu()"
+            [attr.aria-expanded]="menuOpen()"
+            aria-label="Toggle navigation"
+          >
+            <span></span><span></span><span></span>
+          </button>
+        }
       }
     </div>
+    @if (menuOpen() && auth.isInstructor()) {
+      <nav class="mobile-nav" aria-label="Mobile studio">
+        <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Courses</a>
+        <a routerLink="/student-success" routerLinkActive="is-active">Student Success</a>
+      </nav>
+    }
   </header>
 
   <main class="page">

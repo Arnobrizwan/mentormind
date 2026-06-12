@@ -3,6 +3,7 @@ import { Component, DestroyRef, NgZone, computed, inject, signal } from '@angula
 
 import { AuthService } from '../core/auth';
 import { apiErrorMessage } from '../core/errors';
+import { parseTutorReply, renderMarkdown } from '../core/markdown';
 import { TutorApi, TutorMessage, TutorQuota, TutorSession } from '../core/tutor';
 
 /**
@@ -110,7 +111,14 @@ const STARTERS = [
         <div class="thread" aria-live="polite">
           @for (message of messages(); track message.id) {
             <div class="bubble" [class.bubble--mine]="message.role === 'user'">
-              <div class="bubble__content" [innerHTML]="rendered(message)"></div>
+              <div class="bubble__content" [innerHTML]="renderedBody(message)"></div>
+              @if (message.role === 'assistant' && sourceCitation(message); as src) {
+                <div class="source-card" role="note">
+                  <span class="source-card__icon" aria-hidden="true">📑</span>
+                  <span class="source-card__label">Mark scheme</span>
+                  <span class="source-card__text">{{ src }}</span>
+                </div>
+              }
               @if (message.role === 'assistant') {
                 <div class="bubble__tools">
                   @if (ttsSupported) {
@@ -166,11 +174,13 @@ const STARTERS = [
         }
 
         @if (attachment(); as file) {
-          <div class="attach-chip">
+          <div class="attach-chip" [class.attach-chip--scan]="thinking()">
             @if (previewUrl(); as url) {
-              <img class="attach-chip__thumb" [src]="url" alt="Attached image preview" />
+              <img class="attach-chip__thumb" [src]="url" alt="Snap & Solve preview" />
             }
-            <span class="attach-chip__name">{{ file.name }}</span>
+            <span class="attach-chip__name">
+              {{ thinking() ? 'Reading your question…' : 'Snap & Solve · ' + file.name }}
+            </span>
             <button
               type="button"
               class="attach-chip__remove"
@@ -191,12 +201,15 @@ const STARTERS = [
           />
           <button
             type="button"
-            class="composer__attach"
+            class="composer__snap"
             (click)="fileInput.click()"
             [disabled]="thinking()"
-            title="Attach a photo"
-            aria-label="Attach a photo"
-          >📎</button>
+            title="Snap & Solve — photograph a question"
+            aria-label="Snap and Solve — photograph a question"
+          >
+            <span aria-hidden="true">📷</span>
+            <span class="composer__snap-label">Snap</span>
+          </button>
           @if (speechSupported) {
             <button
               type="button"
@@ -483,15 +496,53 @@ const STARTERS = [
       &:focus-visible { border-color: var(--danger); color: var(--danger); }
     }
 
-    .composer__attach {
-      width: 46px;
-      height: 46px;
+    .attach-chip--scan .attach-chip__thumb {
+      animation: scan-pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes scan-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.55; }
+    }
+
+    .source-card {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem 0.5rem;
+      margin-top: 0.65rem;
+      padding: 0.55rem 0.75rem;
+      background: color-mix(in srgb, var(--chip-lav) 55%, var(--card));
+      border: 1.5px solid var(--accent-2);
+      border-radius: 8px;
+      font-size: 0.78rem;
+    }
+
+    .source-card__icon { font-size: 1rem; }
+    .source-card__label {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+    }
+    .source-card__text { color: var(--ink-soft); flex: 1 1 100%; }
+
+    .composer__snap {
       flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      height: 46px;
+      padding: 0 0.85rem;
       border: 1.5px solid var(--line-strong);
       border-radius: 999px;
-      background: var(--card);
+      background: var(--chip-yellow);
       cursor: pointer;
-      font-size: 1.05rem;
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--ink);
 
       &:hover:not(:disabled),
       &:focus-visible { border-color: var(--accent); }
@@ -499,6 +550,12 @@ const STARTERS = [
       &:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
       &:disabled { opacity: 0.5; cursor: default; }
+    }
+
+    .composer__snap-label {
+      font-family: var(--font-mono);
+      letter-spacing: 0.04em;
+      font-size: 0.72rem;
     }
 
     .composer__mic {
@@ -722,7 +779,11 @@ export class TutorPage {
       return;
     }
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(this.speechText(message.content));
+    const text =
+      message.role === 'assistant'
+        ? parseTutorReply(message.content).body
+        : message.content;
+    const utterance = new SpeechSynthesisUtterance(this.speechText(text));
     utterance.onend = () => this.zone.run(() => this.speakingId.set(null));
     utterance.onerror = () => this.zone.run(() => this.speakingId.set(null));
     this.speakingId.set(message.id);
@@ -847,23 +908,17 @@ export class TutorPage {
   /** Minimal, safe markdown for tutor bubbles: HTML is escaped first,
    * then bold/italic/inline-code/blockquote/ordered-bullet lines and line
    * breaks are converted. No raw HTML ever passes through. */
-  protected rendered(message: TutorMessage): string {
-    const escaped = message.content
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;');
-    const lines = escaped.split('\n').map((line) => {
-      let out = line;
-      if (/^\s*&gt;\s?/.test(out)) {
-        out = `<span class="md-quote">${out.replace(/^\s*&gt;\s?/, '')}</span>`;
-      }
-      return out;
-    });
-    let html = lines.join('<br>');
-    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/(^|[\s>])_([^_]+)_(?=[\s<.,!?)]|$)/g, '$1<em>$2</em>');
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    return html;
+  protected sourceCitation(message: TutorMessage): string | null {
+    if (message.role !== 'assistant') return null;
+    return parseTutorReply(message.content).source;
+  }
+
+  protected renderedBody(message: TutorMessage): string {
+    const text =
+      message.role === 'assistant'
+        ? parseTutorReply(message.content).body
+        : message.content;
+    return renderMarkdown(text);
   }
 
   protected copy(message: TutorMessage): void {

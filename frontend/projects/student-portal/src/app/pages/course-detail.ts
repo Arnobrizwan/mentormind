@@ -2,10 +2,12 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
-import { LearningApi } from '../core/api';
+import { CourseLeaderboardRow, LearningApi } from '../core/api';
 import { AuthService } from '../core/auth';
+import { SiteConfig } from '../core/site-config';
 import { apiErrorMessage } from '../core/errors';
 import { Course, Quiz } from '../core/models';
+import { PracticeInsightsApi, RecommendedItem } from '../core/practice-insights';
 import { ShortAnswerApi } from '../core/short-answers';
 
 @Component({
@@ -110,7 +112,69 @@ import { ShortAnswerApi } from '../core/short-answers';
           </section>
         }
 
-        @if (practiceCount() > 0) {
+        @if (leaderboard().length > 0) {
+          <section class="syllabus rise" style="animation-delay: 240ms">
+            <div class="section-head">
+              <h2>Quiz leaderboard</h2>
+              <span class="mono-label">top scorers</span>
+            </div>
+            <ol class="leaderboard">
+              @for (row of leaderboard(); track row.rank) {
+                <li class="leaderboard__row" [class.leaderboard__row--top]="row.rank === 1">
+                  <span class="leaderboard__rank mono-label">#{{ row.rank }}</span>
+                  <span class="leaderboard__name">{{ row.student }}</span>
+                  <span class="leaderboard__score">{{ row.best_score }}%</span>
+                </li>
+              }
+            </ol>
+          </section>
+        }
+
+        @if (enrollment() && config.flagEnabled('chat')) {
+          <section class="syllabus rise" style="animation-delay: 250ms">
+            <div class="section-head">
+              <h2>Study hall</h2>
+              <span class="mono-label">live chat</span>
+            </div>
+            <ol class="lesson-list">
+              <li class="lesson">
+                <span class="lesson__index mono-label">💬</span>
+                <div class="lesson__body">
+                  <span class="lesson__title">Course chat</span>
+                  <span class="lesson__check">ask classmates, share tips, earn Chatterbox points</span>
+                </div>
+                <a class="btn btn--ghost lesson__open" [routerLink]="['/courses', c.slug, 'chat']">
+                  Join chat
+                </a>
+              </li>
+            </ol>
+          </section>
+        }
+
+        @if (courseDrill().length > 0) {
+          <section class="syllabus rise" style="animation-delay: 255ms">
+            <div class="section-head">
+              <h2>Weak-topic drill</h2>
+              <span class="mono-label">adaptive practice</span>
+            </div>
+            <ol class="lesson-list">
+              @for (item of courseDrill(); track item.type + '-' + item.id) {
+                <li class="lesson">
+                  <span class="lesson__index mono-label">{{ item.type === 'quiz' ? 'QZ' : 'SA' }}</span>
+                  <div class="lesson__body">
+                    <span class="lesson__title">{{ item.title }}</span>
+                    <span class="lesson__check">{{ item.topic }} · {{ item.preview }}</span>
+                  </div>
+                  <a class="btn btn--ghost lesson__open" [routerLink]="drillLink(item)">
+                    Practise
+                  </a>
+                </li>
+              }
+            </ol>
+          </section>
+        }
+
+        @if (practiceCount() > 0 && config.flagEnabled('short_answer_grading')) {
           <section class="syllabus rise" style="animation-delay: 260ms">
             <div class="section-head">
               <h2>Practice</h2>
@@ -276,12 +340,45 @@ import { ShortAnswerApi } from '../core/short-answers';
       padding: 0.4rem 1rem;
       font-size: 0.82rem;
     }
+
+    .leaderboard {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .leaderboard__row {
+      display: grid;
+      grid-template-columns: 3rem 1fr auto;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.9rem;
+      background: var(--card);
+      border: 1.5px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .leaderboard__row--top {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--chip-pink) 40%, var(--card));
+    }
+
+    .leaderboard__score {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent-deep);
+    }
   `,
 })
 export class CourseDetailPage {
   private readonly api = inject(LearningApi);
   private readonly shortAnswers = inject(ShortAnswerApi);
+  private readonly practiceInsights = inject(PracticeInsightsApi);
   private readonly auth = inject(AuthService);
+  protected readonly config = inject(SiteConfig);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -290,6 +387,8 @@ export class CourseDetailPage {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly practiceCount = signal(0);
+  protected readonly leaderboard = signal<CourseLeaderboardRow[]>([]);
+  protected readonly courseDrill = signal<RecommendedItem[]>([]);
 
   protected readonly enrollment = computed(() => {
     const c = this.course();
@@ -308,6 +407,8 @@ export class CourseDetailPage {
     try {
       this.course.set(await this.api.getCourse(slug));
       void this.loadPracticeCount();
+      void this.loadLeaderboard(slug);
+      void this.loadCourseDrill(slug);
     } catch {
       this.course.set(null);
     } finally {
@@ -315,7 +416,37 @@ export class CourseDetailPage {
     }
   }
 
+  private async loadLeaderboard(slug: string): Promise<void> {
+    try {
+      this.leaderboard.set(await this.api.courseLeaderboard(slug));
+    } catch {
+      this.leaderboard.set([]);
+    }
+  }
+
   /** Practice is a quiet extra — if the lookup fails we simply hide the section. */
+  private async loadCourseDrill(slug: string): Promise<void> {
+    if (!this.auth.isLoggedIn() || !this.enrollment()) {
+      this.courseDrill.set([]);
+      return;
+    }
+    try {
+      const feed = await this.practiceInsights.recommendations();
+      this.courseDrill.set(
+        feed.recommended.filter((item) => item.course_slug === slug).slice(0, 5),
+      );
+    } catch {
+      this.courseDrill.set([]);
+    }
+  }
+
+  protected drillLink(item: RecommendedItem): string[] {
+    if (item.type === 'quiz' && item.quiz_id) {
+      return ['/courses', item.course_slug, 'quiz', String(item.quiz_id)];
+    }
+    return ['/courses', item.course_slug, 'practice'];
+  }
+
   private async loadPracticeCount(): Promise<void> {
     const c = this.course();
     if (!c || !this.auth.isLoggedIn()) {

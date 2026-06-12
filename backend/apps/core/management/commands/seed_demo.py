@@ -55,6 +55,7 @@ FLAGS = [
     ("short_answer_grading", True, "LLM rubric grading"),
     ("flashcard_generation", True, "AI flashcard drafting"),
     ("quiz_generation", True, "AI quiz drafting"),
+    ("omr_grading", True, "Bubble-sheet OMR grading"),
 ]
 
 

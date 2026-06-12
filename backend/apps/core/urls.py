@@ -7,6 +7,7 @@ from .views import (
     EnrollmentViewSet,
     HealthView,
     LessonViewSet,
+    OmrGradeView,
     PracticeRecommendationsView,
     QuizQuestionViewSet,
     QuizViewSet,
@@ -39,5 +40,6 @@ urlpatterns = [
         name="practice-readiness",
     ),
     path("admin/stats/", AdminStatsView.as_view(), name="admin-stats"),
+    path("omr/grade/", OmrGradeView.as_view(), name="omr-grade"),
     path("", include(router.urls)),
 ]

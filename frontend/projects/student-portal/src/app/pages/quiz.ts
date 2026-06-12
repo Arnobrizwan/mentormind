@@ -67,7 +67,7 @@ interface ReviewRow {
           }
         </header>
 
-        @if (!result() && proctorState() !== 'idle') {
+        @if (!result() && config.flagEnabled('proctoring') && proctorState() !== 'idle') {
           <aside class="proctor" aria-live="polite">
             @if (proctorState() === 'on') {
               <div class="proctor__status">
@@ -566,7 +566,7 @@ interface ReviewRow {
 export class QuizPage {
   private readonly api = inject(LearningApi);
   private readonly route = inject(ActivatedRoute);
-  private readonly config = inject(SiteConfig);
+  protected readonly config = inject(SiteConfig);
 
   /** Pass cutoff (%) — operators tune it live via the quiz-pass-threshold setting. */
   protected readonly passThreshold = computed(() => {
@@ -765,6 +765,7 @@ export class QuizPage {
   }
 
   private async startProctoring(): Promise<void> {
+    if (!this.config.flagEnabled('proctoring')) return;
     if (this.stream()) return;
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       this.proctorState.set('unavailable');

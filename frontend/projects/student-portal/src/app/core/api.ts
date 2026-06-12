@@ -3,24 +3,59 @@ import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from './auth';
+import { Connectivity } from './connectivity';
 import { Course, Enrollment, Paginated, QuizAttempt } from './models';
+import {
+  readCatalogCache,
+  readEnrollmentsCache,
+  writeCatalogCache,
+  writeEnrollmentsCache,
+} from './offline-cache';
+
+export interface CourseLeaderboardRow {
+  rank: number;
+  student: string;
+  best_score: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class LearningApi {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
+  private readonly connectivity = inject(Connectivity);
 
   /** The signed-in student's enrollments, kept fresh after every mutation. */
   readonly enrollments = signal<Enrollment[]>([]);
 
   listCourses(): Promise<Course[]> {
-    return firstValueFrom(this.http.get<Paginated<Course>>('/api/v1/courses/')).then(
-      (page) => page.results,
-    );
+    if (!this.connectivity.online()) {
+      const cached = readCatalogCache<Course[]>();
+      if (cached) return Promise.resolve(cached);
+    }
+    return firstValueFrom(this.http.get<Paginated<Course>>('/api/v1/courses/'))
+      .then((page) => {
+        writeCatalogCache(page.results);
+        return page.results;
+      })
+      .catch((err) => {
+        const cached = readCatalogCache<Course[]>();
+        if (cached) return cached;
+        throw err;
+      });
   }
 
   getCourse(slug: string): Promise<Course> {
     return firstValueFrom(this.http.get<Course>(`/api/v1/courses/${slug}/`));
+  }
+
+  listRecommended(): Promise<Course[]> {
+    return firstValueFrom(this.http.get<Course[]>('/api/v1/courses/recommended/'));
+  }
+
+  courseLeaderboard(slug: string): Promise<CourseLeaderboardRow[]> {
+    return firstValueFrom(
+      this.http.get<CourseLeaderboardRow[]>(`/api/v1/courses/${slug}/leaderboard/`),
+    );
   }
 
   async enroll(slug: string): Promise<Enrollment> {
@@ -36,10 +71,21 @@ export class LearningApi {
       this.enrollments.set([]);
       return;
     }
-    const page = await firstValueFrom(
-      this.http.get<Paginated<Enrollment>>('/api/v1/enrollments/'),
-    );
-    this.enrollments.set(page.results);
+    if (!this.connectivity.online()) {
+      const cached = readEnrollmentsCache<Enrollment[]>();
+      if (cached) this.enrollments.set(cached);
+      return;
+    }
+    try {
+      const page = await firstValueFrom(
+        this.http.get<Paginated<Enrollment>>('/api/v1/enrollments/'),
+      );
+      this.enrollments.set(page.results);
+      writeEnrollmentsCache(page.results);
+    } catch {
+      const cached = readEnrollmentsCache<Enrollment[]>();
+      if (cached) this.enrollments.set(cached);
+    }
   }
 
   enrollmentFor(courseId: number): Enrollment | undefined {

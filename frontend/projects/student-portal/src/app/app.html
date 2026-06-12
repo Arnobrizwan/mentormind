@@ -1,7 +1,7 @@
 <div class="frame">
   @if (!connectivity.online()) {
     <div class="offline-banner" role="status">
-      <span aria-hidden="true">📡</span> You're offline — cached courses and your AI tutor still work.
+      <span aria-hidden="true">📡</span> You're offline — cached catalog and enrollments still work; chat and quizzes need a connection.
     </div>
   }
   @if (slowApi.waking()) {
@@ -24,7 +24,9 @@
         <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Catalog</a>
         @if (auth.isLoggedIn()) {
           <a routerLink="/dashboard" routerLinkActive="is-active">My Desk</a>
-          <a routerLink="/tutor" routerLinkActive="is-active">AI Tutor</a>
+          @if (config.flagEnabled('ai_tutor')) {
+            <a routerLink="/tutor" routerLinkActive="is-active">AI Tutor</a>
+          }
           <a routerLink="/revision" routerLinkActive="is-active" class="nav__revision">
             Revision
             @if (dueCount() > 0) {
@@ -34,6 +36,8 @@
             }
           </a>
           <a routerLink="/planner" routerLinkActive="is-active">Planner</a>
+          <a routerLink="/profile" routerLinkActive="is-active">Profile</a>
+          <a routerLink="/notifications" routerLinkActive="is-active">Alerts</a>
         }
       </nav>
 
@@ -75,7 +79,9 @@
         <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Catalog</a>
         @if (auth.isLoggedIn()) {
           <a routerLink="/dashboard" routerLinkActive="is-active">My Desk</a>
-          <a routerLink="/tutor" routerLinkActive="is-active">AI Tutor</a>
+          @if (config.flagEnabled('ai_tutor')) {
+            <a routerLink="/tutor" routerLinkActive="is-active">AI Tutor</a>
+          }
           <a routerLink="/revision" routerLinkActive="is-active" class="nav__revision">
             Revision
             @if (dueCount() > 0) {
@@ -86,6 +92,7 @@
           </a>
           <a routerLink="/planner" routerLinkActive="is-active">Planner</a>
           <a routerLink="/profile" routerLinkActive="is-active">Profile</a>
+          <a routerLink="/notifications" routerLinkActive="is-active">Alerts</a>
           <button type="button" class="mobile-menu__signout" (click)="logout()">Sign out</button>
         } @else {
           <a routerLink="/auth" class="btn btn--accent mobile-menu__signin">Sign in</a>
@@ -114,7 +121,9 @@
         <a routerLink="/" class="colophon__link">Catalog</a>
         @if (auth.isLoggedIn()) {
           <a routerLink="/dashboard" class="colophon__link">My Desk</a>
-          <a routerLink="/tutor" class="colophon__link">AI Tutor</a>
+          @if (config.flagEnabled('ai_tutor')) {
+            <a routerLink="/tutor" class="colophon__link">AI Tutor</a>
+          }
           <a routerLink="/revision" class="colophon__link">Revision</a>
           <a routerLink="/planner" class="colophon__link">Planner</a>
         } @else {

@@ -3,6 +3,7 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 
 import {
   AdminApi,
+  AdminStats,
   BADGE_RULES,
   Badge,
   FeatureFlag,
@@ -59,6 +60,24 @@ const POLL_MS = 5000;
 
       @if (error(); as message) {
         <p class="error-note" role="alert" style="margin-top: 1rem">{{ message }}</p>
+      }
+
+      @if (stats(); as s) {
+        <section class="bay boot-in stats-bay" style="margin-top: 1rem">
+          <div class="deck-head">
+            <h2>headline_stats</h2>
+            <span class="label">today · live</span>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-cell"><span class="label">users</span><strong>{{ s.users_total }}</strong></div>
+            <div class="stat-cell"><span class="label">premium</span><strong>{{ s.premium_users }}</strong></div>
+            <div class="stat-cell"><span class="label">courses</span><strong>{{ s.courses_published }}/{{ s.courses_total }}</strong></div>
+            <div class="stat-cell"><span class="label">enrollments</span><strong>{{ s.enrollments_total }}</strong></div>
+            <div class="stat-cell"><span class="label">quizzes_today</span><strong>{{ s.quiz_attempts_today }}</strong></div>
+            <div class="stat-cell"><span class="label">tutor_today</span><strong>{{ s.tutor_sessions_today }}</strong></div>
+            <div class="stat-cell"><span class="label">points_today</span><strong>{{ s.points_awarded_today }}</strong></div>
+          </div>
+        </section>
       }
 
       <div class="decks">
@@ -358,6 +377,26 @@ const POLL_MS = 5000;
       font-size: 0.8rem;
     }
 
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+      gap: 0.65rem;
+    }
+
+    .stat-cell {
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--void);
+
+      strong {
+        display: block;
+        margin-top: 0.25rem;
+        font-size: 1.35rem;
+        color: var(--amber);
+      }
+    }
+
     @media (max-width: 920px) {
       .decks { grid-template-columns: 1fr; }
     }
@@ -382,6 +421,7 @@ export class ConsolePage {
 
   protected readonly badges = signal<Badge[]>([]);
   protected readonly leaderboard = signal<LeaderboardRow[]>([]);
+  protected readonly stats = signal<AdminStats | null>(null);
   protected readonly badgeRules = BADGE_RULES;
   protected readonly badgeIcon = signal('');
   protected readonly badgeName = signal('');
@@ -397,16 +437,18 @@ export class ConsolePage {
   private async bootstrap(): Promise<void> {
     await this.pollSystem();
     try {
-      const [flags, settings, badges, leaderboard] = await Promise.all([
+      const [flags, settings, badges, leaderboard, stats] = await Promise.all([
         this.api.flags(),
         this.api.settings(),
         this.api.badges(),
         this.api.leaderboard().catch(() => []),
+        this.api.stats().catch(() => null),
       ]);
       this.flags.set(flags);
       this.settings.set(settings);
       this.badges.set(badges);
       this.leaderboard.set(leaderboard);
+      this.stats.set(stats);
     } catch (err) {
       if (err instanceof HttpErrorResponse && err.status === 403) {
         this.forbidden.set(true);

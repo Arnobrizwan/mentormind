@@ -22,6 +22,14 @@ import {
   ShortAnswerSubmission,
 } from './models';
 
+export interface OmrGradeResult {
+  total_questions: number;
+  correct: number;
+  score: number;
+  detected_answers: Array<number | null>;
+  fill_grid: number[][];
+}
+
 @Injectable({ providedIn: 'root' })
 export class StudioApi {
   private readonly http = inject(HttpClient);
@@ -177,5 +185,14 @@ export class StudioApi {
     return firstValueFrom(
       this.http.post<RiskScanQueued>('/api/v1/engagement/risk/tickets/scan/', {}),
     );
+  }
+
+  /** Grade a bubble-sheet photo against a JSON answer-key array. */
+  gradeOmr(image: File, answerKeyJson: string, numOptions: number): Promise<OmrGradeResult> {
+    const form = new FormData();
+    form.append('image', image, image.name || 'sheet.jpg');
+    form.append('answer_key', answerKeyJson);
+    form.append('num_options', String(numOptions));
+    return firstValueFrom(this.http.post<OmrGradeResult>('/api/v1/omr/grade/', form));
   }
 }

@@ -218,8 +218,18 @@ MM_API_BASE_URL=https://api.your-host npm run build:mobile   # build + inject AP
 npm run run:android    # or run:ios / open:android / open:ios
 ```
 
-Android builds need **JDK 21+** (Capacitor 8); point `JAVA_HOME` at a modern
-JDK if Gradle complains about `invalid source release`.
+**DIGITEX / public demo APK** (student portal → Render API, login baked in via
+`seed_demo`):
+
+```bash
+cd frontend
+npm run apk:demo    # → ../docs/releases/mentormind-demo.apk
+```
+
+Android builds need **Node ≥ 24.15**, **JDK 21** (not JDK 26 — AGP rejects it),
+and `ANDROID_HOME` set. The demo script auto-detects Homebrew `openjdk@21` on macOS.
+After changing `CORS_ALLOWED_ORIGINS` in `render.yaml`, redeploy the API so the
+APK’s `https://localhost` origin is allowed.
 
 ## Full architecture demo (Docker)
 
