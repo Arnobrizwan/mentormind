@@ -45,6 +45,15 @@
 
       <div class="masthead__tools">
         <mm-global-search class="tools__search" />
+        <button
+          type="button"
+          class="theme-toggle"
+          (click)="theme.toggle()"
+          [attr.aria-label]="theme.theme() === 'dark' ? locale.t('theme.toLight') : locale.t('theme.toDark')"
+          [title]="theme.theme() === 'dark' ? locale.t('theme.toLight') : locale.t('theme.toDark')"
+        >
+          <span aria-hidden="true">{{ theme.theme() === 'dark' ? '☀️' : '🌙' }}</span>
+        </button>
         @if (auth.isLoggedIn()) {
           @if (engagement.me(); as me) {
             <span

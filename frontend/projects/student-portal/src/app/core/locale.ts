@@ -18,6 +18,8 @@ const MESSAGES: Record<LocaleId, Record<string, string>> = {
     'nav.alerts': 'Alerts',
     'nav.signIn': 'Sign in',
     'nav.signOut': 'Sign out',
+    'theme.toDark': 'Switch to dark mode',
+    'theme.toLight': 'Switch to light mode',
     'offline.banner':
       "You're offline — cached catalog and enrollments still work; chat and quizzes need a connection.",
     'catalog.hero.label': 'Vol. 1 — The Course Catalog',
@@ -189,6 +191,8 @@ const MESSAGES: Record<LocaleId, Record<string, string>> = {
     'nav.alerts': 'Makluman',
     'nav.signIn': 'Log masuk',
     'nav.signOut': 'Log keluar',
+    'theme.toDark': 'Tukar ke mod gelap',
+    'theme.toLight': 'Tukar ke mod cerah',
     'offline.banner':
       'Anda luar talian — katalog dan pendaftaran cache masih berfungsi; sembang dan kuiz perlukan sambungan.',
     'catalog.hero.label': 'Jilid 1 — Katalog Kursus',

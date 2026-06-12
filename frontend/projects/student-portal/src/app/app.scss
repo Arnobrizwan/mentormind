@@ -104,6 +104,26 @@
   gap: 0.7rem;
 }
 
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  padding: 0;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--card));
+}
+
 .streak-chip {
   display: inline-flex;
   align-items: center;
@@ -306,7 +326,7 @@
 
 .offline-banner {
   background: var(--ink);
-  color: #fff;
+  color: var(--paper); /* tracks the theme — ink and paper swap in dark mode */
   text-align: center;
   padding: 0.55rem 1rem;
   font-size: 0.85rem;

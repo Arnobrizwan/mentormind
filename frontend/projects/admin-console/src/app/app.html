@@ -5,6 +5,15 @@
       {{ config.siteName().toLowerCase() }}<span class="brand__path">:~/ops$</span> admin-console
     </a>
     <div class="topbar__right">
+      <button
+        type="button"
+        class="theme-toggle"
+        (click)="theme.toggle()"
+        [attr.aria-label]="theme.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+        [title]="theme.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+      >
+        <span aria-hidden="true">{{ theme.theme() === 'dark' ? '☀️' : '🌙' }}</span>
+      </button>
       @if (auth.user(); as user) {
         <a routerLink="/system" class="label topbar__link">system</a>
         <span class="label">{{ user.email }}</span>

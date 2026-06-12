@@ -11,6 +11,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <meta name="theme-color" content="#ff5ca3" />
+    <script>
+      // Apply the saved (or OS) theme before styles load — no light flash.
+      try {
+        var mmTheme = localStorage.getItem('mm_theme');
+        if (!mmTheme && matchMedia('(prefers-color-scheme: dark)').matches) mmTheme = 'dark';
+        if (mmTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      } catch (e) {}
+    </script>
     <link
       href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..700&family=Spline+Sans+Mono:wght@400..700&display=swap"
       rel="stylesheet"

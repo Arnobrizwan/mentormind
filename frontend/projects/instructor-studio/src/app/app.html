@@ -5,6 +5,15 @@
       {{ config.siteName() }} <span class="brand__sub">/ Instructor Studio</span>
     </a>
     <div class="topbar__right">
+      <button
+        type="button"
+        class="theme-toggle"
+        (click)="theme.toggle()"
+        [attr.aria-label]="theme.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+        [title]="theme.theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+      >
+        <span aria-hidden="true">{{ theme.theme() === 'dark' ? '☀️' : '🌙' }}</span>
+      </button>
       @if (auth.user(); as user) {
         @if (auth.isInstructor()) {
           <nav class="topbar__nav topbar__nav--desktop" aria-label="Studio">

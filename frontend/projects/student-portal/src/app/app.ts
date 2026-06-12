@@ -8,6 +8,7 @@ import { EngagementApi } from './core/engagement';
 import { RevisionApi } from './core/revision';
 import { LocaleService } from './core/locale';
 import { SiteConfig } from './core/site-config';
+import { ThemeService } from './core/theme';
 import { SlowApiService } from './core/slow-api';
 import { GlobalSearch } from './shell/global-search';
 import { NotificationsBell } from './shell/notifications-bell';
@@ -26,6 +27,7 @@ export class App {
   protected readonly auth = inject(AuthService);
   protected readonly locale = inject(LocaleService);
   protected readonly config = inject(SiteConfig);
+  protected readonly theme = inject(ThemeService);
   protected readonly connectivity = inject(Connectivity);
   protected readonly slowApi = inject(SlowApiService);
   protected readonly engagement = inject(EngagementApi);

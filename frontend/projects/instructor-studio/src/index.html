@@ -7,6 +7,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="MentorMind Instructor Studio — build courses, lessons and quizzes." />
     <meta name="theme-color" content="#ff5ca3" />
+    <script>
+      // Apply the saved (or OS) theme before styles load — no light flash.
+      try {
+        var mmTheme = localStorage.getItem('mm_theme');
+        if (!mmTheme && matchMedia('(prefers-color-scheme: dark)').matches) mmTheme = 'dark';
+        if (mmTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      } catch (e) {}
+    </script>
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
