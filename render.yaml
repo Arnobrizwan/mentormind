@@ -1,0 +1,29 @@
+# One-click Render deployment (free tier) — the live demo configuration.
+#
+# Ephemeral SQLite by design: every deploy/restart re-runs migrate +
+# seed_demo, so the public demo resets itself to a clean, fully-featured
+# state. Point DATABASE_URL at a real Postgres for a persistent install.
+# No Redis needed: settings fall back to in-memory cache + eager Celery.
+
+services:
+  - type: web
+    name: mentormind-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash render-start.sh
+    healthCheckPath: /api/v1/health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.7
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: mentormind-api.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://mentormind-demo.vercel.app
+      - key: INSTANCE_NAME
+        value: render-free
