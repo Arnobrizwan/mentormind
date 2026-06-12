@@ -19,13 +19,17 @@ from apps.core.models import (
     Course,
     Enrollment,
     Lesson,
+    ProctoringLog,
     Quiz,
     QuizAttempt,
     QuizQuestion,
+    ShortAnswerQuestion,
+    ShortAnswerSubmission,
 )
-from apps.engagement.models import DailyActivity, PointsEvent
+from apps.engagement.models import DailyActivity, PointsEvent, RemediationTicket
 from apps.flags.models import FeatureFlag
 from apps.notifications.models import Notification
+from apps.revision.models import Flashcard, ReviewCard
 from apps.tutor.models import TutorMessage, TutorSession
 
 User = get_user_model()
@@ -102,9 +106,65 @@ STUDENTS = [
 FLAGS = [
     ("chat", True, "Live course chat rooms"),
     ("recommendations", True, "ML course recommendations"),
-    ("proctoring", False, "Quiz proctoring module"),
+    ("proctoring", True, "Quiz proctoring module"),
     ("payments", True, "Premium subscription flow"),
+    ("ai_tutor", True, "AI tutor"),
+    ("short_answer_grading", True, "LLM rubric grading"),
+    ("flashcard_generation", True, "AI flashcard drafting"),
+    ("quiz_generation", True, "AI quiz drafting"),
 ]
+
+# Per-question syllabus topics (same order as COURSES quiz questions) —
+# powers the weak-topic practice demo.
+QUESTION_TOPICS = {
+    "igcse-mathematics-0580": ["Linear equations", "Factorising", "Expanding brackets"],
+    "igcse-physics-0625": ["Forces", "Vectors", "Motion graphs"],
+    "igcse-computer-science-0478": ["Binary", "Data units", "Hexadecimal"],
+}
+
+SHORT_ANSWERS = {
+    "igcse-physics-0625": [
+        {
+            "prompt": "A car accelerates uniformly from rest to 20 m/s in 8 s. "
+            "Define acceleration and calculate the car's acceleration.",
+            "mark_scheme": "- States acceleration is the rate of change of velocity\n"
+            "- Uses a = (v - u) / t with correct values\n"
+            "- Gives 2.5 with SI units m/s^2",
+            "topic": "Motion graphs",
+            "max_score": 3,
+        },
+        {
+            "prompt": "Explain why a parachutist reaches terminal velocity.",
+            "mark_scheme": "- Air resistance increases with speed\n"
+            "- Resultant force becomes zero when air resistance equals weight\n"
+            "- Zero resultant force means zero acceleration, so velocity is constant",
+            "topic": "Forces",
+            "max_score": 3,
+        },
+    ],
+    "igcse-mathematics-0580": [
+        {
+            "prompt": "Solve the simultaneous equations 2x + y = 7 and x − y = 2. Show your working.",
+            "mark_scheme": "- Adds the equations to eliminate y\n"
+            "- Finds x = 3\n"
+            "- Substitutes back to find y = 1",
+            "topic": "Linear equations",
+            "max_score": 3,
+        },
+    ],
+}
+
+FLASHCARDS = {
+    "igcse-physics-0625": [
+        ("What is acceleration?", "The rate of change of velocity with respect to time (m/s²).", "Motion graphs"),
+        ("State Newton's second law.", "Resultant force = mass × acceleration (F = ma).", "Forces"),
+        ("What is terminal velocity?", "The constant maximum velocity reached when air resistance equals weight, so the resultant force is zero.", "Forces"),
+    ],
+    "igcse-mathematics-0580": [
+        ("Factorise x² − 9.", "(x + 3)(x − 3) — difference of two squares.", "Factorising"),
+        ("What is the gradient of a line through (0,1) and (2,7)?", "(7 − 1) / (2 − 0) = 3.", "Coordinate geometry"),
+    ],
+}
 
 
 class Command(BaseCommand):
@@ -156,11 +216,40 @@ class Command(BaseCommand):
                 title=spec["quiz"]["title"],
                 defaults={"description": f"Checkpoint quiz for {course.title}.", "lesson": lessons[1]},
             )
+            topics = QUESTION_TOPICS.get(spec["slug"], [])
             for order, (text, options, correct) in enumerate(spec["quiz"]["questions"], start=1):
                 QuizQuestion.objects.update_or_create(
                     quiz=quiz,
                     order=order,
-                    defaults={"text": text, "options": options, "correct_option_index": correct},
+                    defaults={
+                        "text": text,
+                        "options": options,
+                        "correct_option_index": correct,
+                        "topic": topics[order - 1] if order <= len(topics) else "",
+                    },
+                )
+            for order, spec_sa in enumerate(SHORT_ANSWERS.get(spec["slug"], []), start=1):
+                ShortAnswerQuestion.objects.update_or_create(
+                    course=course,
+                    order=order,
+                    defaults={
+                        "prompt": spec_sa["prompt"],
+                        "mark_scheme": spec_sa["mark_scheme"],
+                        "topic": spec_sa["topic"],
+                        "max_score": spec_sa["max_score"],
+                        "is_published": True,
+                    },
+                )
+            for front, back, topic in FLASHCARDS.get(spec["slug"], []):
+                Flashcard.objects.update_or_create(
+                    course=course,
+                    front=front,
+                    defaults={
+                        "back": back,
+                        "topic": topic,
+                        "source": Flashcard.Source.INSTRUCTOR,
+                        "is_published": True,
+                    },
                 )
             courses.append((course, lessons, quiz))
 
@@ -174,14 +263,27 @@ class Command(BaseCommand):
                 enrollment.completed_lessons.set(done)
 
                 if not QuizAttempt.objects.filter(enrollment=enrollment, quiz=quiz).exists():
-                    total = quiz.questions.count()
+                    questions = list(quiz.questions.all())
+                    total = len(questions)
                     correct = max(1, total - i % 3)
+                    # Per-question detail feeds the weak-topic practice demo
+                    detail = {}
+                    for position, question in enumerate(questions):
+                        got_it = position < correct
+                        detail[str(question.id)] = {
+                            "selected": question.correct_option_index
+                            if got_it
+                            else (question.correct_option_index + 1) % len(question.options),
+                            "correct": got_it,
+                            "topic": question.topic,
+                        }
                     QuizAttempt.objects.create(
                         enrollment=enrollment,
                         quiz=quiz,
                         score=round(100.0 * correct / total, 1),
                         total_questions=total,
                         correct_answers=correct,
+                        answers=detail,
                     )
 
                 for lesson in done:
@@ -241,9 +343,74 @@ class Command(BaseCommand):
             )
             PointsEvent.objects.create(user=students[0], action="tutor_question", points=5)
 
+        # ---- Showcase data for the AI assessment & intervention features ----
+        physics = courses[1][0]
+        physics_enrollment = Enrollment.objects.filter(
+            student=students[0], course=physics
+        ).first()
+        accel_question = ShortAnswerQuestion.objects.filter(
+            course=physics, topic="Motion graphs"
+        ).first()
+        if physics_enrollment and accel_question and not accel_question.submissions.exists():
+            ShortAnswerSubmission.objects.create(
+                question=accel_question,
+                enrollment=physics_enrollment,
+                answer_text="Acceleration is the rate of change of velocity. "
+                "a = (20 - 0) / 8 = 2.5 m/s^2.",
+                score=3,
+                max_score=3,
+                criteria_met=[
+                    "States acceleration is the rate of change of velocity",
+                    "Uses a = (v - u) / t with correct values",
+                    "Gives 2.5 with SI units m/s^2",
+                ],
+                criteria_missing=[],
+                feedback="Clear definition and correct working with units — full marks.",
+                engine=ShortAnswerSubmission.Engine.LLM,
+            )
+
+        # Due flashcards for the demo student's revision queue
+        for flashcard in Flashcard.objects.filter(course=physics, is_published=True):
+            ReviewCard.objects.get_or_create(
+                user=students[0],
+                flashcard=flashcard,
+                defaults={"due_at": now - timedelta(hours=2)},
+            )
+
+        # A proctoring timeline with one violation streak for the studio demo
+        physics_quiz = courses[1][2]
+        if physics_enrollment and not ProctoringLog.objects.filter(
+            quiz=physics_quiz, enrollment=physics_enrollment
+        ).exists():
+            verdicts = ["ok", "ok", "no_face", "no_face", "ok", "multiple_faces", "ok"]
+            for offset, verdict in enumerate(verdicts):
+                ProctoringLog.objects.create(
+                    enrollment=physics_enrollment,
+                    quiz=physics_quiz,
+                    faces=0 if verdict == "no_face" else (2 if verdict == "multiple_faces" else 1),
+                    verdict=verdict,
+                )
+
+        # One open remediation ticket so Student Success isn't empty
+        if not RemediationTicket.objects.filter(student=students[3]).exists():
+            RemediationTicket.objects.create(
+                student=students[3],
+                risk=RemediationTicket.Risk.HIGH,
+                probability=0.82,
+                features={
+                    "progress_pct": 12.5,
+                    "days_since_last_login": 16.0,
+                    "quiz_avg": 41.0,
+                    "lessons_per_week": 0.4,
+                    "chat_messages": 1.0,
+                },
+            )
+
         self.stdout.write(self.style.SUCCESS(
             f"Seeded: {User.objects.count()} users, {Course.objects.count()} courses, "
             f"{Lesson.objects.count()} lessons, {Quiz.objects.count()} quizzes, "
+            f"{ShortAnswerQuestion.objects.count()} short answers, "
+            f"{Flashcard.objects.count()} flashcards, "
             f"{Enrollment.objects.count()} enrollments, {ChatMessage.objects.count()} chat messages. "
             f"Logins: admin@mentormind.dev / instructor@mentormind.dev / student@mentormind.dev "
             f"(password: {PASSWORD})"

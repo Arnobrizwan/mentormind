@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, NgZone, inject, signal } from '@angular/core';
+import { Component, DestroyRef, NgZone, computed, inject, signal } from '@angular/core';
 
 import { AuthService } from '../core/auth';
 import { apiErrorMessage } from '../core/errors';
@@ -39,7 +39,7 @@ function dictationCtor(): DictationCtor | null {
 }
 
 const SUBJECTS = ['Math', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'General'];
-const LEVELS = ['O-Level', 'A-Level'];
+const LEVELS = ['IGCSE', 'O-Level', 'A-Level'];
 const STARTERS = [
   'Explain photosynthesis simply',
   'How do I integrate x·sin(x)?',
@@ -76,10 +76,10 @@ const STARTERS = [
           <h1>AI Tutor</h1>
           <div class="chat__pickers">
             <select [value]="subject()" (change)="subject.set($any($event.target).value)" [disabled]="!!session()" aria-label="Subject">
-              @for (s of subjects; track s) { <option [value]="s">{{ s }}</option> }
+              @for (s of subjects(); track s) { <option [value]="s">{{ s }}</option> }
             </select>
             <select [value]="level()" (change)="level.set($any($event.target).value)" [disabled]="!!session()" aria-label="Level">
-              @for (l of levels; track l) { <option [value]="l">{{ l }}</option> }
+              @for (l of levels(); track l) { <option [value]="l">{{ l }}</option> }
             </select>
           </div>
         </header>
@@ -548,8 +548,16 @@ export class TutorPage {
   private readonly api = inject(TutorApi);
   private readonly auth = inject(AuthService);
 
-  protected readonly subjects = SUBJECTS;
-  protected readonly levels = LEVELS;
+  // Include the open session's values so older sessions whose
+  // subject/level predate these lists never render a blank select.
+  protected readonly subjects = computed(() => {
+    const current = this.session()?.subject;
+    return current && !SUBJECTS.includes(current) ? [current, ...SUBJECTS] : SUBJECTS;
+  });
+  protected readonly levels = computed(() => {
+    const current = this.session()?.level;
+    return current && !LEVELS.includes(current) ? [current, ...LEVELS] : LEVELS;
+  });
   protected readonly starters = STARTERS;
 
   protected readonly sessions = signal<TutorSession[]>([]);
