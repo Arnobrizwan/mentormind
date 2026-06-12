@@ -25,4 +25,63 @@ test.describe('Student portal smoke', () => {
       expect(registered).toBe(true);
     }
   });
+
+  test('full student journey (login -> enroll -> quiz -> tutor)', async ({ page }) => {
+    // 1. Go to auth page and register a new student account
+    await page.goto('/auth');
+    await page.getByRole('tab', { name: /Create account/i }).click();
+    
+    const testEmail = `e2e-student-${Date.now()}@example.com`;
+    await page.getByPlaceholder('Ada Lovelace').fill('E2E Tester');
+    await page.getByPlaceholder('you@example.com').fill(testEmail);
+    await page.getByPlaceholder('••••••••').fill('SecretPassword123!');
+    await page.getByRole('button', { name: /Enroll me/i }).click();
+
+    // 2. Redirected to dashboard
+    await expect(page).toHaveURL(/.*dashboard.*/);
+
+    // 3. Go to catalog to find and enroll in a course
+    await page.goto('/');
+    const courseCard = page.locator('.course-card').first();
+    await expect(courseCard).toBeVisible();
+    await courseCard.click();
+
+    // 4. Enroll in the course
+    await expect(page).toHaveURL(/.*courses.*/);
+    const enrollBtn = page.getByRole('button', { name: /Enroll/i });
+    await expect(enrollBtn).toBeVisible();
+    await enrollBtn.click();
+    await expect(enrollBtn).not.toBeVisible();
+
+    // 5. Take a quiz
+    const takeQuizBtn = page.getByRole('link', { name: /Take quiz/i }).first();
+    await expect(takeQuizBtn).toBeVisible();
+    await takeQuizBtn.click();
+
+    // 6. Answer quiz questions
+    await expect(page).toHaveURL(/.*quiz.*/);
+    const radioGroups = await page.getByRole('radiogroup').all();
+    for (const group of radioGroups) {
+      const radio = group.getByRole('radio').first();
+      await expect(radio).toBeVisible();
+      await radio.click();
+    }
+
+    // Hand in paper
+    const submitBtn = page.getByRole('button', { name: /Hand in paper/i });
+    await expect(submitBtn).toBeEnabled();
+    await submitBtn.click();
+
+    // Verify quiz result page loaded
+    await expect(page.locator('.result__score')).toBeVisible();
+
+    // 7. Go to AI Tutor page
+    const tutorLink = page.locator('a[href="/tutor"]').first();
+    await expect(tutorLink).toBeVisible();
+    await tutorLink.click();
+
+    // Verify AI Tutor page composer loads
+    await expect(page).toHaveURL(/.*tutor.*/);
+    await expect(page.getByPlaceholder('Ask your tutor…')).toBeVisible();
+  });
 });

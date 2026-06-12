@@ -20,6 +20,15 @@ spaced repetition, adaptive practice, exam proctoring and dropout prediction —
 
 Demo logins below — the demo resets itself periodically. First request may take ~40s (free tier waking up).
 
+### 🚀 DIGITEX v2 Updates
+- **Full Student Portal i18n:** Complete English (EN) and Bahasa Malaysia (ms) support on all student pages (My Desk, Catalog, AI Tutor, Revision, Planner, and Profile).
+- **PWA Installation Support:** Installs directly to home screens at booth displays via standard PWA manifest configurations.
+- **Smart Vector RAG Tutor:** Aligned past-paper retrieval uses semantic Vector RAG (MiniLM embeddings via `sentence-transformers`) with clean cosine similarity matching and fallback to token overlap search.
+- **Conversational Memory:** AI Tutor session history is now passed through to the model pipeline.
+- **GitHub Actions Scheduled Sweeps:** Risk scans and study planner rebuilds run regularly via repository cron actions, bypassing paid Celery beat requirements.
+- **Self-Service Password Reset:** Secure password reset workflow configured across all 3 web portals.
+
+
 </div>
 
 ## ✨ See it
@@ -133,7 +142,7 @@ flowchart LR
 | Backend | Django 6 + DRF + Celery (worker + beat) + SimpleJWT (Python 3.14) |
 | Frontend | Angular (latest, signals + standalone) — `student-portal` (:4200), `instructor-studio` (:4201), `admin-console` (:4202), `shared` lib |
 | Mobile | Capacitor (iOS + Android) wrapping the student portal — same codebase, native camera/mic |
-| Design | Hand-rolled light design system ("Fresh Air" teal/sky) — 3D flashcard flips, count-up stats, staggered entrances, skeleton loaders, celebration micro-moments; all `prefers-reduced-motion` safe |
+| Design | Hand-rolled poster-branded design system (warm pink surfaces, magenta accents) — 3D flashcard flips, count-up stats, staggered entrances, skeleton loaders, celebration micro-moments, PWA manifest; all `prefers-reduced-motion` safe |
 | ML service | FastAPI + PyTorch (MPS/CUDA/CPU) + transformers/peft + OpenCV (Python 3.13) |
 | Tutor model | Qwen2.5-0.5B-Instruct + LoRA adapter fine-tuned on aligned Cambridge past papers, served in-process |
 | Data | PostgreSQL primary + read replica, Redis, SQLite (past-paper corpus) |

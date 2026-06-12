@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { LearningApi } from '../core/api';
 import { AuthService } from '../core/auth';
+import { LocaleService } from '../core/locale';
 import { ConfettiBurst } from '../core/confetti';
 import { CountUpDirective } from '../core/count-up';
 import { EngagementApi } from '../core/engagement';
@@ -32,24 +33,22 @@ interface ContinueHero {
   imports: [RouterLink, ConfettiBurst, CountUpDirective],
   template: `
     <section class="desk rise">
-      <p class="mono-label">My Desk</p>
-      <h1>
-        {{ greeting() }},
-        <em>{{ firstName() }}.</em>
-      </h1>
+      <p class="mono-label">{{ locale.t('nav.desk') }}</p>
+      <h1>{{ locale.id() === 'ms' ? 'Selamat kembali' : 'Welcome back' }}, {{ auth.user()?.display_name || 'student' }}</h1>
+
       @if (engagement.me(); as eng) {
         <div class="spark-row">
-          <span class="mono-label">🔥 <span [mmCountUp]="eng.streak"></span>-day streak</span>
-          <span class="mono-label">★ <span [mmCountUp]="eng.points_total"></span> pts</span>
+          <span class="mono-label">🔥 <span [mmCountUp]="eng.streak"></span>-{{ locale.t('dash.streak') }}</span>
+          <span class="mono-label">★ <span [mmCountUp]="eng.points_total"></span> {{ locale.t('dash.pts') }}</span>
           @if (!eng.daily_login_claimed) {
             <button class="btn btn--accent claim-btn" (click)="claimDaily()" [disabled]="claiming()">
-              Claim today's +{{ eng.daily_login_points }} pts
+              {{ locale.t('dash.claim') }} +{{ eng.daily_login_points }} {{ locale.t('dash.pts') }}
             </button>
           } @else {
-            <span class="stamp">Daily reward claimed</span>
+            <span class="stamp">{{ locale.t('dash.claimed') }}</span>
           }
           @if (claimBurst(); as burst) {
-            <span class="claim-burst" aria-live="polite">+{{ burst }} pts!<mm-confetti /></span>
+            <span class="claim-burst" aria-live="polite">+{{ burst }} {{ locale.t('dash.pts') }}!<mm-confetti /></span>
           }
         </div>
       }
@@ -57,7 +56,7 @@ interface ContinueHero {
 
     @if (hero(); as h) {
       <section class="hero rise" style="animation-delay: 60ms" aria-label="Continue learning">
-        <p class="mono-label hero__label">Continue learning</p>
+        <p class="mono-label hero__label">{{ locale.t('dash.continue') }}</p>
         <h2 class="hero__title">{{ h.enrollment.course_title }}</h2>
         <p class="hero__lesson">{{ h.lessonLine }}</p>
         <div class="hero__progress">
@@ -74,7 +73,7 @@ interface ContinueHero {
           <span class="mono-label">{{ h.enrollment.progress_percentage }}%</span>
         </div>
         @if (h.slug) {
-          <a class="btn btn--accent hero__btn" [routerLink]="['/courses', h.slug]">Continue →</a>
+          <a class="btn btn--accent hero__btn" [routerLink]="['/courses', h.slug]">{{ locale.id() === 'ms' ? 'Teruskan' : 'Continue' }} →</a>
         }
       </section>
     }
@@ -82,31 +81,31 @@ interface ContinueHero {
     <div class="stats">
       <div class="stat">
         <span class="stat__number">{{ api.enrollments().length }}</span>
-        <span class="mono-label">courses enrolled</span>
+        <span class="mono-label">{{ locale.t('dash.enrolled') }}</span>
       </div>
       <div class="stat">
         <span class="stat__number">{{ averageProgress() }}<small>%</small></span>
-        <span class="mono-label">average progress</span>
+        <span class="mono-label">{{ locale.t('dash.avgProgress') }}</span>
       </div>
       <div class="stat">
         <span class="stat__number">{{ attempts().length }}</span>
-        <span class="mono-label">quiz attempts</span>
+        <span class="mono-label">{{ locale.t('dash.attempts') }}</span>
       </div>
     </div>
 
     <section class="quick rise" style="animation-delay: 105ms" aria-label="Study shortcuts">
       <a routerLink="/revision" class="quick__tile">
         <span class="quick__icon" aria-hidden="true">🃏</span>
-        <span class="quick__label">Revision</span>
+        <span class="quick__label">{{ locale.t('nav.revision') }}</span>
         @if (dueCards() > 0) {
-          <span class="quick__badge">{{ dueCards() }} due</span>
+          <span class="quick__badge">{{ dueCards() }} {{ locale.t('dash.due') }}</span>
         }
       </a>
       <a routerLink="/planner" class="quick__tile">
         <span class="quick__icon" aria-hidden="true">🗓️</span>
-        <span class="quick__label">This week's plan</span>
+        <span class="quick__label">{{ locale.t('nav.planner') }}</span>
         @if (planPct() !== null) {
-          <span class="mono-label quick__note">{{ planPct() }}% done</span>
+          <span class="mono-label quick__note">{{ planPct() }}% {{ locale.t('dash.done') }}</span>
         }
       </a>
     </section>
@@ -114,7 +113,7 @@ interface ContinueHero {
     @if (focus(); as f) {
       @if (f.topics.length > 0) {
         <section class="block focus rise" style="animation-delay: 130ms">
-          <h2>Focus areas</h2>
+          <h2>{{ locale.t('dash.focus') }}</h2>
           <div class="focus__topics">
             @for (topic of f.topics; track topic.topic) {
               <div class="focus__row">
@@ -135,13 +134,13 @@ interface ContinueHero {
                 </span>
                 <span class="focus__pct mono-label">{{ topic.accuracy }}%</span>
                 <span class="mono-label focus__samples">
-                  {{ topic.samples }} {{ topic.samples === 1 ? 'answer' : 'answers' }}
+                  {{ topic.samples }} {{ topic.samples === 1 ? locale.t('dash.answer') : locale.t('dash.answers') }}
                 </span>
               </div>
             }
           </div>
           @if (recommended().length > 0) {
-            <p class="mono-label focus__label">Recommended next</p>
+            <p class="mono-label focus__label">{{ locale.t('dash.recommended') }}</p>
             <ul class="focus__recs">
               @for (item of recommended(); track item.type + '-' + item.id) {
                 <li>
@@ -165,14 +164,14 @@ interface ContinueHero {
 
     @if (engagement.me(); as eng) {
       <section class="badges rise" style="animation-delay: 120ms">
-        <h2>Badges</h2>
+        <h2>{{ locale.t('dash.badges') }}</h2>
         <div class="badges__row">
           @for (badge of eng.badges; track badge.key) {
             <div class="badge" [class.badge--locked]="!badge.earned" [title]="badge.description">
               <span class="badge__icon">{{ badge.earned ? badge.icon : '🔒' }}</span>
               <span class="badge__name">{{ badge.name }}</span>
               <span class="mono-label">
-                {{ badge.earned ? 'earned' : badge.progress + '/' + badge.threshold }}
+                {{ badge.earned ? (locale.id() === 'ms' ? 'didapat' : 'earned') : badge.progress + '/' + badge.threshold }}
               </span>
               @if (!badge.earned) {
                 <span class="badge__meter">
@@ -189,19 +188,21 @@ interface ContinueHero {
     }
 
     <section class="leaderboard rise" style="animation-delay: 150ms">
-      <h2>This week's leaderboard</h2>
+      <h2>{{ locale.t('dash.leaderboard') }}</h2>
       @if (engagement.leaderboard().length > 0) {
         <ol class="leaderboard__list">
           @for (row of engagement.leaderboard(); track row.rank) {
             <li class="leaderboard__row" [class.leaderboard__row--top]="row.rank === 1">
               <span class="leaderboard__rank">{{ medal(row.rank) }}</span>
               <span class="leaderboard__name">{{ row.student }}</span>
-              <span class="mono-label">★ {{ row.points }} pts</span>
+              <span class="mono-label">★ {{ row.points }} {{ locale.t('dash.pts') }}</span>
             </li>
           }
         </ol>
       } @else {
-        <p class="leaderboard__empty mono-label">No points logged yet this week — take a quiz to claim the top spot.</p>
+        <p class="leaderboard__empty mono-label">
+          {{ locale.id() === 'ms' ? 'Tiada mata dicatatkan lagi minggu ini — ambil kuiz untuk menuntut tempat teratas.' : 'No points logged yet this week — take a quiz to claim the top spot.' }}
+        </p>
       }
     </section>
 
@@ -790,6 +791,7 @@ export class DashboardPage {
   private readonly insights = inject(PracticeInsightsApi);
   private readonly revision = inject(RevisionApi);
   private readonly planner = inject(PlannerApi);
+  protected readonly locale = inject(LocaleService);
 
   protected readonly loading = signal(true);
   private readonly courseRefs = signal<CourseRef[]>([]);

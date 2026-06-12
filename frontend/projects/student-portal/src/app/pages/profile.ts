@@ -40,12 +40,12 @@ function isoLocal(date: Date): string {
   imports: [RouterLink],
   template: `
     <section class="head rise">
-      <p class="mono-label">My Profile</p>
-      <h1>Your details</h1>
+      <p class="mono-label">{{ locale.t('profile.title') }}</p>
+      <h1>{{ locale.t('profile.details') }}</h1>
     </section>
 
     @if (loading()) {
-      <div class="skeletons" role="status" aria-label="Loading your profile">
+      <div class="skeletons" role="status" [attr.aria-label]="locale.t('profile.loading')">
         <div class="skeleton skeleton--row"></div>
         <div class="skeleton skeleton--row"></div>
       </div>
@@ -55,7 +55,7 @@ function isoLocal(date: Date): string {
       <section class="card-block rise" style="animation-delay: 60ms" aria-label="Avatar">
         <div class="avatar-row">
           @if (u.avatar_url) {
-            <img class="avatar" [src]="u.avatar_url" [alt]="(u.display_name || u.email) + ' avatar'" />
+            <img class="avatar" [src]="u.avatar_url" [alt]="(u.display_name || u.email) + ' ' + locale.t('profile.avatar')" />
           } @else {
             <span class="avatar avatar--initial" aria-hidden="true">{{ initial() }}</span>
           }
@@ -69,7 +69,7 @@ function isoLocal(date: Date): string {
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 (change)="onAvatarPicked($event)"
-                aria-label="Choose a new profile photo"
+                [attr.aria-label]="locale.t('profile.choosePhoto')"
               />
               <button
                 type="button"
@@ -77,10 +77,10 @@ function isoLocal(date: Date): string {
                 (click)="avatarInput.click()"
                 [disabled]="avatarSaving()"
               >
-                {{ avatarSaving() ? 'Uploading…' : 'Change photo' }}
+                {{ avatarSaving() ? locale.t('profile.uploading') : locale.t('profile.changePhoto') }}
               </button>
               @if (avatarSaved()) {
-                <span class="tick" aria-live="polite">✓ Updated</span>
+                <span class="tick" aria-live="polite">{{ locale.t('profile.updated') }}</span>
               }
             </div>
             @if (avatarError(); as msg) {
@@ -90,11 +90,11 @@ function isoLocal(date: Date): string {
         </div>
       </section>
 
-      <section class="card-block rise" style="animation-delay: 110ms" aria-label="Display name">
-        <h2>Display name</h2>
+      <section class="card-block rise" style="animation-delay: 110ms" [attr.aria-label]="locale.t('profile.displayName')">
+        <h2>{{ locale.t('profile.displayName') }}</h2>
         <form class="name-row" (submit)="saveName($event)">
           <label class="field name-field">
-            <span class="visually-hidden">Display name</span>
+            <span class="visually-hidden">{{ locale.t('profile.displayName') }}</span>
             <input
               type="text"
               name="display_name"
@@ -110,10 +110,10 @@ function isoLocal(date: Date): string {
             class="btn btn--accent btn--small"
             [disabled]="nameSaving() || !nameDirty()"
           >
-            {{ nameSaving() ? 'Saving…' : 'Save' }}
+            {{ nameSaving() ? locale.t('profile.saving') : locale.t('profile.save') }}
           </button>
           @if (nameSaved()) {
-            <span class="tick" aria-live="polite">✓ Saved</span>
+            <span class="tick" aria-live="polite">{{ locale.t('profile.saved') }}</span>
           }
         </form>
         @if (nameError(); as msg) {
@@ -150,24 +150,24 @@ function isoLocal(date: Date): string {
         style="animation-delay: 160ms"
         aria-label="Subscription"
       >
-        <h2>Plan</h2>
+        <h2>{{ locale.t('profile.plan') }}</h2>
         @if (u.is_premium) {
           <p class="plan plan--premium">
-            ✨ Premium{{ premiumUntil() ? ' until ' + premiumUntil() : '' }}
+            ✨ {{ locale.t('profile.plan.premium') }}{{ premiumUntil() ? ' ' + locale.t('profile.plan.until') + ' ' + premiumUntil() : '' }}
           </p>
-          <p class="plan-note">Unlimited AI tutor questions and all premium features.</p>
+          <p class="plan-note">{{ locale.t('profile.plan.premiumDesc') }}</p>
         } @else {
-          <p class="plan">Free plan</p>
+          <p class="plan">{{ locale.t('profile.plan.free') }}</p>
           <p class="plan-note">
-            Want unlimited AI tutor questions?
-            <a routerLink="/tutor">Upgrade from the AI Tutor page</a>.
+            {{ locale.t('profile.plan.freeDesc') }}
+            <a routerLink="/tutor">{{ locale.t('profile.plan.upgradePrompt') }}</a>.
           </p>
         }
       </section>
     }
 
     <section class="card-block rise" style="animation-delay: 185ms" aria-label="Activity">
-      <h2>Activity</h2>
+      <h2>{{ locale.t('profile.activity') }}</h2>
       @if (activity(); as cal) {
         <div class="heatmap" role="img" [attr.aria-label]="heatmapLabel()">
           @for (cell of heatmapCells(); track cell.date; let i = $index) {
@@ -181,24 +181,24 @@ function isoLocal(date: Date): string {
             ></span>
           }
         </div>
-        <p class="streak">🔥 {{ cal.streak }}-day streak</p>
+        <p class="streak">🔥 {{ cal.streak }}-{{ locale.t('dash.streak') }}</p>
       } @else if (activityError(); as msg) {
         <p class="plan-note">{{ msg }}</p>
       } @else {
-        <p class="plan-note" role="status">Loading activity…</p>
+        <p class="plan-note" role="status">{{ locale.t('profile.activity.loading') }}</p>
       }
     </section>
 
     <section class="card-block rise" style="animation-delay: 210ms" aria-label="Points history">
-      <h2>Points history</h2>
+      <h2>{{ locale.t('profile.pointsHistory') }}</h2>
       @if (events().length === 0 && !historyLoading()) {
-        <p class="plan-note">No points yet — complete a lesson or review some flashcards.</p>
+        <p class="plan-note">{{ locale.t('profile.pointsHistory.empty') }}</p>
       } @else {
         <ul class="feed">
           @for (event of events(); track event.at + event.action; let i = $index) {
             <li class="feed__row">
               <span class="feed__action">{{ label(event) }}</span>
-              <span class="feed__pts">+{{ event.points }} pts</span>
+              <span class="feed__pts">+{{ event.points }} {{ locale.t('profile.pts') }}</span>
               <span class="mono-label feed__when">{{ when(event) }}</span>
             </li>
           }
@@ -214,7 +214,7 @@ function isoLocal(date: Date): string {
           (click)="loadMore()"
           [disabled]="historyLoading()"
         >
-          {{ historyLoading() ? 'Loading…' : 'Load more' }}
+          {{ historyLoading() ? locale.t('profile.loadingBtn') : locale.t('profile.loadMore') }}
         </button>
       }
     </section>
@@ -563,7 +563,7 @@ export class ProfilePage {
     try {
       this.activity.set(await this.api.activity());
     } catch (err) {
-      this.activityError.set(apiErrorMessage(err, 'Could not load your activity calendar.'));
+      this.activityError.set(apiErrorMessage(err, this.locale.t('profile.error.calendar')));
     }
   }
 
@@ -573,18 +573,27 @@ export class ProfilePage {
       this.user.set(me);
       this.nameDraft.set(me.display_name ?? '');
     } catch (err) {
-      this.loadError.set(apiErrorMessage(err, 'Could not load your profile. Try again shortly.'));
+      this.loadError.set(apiErrorMessage(err, this.locale.t('profile.error.profile')));
     } finally {
       this.loading.set(false);
     }
   }
 
   protected label(event: PointsEvent): string {
+    const raw = event.action.split(':')[0];
+    const key = `profile.action.${raw}`;
+    const localized = this.locale.t(key);
+    if (localized !== key) return localized;
     return humanizeAction(event.action);
   }
 
   protected when(event: PointsEvent): string {
-    return relativeTime(event.at);
+    const raw = relativeTime(event.at);
+    if (raw === 'just now') return this.locale.t('time.justNow');
+    if (raw.endsWith('m ago')) return raw.replace('m ago', '') + this.locale.t('time.mAgo');
+    if (raw.endsWith('h ago')) return raw.replace('h ago', '') + this.locale.t('time.hAgo');
+    if (raw.endsWith('d ago')) return raw.replace('d ago', '') + this.locale.t('time.dAgo');
+    return raw;
   }
 
   protected async saveName(submit: Event): Promise<void> {
@@ -601,7 +610,7 @@ export class ProfilePage {
       this.nameSaved.set(true);
       setTimeout(() => this.nameSaved.set(false), 2500);
     } catch (err) {
-      this.nameError.set(apiErrorMessage(err, 'Could not save your display name.'));
+      this.nameError.set(apiErrorMessage(err, this.locale.t('profile.error.name')));
     } finally {
       this.nameSaving.set(false);
     }
@@ -615,12 +624,12 @@ export class ProfilePage {
     this.avatarSaved.set(false);
 
     if (!AVATAR_TYPES.includes(file.type)) {
-      this.avatarError.set('Please choose a JPEG, PNG, WebP, or GIF image.');
+      this.avatarError.set(this.locale.t('profile.error.avatarType'));
       input.value = '';
       return;
     }
     if (file.size > AVATAR_MAX_BYTES) {
-      this.avatarError.set('That image is over 2 MB — please pick a smaller one.');
+      this.avatarError.set(this.locale.t('profile.error.avatarSize'));
       input.value = '';
       return;
     }
@@ -632,7 +641,7 @@ export class ProfilePage {
       this.avatarSaved.set(true);
       setTimeout(() => this.avatarSaved.set(false), 2500);
     } catch (err) {
-      this.avatarError.set(apiErrorMessage(err, 'Could not upload that photo.'));
+      this.avatarError.set(apiErrorMessage(err, this.locale.t('profile.error.avatar')));
     } finally {
       this.avatarSaving.set(false);
       input.value = '';
@@ -655,7 +664,7 @@ export class ProfilePage {
       this.events.update((all) => [...all, ...result.results]);
       this.nextPage.set(result.next ? page + 1 : null);
     } catch (err) {
-      this.historyError.set(apiErrorMessage(err, 'Could not load your points history.'));
+      this.historyError.set(apiErrorMessage(err, this.locale.t('profile.error.history')));
     } finally {
       this.historyLoading.set(false);
     }
