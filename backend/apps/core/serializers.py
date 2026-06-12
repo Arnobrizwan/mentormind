@@ -132,6 +132,7 @@ class QuizSerializer(serializers.ModelSerializer):
             "lesson",
             "title",
             "description",
+            "time_limit_minutes",
             "questions",
             "created_at",
             "updated_at",
@@ -258,6 +259,10 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             "score",
             "total_questions",
             "correct_answers",
+            # Per-question review: {question_id: {selected, correct, topic}}.
+            # Deliberately never contains the correct option index, so a
+            # student with attempts left learns what was wrong, not the key.
+            "answers",
             "completed_at",
         )
         read_only_fields = ("id", "completed_at")

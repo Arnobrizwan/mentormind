@@ -8,7 +8,7 @@ import { apiErrorMessage } from '../core/errors';
 import { Course, Enrollment, Lesson, Quiz, ReadinessRow } from '../core/models';
 import { FlashcardsTab } from './flashcards-tab';
 import { ProctoringTab } from './proctoring-tab';
-import { QuizAiDraft } from './quiz-ai-draft';
+import { QuizAiDraft, parseTimeLimit } from './quiz-ai-draft';
 import { ShortAnswersTab } from './short-answers-tab';
 
 type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessions' | 'roster';
@@ -125,7 +125,26 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
             @for (quiz of c.quizzes; track quiz.id; let i = $index) {
               <div class="panel quiz sheet-in" [style.animation-delay.ms]="stagger(i)">
                 <div class="quiz__head">
-                  <strong>{{ quiz.title }}</strong>
+                  <div class="quiz__title">
+                    <strong>{{ quiz.title }}</strong>
+                    @if (quiz.time_limit_minutes) {
+                      <span class="tag time-tag">⏱ {{ quiz.time_limit_minutes }} min</span>
+                    }
+                  </div>
+                  <form class="limit-form" (submit)="saveTimeLimit($event, quiz)">
+                    <label class="field limit-field">
+                      <span class="tag">Time limit (minutes)</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="untimed"
+                        [value]="limitDraft(quiz)"
+                        (input)="setLimitDraft(quiz.id, $any($event.target).value)"
+                      />
+                    </label>
+                    <button class="btn btn--line btn--sm" type="submit" [disabled]="busy()">Save</button>
+                  </form>
                   <button class="btn btn--danger btn--sm" (click)="removeQuiz(quiz)" [disabled]="busy()">
                     Delete quiz
                   </button>
@@ -183,6 +202,16 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
                 <label class="field">
                   <span class="tag">Title</span>
                   <input type="text" required [value]="quizTitle()" (input)="quizTitle.set($any($event.target).value)" />
+                </label>
+                <label class="field">
+                  <span class="tag">Time limit (minutes) — blank for untimed</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    [value]="quizTimeLimit()"
+                    (input)="quizTimeLimit.set($any($event.target).value)"
+                  />
                 </label>
                 <button class="btn" type="submit" [disabled]="busy()">Create quiz</button>
               </form>
@@ -373,8 +402,36 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
     .quiz__head {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-end;
       gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .quiz__title {
+      flex: 1;
+      min-width: 160px;
+      display: flex;
+      align-items: baseline;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
+
+    .time-tag {
+      color: var(--teal);
+      border: 1px solid var(--line-strong);
+      border-radius: 99px;
+      padding: 0.05rem 0.5rem;
+      white-space: nowrap;
+    }
+
+    .limit-form {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5rem;
+    }
+
+    .limit-field input {
+      width: 110px;
     }
 
     .questions {
@@ -478,6 +535,9 @@ export class WorkbenchPage {
   protected readonly lessonContent = signal('');
   protected readonly lessonVideo = signal('');
   protected readonly quizTitle = signal('');
+  protected readonly quizTimeLimit = signal('');
+  /** Per-quiz time-limit edits, keyed by quiz id — raw input text until saved. */
+  protected readonly quizLimitDraft = signal<Record<number, string>>({});
   protected readonly questionText = signal<Record<number, string>>({});
   protected readonly questionTopic = signal<Record<number, string>>({});
   protected readonly questionOptions = signal<Record<number, string>>({});
@@ -600,10 +660,46 @@ export class WorkbenchPage {
     event.preventDefault();
     const c = this.course();
     if (!c) return;
+    const limit = parseTimeLimit(this.quizTimeLimit());
+    if (limit === undefined) {
+      this.error.set('The time limit must be a whole number of minutes (or blank for untimed).');
+      return;
+    }
     void this.run(async () => {
-      await this.api.createQuiz({ course: c.id, title: this.quizTitle(), description: '' });
+      await this.api.createQuiz({
+        course: c.id,
+        title: this.quizTitle(),
+        description: '',
+        time_limit_minutes: limit,
+      });
       this.quizTitle.set('');
+      this.quizTimeLimit.set('');
     }, 'Could not create the quiz.');
+  }
+
+  /** Current text for a quiz's time-limit input — unsaved edit wins over the saved value. */
+  protected limitDraft(quiz: Quiz): string {
+    return this.quizLimitDraft()[quiz.id] ?? (quiz.time_limit_minutes?.toString() ?? '');
+  }
+
+  protected setLimitDraft(quizId: number, value: string): void {
+    this.quizLimitDraft.update((m) => ({ ...m, [quizId]: value }));
+  }
+
+  protected saveTimeLimit(event: Event, quiz: Quiz): void {
+    event.preventDefault();
+    const limit = parseTimeLimit(this.limitDraft(quiz));
+    if (limit === undefined) {
+      this.error.set('The time limit must be a whole number of minutes (or blank for untimed).');
+      return;
+    }
+    void this.run(async () => {
+      await this.api.updateQuiz(quiz.id, { time_limit_minutes: limit });
+      this.quizLimitDraft.update((m) => {
+        const { [quiz.id]: _, ...rest } = m;
+        return rest;
+      });
+    }, 'Could not save the time limit.');
   }
 
   protected removeQuiz(quiz: Quiz): void {

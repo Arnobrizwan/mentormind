@@ -64,6 +64,11 @@ class Quiz(models.Model):
     )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    time_limit_minutes = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Exam mode: countdown with auto-submit. Blank = untimed.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -19,6 +19,17 @@ interface DraftForm {
 }
 
 /**
+ * Parses a "Time limit (minutes)" input: blank means untimed (null), a positive
+ * whole number is the limit, anything else is invalid (undefined).
+ */
+export function parseTimeLimit(raw: string): number | null | undefined {
+  const text = raw.trim();
+  if (!text) return null;
+  const minutes = Number(text);
+  return Number.isInteger(minutes) && minutes > 0 ? minutes : undefined;
+}
+
+/**
  * "Draft with AI" flow for the quizzes tab: pick a lesson, generate a draft
  * synchronously (can take ~90s), review/edit every question, then persist the
  * quiz + questions via the standard endpoints. Nothing is saved until confirm.
@@ -72,6 +83,17 @@ interface DraftForm {
           <label class="field">
             <span class="tag">Quiz title</span>
             <input type="text" required [value]="d.title" (input)="setTitle($any($event.target).value)" />
+          </label>
+
+          <label class="field ai__limit">
+            <span class="tag">Time limit (minutes) — blank for untimed</span>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              [value]="timeLimit()"
+              (input)="timeLimit.set($any($event.target).value)"
+            />
           </label>
 
           @for (question of d.questions; track $index; let qi = $index) {
@@ -210,6 +232,8 @@ interface DraftForm {
 
     .q__topic input { max-width: 280px; }
 
+    .ai__limit input { max-width: 160px; }
+
     .q__options {
       display: flex;
       flex-direction: column;
@@ -252,6 +276,8 @@ export class QuizAiDraft {
   readonly saved = output<void>();
 
   protected readonly lessonId = signal<number | null>(null);
+  /** Raw "Time limit (minutes)" input — blank means untimed. */
+  protected readonly timeLimit = signal('');
   protected readonly generating = signal(false);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -331,6 +357,7 @@ export class QuizAiDraft {
 
   protected discard(): void {
     this.draft.set(null);
+    this.timeLimit.set('');
     this.error.set(null);
   }
 
@@ -342,6 +369,11 @@ export class QuizAiDraft {
     const title = d.title.trim();
     if (!title) {
       this.error.set('The quiz needs a title.');
+      return;
+    }
+    const timeLimit = parseTimeLimit(this.timeLimit());
+    if (timeLimit === undefined) {
+      this.error.set('The time limit must be a whole number of minutes (or blank for untimed).');
       return;
     }
     // Drop empty option slots while keeping track of where the correct answer lands.
@@ -374,6 +406,7 @@ export class QuizAiDraft {
           lesson: d.lesson,
           title,
           description: '',
+          time_limit_minutes: timeLimit,
         });
         for (const [i, q] of questions.entries()) {
           await this.api.createQuestion({
@@ -386,6 +419,7 @@ export class QuizAiDraft {
           });
         }
         this.draft.set(null);
+        this.timeLimit.set('');
         this.saved.emit();
       } catch (err) {
         this.error.set(apiErrorMessage(err, 'Could not save the drafted quiz.'));

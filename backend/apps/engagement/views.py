@@ -78,6 +78,35 @@ class PointsHistoryView(APIView):
         return paginator.get_paginated_response(data)
 
 
+class ActivityCalendarView(APIView):
+    """The student's active days (last ~17 weeks) + current streak — feeds
+    the profile heatmap."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from .models import DailyActivity
+
+        since = timezone.localdate() - timedelta(days=119)
+        days = list(
+            DailyActivity.objects.using("default")
+            .filter(user=request.user, date__gte=since)
+            .order_by("date")
+            .values_list("date", flat=True)
+        )
+        return Response(
+            {
+                "since": since,
+                "days": days,
+                "streak": services.current_streak(request.user),
+            }
+        )
+
+
 class RemediationTicketViewSet(viewsets.ModelViewSet):
     """The Student Success queue — tickets opened by the weekly dropout-risk
     scan. Instructors triage them (open → contacted → resolved) and can

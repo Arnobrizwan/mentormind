@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,6 +17,16 @@ import { ConfettiBurst } from '../core/confetti';
 import { apiErrorMessage } from '../core/errors';
 import { Course, Quiz, QuizAttempt } from '../core/models';
 import { SiteConfig } from '../core/site-config';
+
+/** One row of the post-submit answer review. */
+interface ReviewRow {
+  id: number;
+  no: number;
+  text: string;
+  correct: boolean;
+  picked: string | null;
+  topic: string;
+}
 
 @Component({
   selector: 'mm-quiz',
@@ -34,8 +45,23 @@ import { SiteConfig } from '../core/site-config';
           <a [routerLink]="['/courses', course()!.slug]" class="mono-label exam__crumb">
             ← {{ course()!.title }}
           </a>
-          <p class="mono-label">Examination booklet</p>
-          <h1>{{ q.title }}</h1>
+          <p class="mono-label">
+            Examination booklet@if (q.time_limit_minutes) { · ⏱ {{ q.time_limit_minutes }} min }
+          </p>
+          <div class="exam__title-row">
+            <h1>{{ q.title }}</h1>
+            @if (timerLabel(); as t) {
+              <span
+                class="timer-pill"
+                role="timer"
+                aria-label="Time remaining"
+                [class.timer-pill--amber]="timerAmber()"
+                [class.timer-pill--danger]="timerDanger()"
+              >
+                {{ t }}
+              </span>
+            }
+          </div>
           @if (q.description) {
             <p class="exam__desc">{{ q.description }}</p>
           }
@@ -79,6 +105,45 @@ import { SiteConfig } from '../core/site-config';
               </span>
             </div>
             <h2>{{ verdict(attempt) }}</h2>
+
+            @if (reviewRows().length > 0) {
+              <section class="review" aria-label="Review your answers">
+                <h3 class="review__title">Review your answers</h3>
+                @if (weakTopics(); as weak) {
+                  <p class="review__weak">Weak spots this attempt: {{ weak }}</p>
+                }
+                <ol class="review__list">
+                  @for (row of reviewRows(); track row.id) {
+                    <li class="review__row">
+                      <span
+                        class="review__mark"
+                        [class.review__mark--right]="row.correct"
+                        [class.review__mark--wrong]="!row.correct"
+                        aria-hidden="true"
+                      >
+                        {{ row.correct ? '✓' : '✗' }}
+                      </span>
+                      <div class="review__body">
+                        <p class="review__question">
+                          <span class="mono-label review__no">Q{{ row.no }}</span>
+                          {{ row.text }}
+                          <span class="visually-hidden">
+                            — {{ row.correct ? 'correct' : 'incorrect' }}
+                          </span>
+                        </p>
+                        <p class="review__picked" [class.review__picked--none]="row.picked === null">
+                          {{ row.picked ?? 'Not answered' }}
+                        </p>
+                      </div>
+                      @if (row.topic) {
+                        <span class="mono-label review__topic">{{ row.topic }}</span>
+                      }
+                    </li>
+                  }
+                </ol>
+              </section>
+            }
+
             <div class="result__actions">
               <button class="btn btn--accent" (click)="retake()">Retake quiz</button>
               <a class="btn btn--ghost" [routerLink]="['/courses', course()!.slug]">Back to course</a>
@@ -156,6 +221,59 @@ import { SiteConfig } from '../core/site-config';
     .exam__head h1 {
       font-size: clamp(2rem, 4.5vw, 3rem);
       margin: 0.4rem 0 0.8rem;
+    }
+
+    .exam__title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+    }
+
+    .timer-pill {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      font-size: 0.98rem;
+      letter-spacing: 0.05em;
+      padding: 0.32rem 0.85rem;
+      border: 1.5px solid var(--line-strong);
+      border-radius: 99px;
+      background: var(--card);
+      color: var(--ink);
+      transition: color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .timer-pill--amber {
+      color: #9a6402;
+      border-color: #c98a14;
+    }
+
+    .timer-pill--danger {
+      color: var(--danger);
+      border-color: var(--danger);
+      animation: timer-pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes timer-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.55; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .timer-pill--danger { animation: none; }
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .exam__desc {
@@ -360,6 +478,89 @@ import { SiteConfig } from '../core/site-config';
       flex-wrap: wrap;
       justify-content: center;
     }
+
+    .review {
+      width: 100%;
+      max-width: 640px;
+      text-align: left;
+      margin-top: 0.6rem;
+    }
+
+    .review__title {
+      font-size: 1.15rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .review__weak {
+      font-size: 0.88rem;
+      color: var(--danger);
+      margin-bottom: 0.7rem;
+    }
+
+    .review__list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .review__row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.8rem;
+      padding: 0.75rem 0.2rem;
+      border-bottom: 1px dashed var(--line);
+    }
+
+    .review__mark {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 50%;
+      font-weight: 800;
+      border: 1.5px solid currentColor;
+    }
+
+    .review__mark--right { color: var(--sage); }
+    .review__mark--wrong { color: var(--danger); }
+
+    .review__body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .review__question {
+      font-weight: 600;
+      font-size: 0.97rem;
+      margin: 0 0 0.25rem;
+    }
+
+    .review__no {
+      color: var(--accent);
+      font-weight: 700;
+      margin-right: 0.35rem;
+    }
+
+    .review__picked {
+      margin: 0;
+      font-size: 0.92rem;
+      color: var(--ink-soft);
+    }
+
+    .review__picked--none { font-style: italic; }
+
+    .review__topic {
+      flex-shrink: 0;
+      align-self: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 99px;
+      padding: 0.12rem 0.6rem;
+      color: var(--ink-soft);
+    }
   `,
 })
 export class QuizPage {
@@ -388,6 +589,61 @@ export class QuizPage {
   });
 
   protected readonly answeredCount = computed(() => Object.keys(this.answers()).length);
+
+  // --- Countdown for timed quizzes -------------------------------------------
+  private readonly remainingSeconds = signal<number | null>(null);
+  private timerId: number | null = null;
+  private timedQuizId: number | null = null;
+
+  protected readonly timerLabel = computed(() => {
+    const left = this.remainingSeconds();
+    if (left === null) return null;
+    const minutes = Math.floor(left / 60);
+    const seconds = left % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  });
+
+  protected readonly timerAmber = computed(() => {
+    const left = this.remainingSeconds();
+    return left !== null && left < 120 && left >= 30;
+  });
+
+  protected readonly timerDanger = computed(() => {
+    const left = this.remainingSeconds();
+    return left !== null && left < 30;
+  });
+
+  // --- Post-submit answer review ----------------------------------------------
+  protected readonly reviewRows = computed<ReviewRow[]>(() => {
+    const q = this.quiz();
+    const outcomes = this.result()?.answers;
+    if (!q || !outcomes) return [];
+    const rows: ReviewRow[] = [];
+    q.questions.forEach((question, index) => {
+      const outcome = outcomes[question.id];
+      if (!outcome) return;
+      rows.push({
+        id: question.id,
+        no: index + 1,
+        text: question.text,
+        correct: outcome.correct,
+        picked: outcome.selected === null ? null : (question.options[outcome.selected] ?? null),
+        topic: outcome.topic ?? '',
+      });
+    });
+    return rows;
+  });
+
+  protected readonly weakTopics = computed(() => {
+    const topics = [
+      ...new Set(
+        this.reviewRows()
+          .filter((row) => !row.correct && row.topic)
+          .map((row) => row.topic),
+      ),
+    ];
+    return topics.length > 0 ? topics.join(', ') : null;
+  });
 
   // --- Proctoring -----------------------------------------------------------
   private static readonly FRAME_INTERVAL_MS = 12_000;
@@ -448,7 +704,50 @@ export class QuizPage {
       }
     });
 
-    inject(DestroyRef).onDestroy(() => this.stopProctoring());
+    // Tick the countdown whenever a timed quiz is on screen and unsubmitted.
+    // Re-runs on quiz-id change (restarts) and on submit (clears).
+    effect(() => {
+      const q = this.quiz();
+      const submitted = this.result() !== null;
+      const limit = q?.time_limit_minutes ?? null;
+      if (!q || submitted || !limit || limit <= 0) {
+        untracked(() => this.stopTimer());
+      } else {
+        untracked(() => this.startTimer(q.id, limit));
+      }
+    });
+
+    inject(DestroyRef).onDestroy(() => {
+      this.stopProctoring();
+      this.stopTimer();
+    });
+  }
+
+  private startTimer(quizId: number, minutes: number): void {
+    if (this.timedQuizId === quizId && this.timerId !== null) return;
+    this.stopTimer();
+    this.timedQuizId = quizId;
+    const deadline = Date.now() + minutes * 60_000;
+    this.remainingSeconds.set(minutes * 60);
+    this.timerId = window.setInterval(() => {
+      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      this.remainingSeconds.set(left);
+      if (left === 0) {
+        // Time's up — stop ticking and hand in whatever is answered.
+        window.clearInterval(this.timerId!);
+        this.timerId = null;
+        void this.performSubmit();
+      }
+    }, 500);
+  }
+
+  private stopTimer(): void {
+    if (this.timerId !== null) {
+      window.clearInterval(this.timerId);
+      this.timerId = null;
+    }
+    this.timedQuizId = null;
+    this.remainingSeconds.set(null);
   }
 
   private async load(slug: string): Promise<void> {
@@ -545,8 +844,13 @@ export class QuizPage {
 
   protected async submit(event: Event): Promise<void> {
     event.preventDefault();
+    await this.performSubmit();
+  }
+
+  /** Shared by the submit button and the timer's auto-submit — never runs twice. */
+  private async performSubmit(): Promise<void> {
     const q = this.quiz();
-    if (!q || this.busy()) return;
+    if (!q || this.busy() || this.result()) return;
     this.busy.set(true);
     this.error.set(null);
     try {

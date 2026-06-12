@@ -322,3 +322,22 @@ class ReviewFixTests(TestCase):
         RemediationTicket.objects.create(
             student=self.student, risk="medium", probability=0.5, features={}
         )
+
+
+class ActivityCalendarTests(TestCase):
+    def test_returns_active_days_and_streak(self):
+        from rest_framework.test import APIClient
+
+        from .models import DailyActivity
+        from django.utils import timezone
+
+        user = User.objects.create_user(
+            email="cal@mentormind.dev", password="password123"
+        )
+        DailyActivity.objects.create(user=user, date=timezone.localdate())
+        client = APIClient()
+        client.force_authenticate(user=user)
+        body = client.get("/api/v1/engagement/activity/").json()
+        self.assertEqual(len(body["days"]), 1)
+        self.assertEqual(body["streak"], 1)
+        self.assertIn("since", body)

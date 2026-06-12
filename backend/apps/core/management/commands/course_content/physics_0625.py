@@ -407,6 +407,7 @@ A current-carrying wire in a magnetic field experiences a force (the **motor eff
         {
             "title": "Thermal, Waves and Electricity Check",
             "lesson_index": 4,
+            "time_limit_minutes": 10,
             "questions": [
                 (
                     "A wave has frequency 50 Hz and wavelength 6 m. What is its speed?",

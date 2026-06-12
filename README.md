@@ -156,7 +156,9 @@ heuristic fallback, so nothing 503s when no model is loaded.
 | 🚨 **Exam proctoring** | Webcam frames every 12s during quizzes → face-count verdicts (never images) → instructor timeline; edge-triggered alert after 3 consecutive flagged frames. |
 | 📈 **Dropout-risk remediation** | Weekly scan scores every student (logistic model served by ml-service); high risk → encouragement nudge + ticket in the instructor "Student Success" queue (scoped per-instructor, single-flight scans). |
 | 🎓 **Exam readiness** | 0–100 blend of progress, quiz average, practice volume, accuracy (weights live-tunable). Rings on the student dashboard, weakest-first column on the instructor roster. |
-| 🏅 **Gamification** | Points ledger, streaks, badges (DB-defined rules), weekly leaderboard, daily login rewards. |
+| ⏱ **Timed quizzes** | Instructors set per-quiz time limits; students get a countdown with auto-submit — real exam practice. |
+| 🔍 **Quiz review** | Per-question ✓/✗ breakdown after every attempt (never revealing the key), with weak-topic callouts feeding adaptive practice. |
+| 🏅 **Gamification** | Points ledger, streaks (with a GitHub-style activity heatmap), badges (DB-defined rules), weekly leaderboard, daily login rewards. |
 
 ## The tutor model pipeline (fully self-hosted)
 

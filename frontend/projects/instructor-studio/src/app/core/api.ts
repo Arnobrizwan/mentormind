@@ -73,6 +73,10 @@ export class StudioApi {
     return firstValueFrom(this.http.post<Quiz>('/api/v1/quizzes/', data));
   }
 
+  updateQuiz(id: number, data: Partial<Quiz>): Promise<Quiz> {
+    return firstValueFrom(this.http.patch<Quiz>(`/api/v1/quizzes/${id}/`, data));
+  }
+
   deleteQuiz(id: number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`/api/v1/quizzes/${id}/`));
   }

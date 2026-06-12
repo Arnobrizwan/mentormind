@@ -16,6 +16,13 @@ export interface PointsEvent {
   at: string;
 }
 
+/** GET /engagement/activity/ — days with any learning activity plus the current streak. */
+export interface ActivityCalendar {
+  since: string;
+  days: string[];
+  streak: number;
+}
+
 /** Max avatar upload size enforced client-side before hitting the server. */
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 
@@ -82,6 +89,10 @@ export class ProfileApi {
     const form = new FormData();
     form.append('avatar', file, file.name);
     return firstValueFrom(this.http.post<ProfileUser>('/api/v1/auth/me/avatar/', form));
+  }
+
+  activity(): Promise<ActivityCalendar> {
+    return firstValueFrom(this.http.get<ActivityCalendar>('/api/v1/engagement/activity/'));
   }
 
   history(page = 1): Promise<Paginated<PointsEvent>> {

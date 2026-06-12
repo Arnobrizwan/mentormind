@@ -34,6 +34,8 @@ export interface Quiz {
   lesson: number | null;
   title: string;
   description: string;
+  /** Minutes students get for an attempt — null means untimed. */
+  time_limit_minutes?: number | null;
   questions: QuizQuestion[];
 }
 

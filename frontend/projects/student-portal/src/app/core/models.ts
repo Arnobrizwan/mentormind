@@ -35,6 +35,8 @@ export interface Quiz {
   lesson: number | null;
   title: string;
   description: string;
+  /** Minutes allowed for the attempt — null/absent means untimed. */
+  time_limit_minutes?: number | null;
   questions: QuizQuestion[];
   created_at: string;
   updated_at: string;
@@ -54,6 +56,13 @@ export interface Course {
   updated_at: string;
 }
 
+/** Per-question outcome on a graded attempt — never reveals the right answer. */
+export interface QuizAttemptAnswer {
+  selected: number | null;
+  correct: boolean;
+  topic: string;
+}
+
 export interface QuizAttempt {
   id: number;
   enrollment: number;
@@ -63,6 +72,8 @@ export interface QuizAttempt {
   total_questions: number;
   correct_answers: number;
   completed_at: string;
+  /** Keyed by question id; present on fresh submit responses. */
+  answers?: Record<number, QuizAttemptAnswer>;
 }
 
 export interface Enrollment {

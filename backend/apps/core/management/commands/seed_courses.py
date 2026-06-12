@@ -94,6 +94,7 @@ class Command(BaseCommand):
                     title=quiz_spec["title"],
                     defaults={
                         "description": f"Checkpoint quiz for {course.title}.",
+                        "time_limit_minutes": quiz_spec.get("time_limit_minutes"),
                         "lesson": lessons[lesson_index]
                         if lesson_index is not None and lesson_index < len(lessons)
                         else None,

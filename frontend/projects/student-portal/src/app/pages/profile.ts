@@ -6,6 +6,7 @@ import { apiErrorMessage } from '../core/errors';
 import { User } from '../core/models';
 import {
   AVATAR_MAX_BYTES,
+  ActivityCalendar,
   PointsEvent,
   ProfileApi,
   ProfileUser,
@@ -14,6 +15,24 @@ import {
 } from '../core/profile';
 
 const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+/** Heatmap shape: 17 week-columns × 7 weekday-rows (Mon–Sun) = 119 cells. */
+const HEATMAP_WEEKS = 17;
+
+interface HeatCell {
+  date: string;
+  title: string;
+  active: boolean;
+  today: boolean;
+  future: boolean;
+}
+
+/** Local-timezone YYYY-MM-DD (the API sends calendar dates, not instants). */
+function isoLocal(date: Date): string {
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${m}-${d}`;
+}
 
 @Component({
   selector: 'mm-profile',
@@ -122,6 +141,29 @@ const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
         }
       </section>
     }
+
+    <section class="card-block rise" style="animation-delay: 185ms" aria-label="Activity">
+      <h2>Activity</h2>
+      @if (activity(); as cal) {
+        <div class="heatmap" role="img" [attr.aria-label]="heatmapLabel()">
+          @for (cell of heatmapCells(); track cell.date; let i = $index) {
+            <span
+              class="cell"
+              [class.cell--active]="cell.active"
+              [class.cell--today]="cell.today"
+              [class.cell--future]="cell.future"
+              [style.animation-delay.ms]="cellDelay(i)"
+              [title]="cell.title"
+            ></span>
+          }
+        </div>
+        <p class="streak">🔥 {{ cal.streak }}-day streak</p>
+      } @else if (activityError(); as msg) {
+        <p class="plan-note">{{ msg }}</p>
+      } @else {
+        <p class="plan-note" role="status">Loading activity…</p>
+      }
+    </section>
 
     <section class="card-block rise" style="animation-delay: 210ms" aria-label="Points history">
       <h2>Points history</h2>
@@ -291,6 +333,50 @@ const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
       a { color: var(--accent-deep); }
     }
 
+    .heatmap {
+      display: grid;
+      grid-template-rows: repeat(7, 12px);
+      grid-auto-flow: column;
+      grid-auto-columns: 12px;
+      gap: 3px;
+      margin-bottom: 0.9rem;
+      overflow-x: auto;
+      padding: 2px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .cell {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      background: var(--line);
+      animation: cell-in 0.35s var(--ease) both;
+    }
+
+    .cell--active { background: var(--accent); }
+
+    .cell--today {
+      outline: 2px solid var(--accent-deep);
+      outline-offset: 1px;
+    }
+
+    .cell--future { visibility: hidden; }
+
+    @keyframes cell-in {
+      from { opacity: 0; transform: scale(0.6); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cell { animation: none; }
+    }
+
+    .streak {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
     .feed {
       list-style: none;
       margin: 0 0 0.9rem;
@@ -349,6 +435,53 @@ export class ProfilePage {
   protected readonly avatarSaved = signal(false);
   protected readonly avatarError = signal<string | null>(null);
 
+  protected readonly activity = signal<ActivityCalendar | null>(null);
+  protected readonly activityError = signal<string | null>(null);
+
+  /**
+   * 17 columns × 7 rows, column-major so `grid-auto-flow: column` lays weeks
+   * out left-to-right with Mon–Sun rows. The last column is the current week;
+   * its not-yet-reached days render as invisible placeholders.
+   */
+  protected readonly heatmapCells = computed<HeatCell[]>(() => {
+    const cal = this.activity();
+    if (!cal) return [];
+    const active = new Set(cal.days);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayIso = isoLocal(today);
+    const monday = new Date(today);
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    const start = new Date(monday);
+    start.setDate(start.getDate() - (HEATMAP_WEEKS - 1) * 7);
+    const cells: HeatCell[] = [];
+    for (let i = 0; i < HEATMAP_WEEKS * 7; i++) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
+      const iso = isoLocal(date);
+      const isActive = active.has(iso);
+      const label = date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+      cells.push({
+        date: iso,
+        title: `${label} — ${isActive ? 'active' : 'no activity'}`,
+        active: isActive,
+        today: iso === todayIso,
+        future: date.getTime() > today.getTime(),
+      });
+    }
+    return cells;
+  });
+
+  protected readonly heatmapLabel = computed(() => {
+    const cal = this.activity();
+    if (!cal) return '';
+    return `Activity heatmap: ${cal.days.length} active days in the last ${HEATMAP_WEEKS} weeks, ${cal.streak}-day streak`;
+  });
+
   protected readonly events = signal<PointsEvent[]>([]);
   protected readonly historyLoading = signal(false);
   protected readonly historyError = signal<string | null>(null);
@@ -376,7 +509,21 @@ export class ProfilePage {
 
   constructor() {
     void this.load();
+    void this.loadActivity();
     void this.loadMore();
+  }
+
+  /** Capped stagger so late cells don't drag the entrance out. */
+  protected cellDelay(index: number): number {
+    return Math.min(index * 4, 320);
+  }
+
+  private async loadActivity(): Promise<void> {
+    try {
+      this.activity.set(await this.api.activity());
+    } catch (err) {
+      this.activityError.set(apiErrorMessage(err, 'Could not load your activity calendar.'));
+    }
   }
 
   private async load(): Promise<void> {
