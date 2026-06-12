@@ -17,3 +17,7 @@ jobs:
         run: |
           curl -sS -m 90 -o /dev/null -w "demo api: %{http_code} in %{time_total}s\n" \
             https://mentormind-api.onrender.com/api/v1/health/ || true
+      - name: Ping ml-service Space (HF sleeps it after ~48h idle)
+        run: |
+          curl -sS -m 90 -o /dev/null -w "ml space: %{http_code} in %{time_total}s\n" \
+            https://arnob666666-mentormind-ml.hf.space/healthz || true
