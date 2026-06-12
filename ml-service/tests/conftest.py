@@ -24,6 +24,11 @@ def no_local_llm(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def fresh_token_cache():
-    """Each test gets a fresh DB, so row ids repeat — drop cached tokens."""
+    """Each test gets a fresh DB, so row ids repeat — drop cached tokens,
+    cached vectors, and the precomputed semantic index."""
     answering._token_cache.clear()
+    answering._vector_cache.clear()
+    answering._index_ids = []
+    answering._index_matrix = None
+    answering._index_count = -1
     yield

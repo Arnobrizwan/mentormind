@@ -23,7 +23,7 @@ import re
 
 import httpx
 import numpy as np
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from . import local_llm, models
 from .models import AlignedQuestion, PastPaper
@@ -44,6 +44,15 @@ _token_cache: dict[int, set[str]] = {}
 
 _embedding_model = None
 _vector_cache: dict[str, np.ndarray] = {}
+
+# Whole-corpus semantic index built from precomputed embeddings
+# (scripts/embed_corpus.py). Loaded once per process and rebuilt only when
+# the number of embedded rows changes, so query time is one model.encode of
+# the question plus a single matrix product over the full corpus.
+_index_lock = asyncio.Lock()
+_index_ids: list[str] = []
+_index_matrix: np.ndarray | None = None
+_index_count: int = -1
 
 def get_embedding_model():
     global _embedding_model
@@ -101,10 +110,107 @@ def _source_of(paper: PastPaper, question: AlignedQuestion) -> dict:
     }
 
 
+async def _load_semantic_index() -> tuple[list[str], np.ndarray | None]:
+    """Return (row ids, normalised embedding matrix) for every row that has
+    a precomputed embedding. None matrix means the corpus hasn't been run
+    through scripts/embed_corpus.py yet — callers fall back to the legacy
+    encode-at-request-time path. Rows aligned after the last embed run are
+    invisible to the index until the script re-runs."""
+    global _index_ids, _index_matrix, _index_count
+
+    async with models.SessionFactory() as session:
+        count = (
+            await session.execute(
+                select(func.count(AlignedQuestion.id)).where(
+                    AlignedQuestion.embedding.isnot(None)
+                )
+            )
+        ).scalar_one()
+    if count == _index_count:
+        return _index_ids, _index_matrix
+    if count == 0:
+        _index_ids, _index_matrix, _index_count = [], None, 0
+        return _index_ids, _index_matrix
+
+    async with _index_lock:
+        if count == _index_count:  # another request built it while we waited
+            return _index_ids, _index_matrix
+        async with models.SessionFactory() as session:
+            rows = (
+                await session.execute(
+                    select(AlignedQuestion.id, AlignedQuestion.embedding).where(
+                        AlignedQuestion.embedding.isnot(None)
+                    )
+                )
+            ).all()
+        try:
+            matrix = np.frombuffer(
+                b"".join(blob for _, blob in rows), dtype=np.float32
+            ).reshape(len(rows), -1)
+        except ValueError:  # mixed dims after a model change — re-run --force
+            _index_ids, _index_matrix, _index_count = [], None, 0
+            return _index_ids, _index_matrix
+        _index_ids = [row_id for row_id, _ in rows]
+        _index_matrix = matrix
+        _index_count = count
+    return _index_ids, _index_matrix
+
+
+async def _semantic_matches(
+    model, question_text: str, limit: int, exclude_ids: set[str] | None
+) -> list[tuple[float, AlignedQuestion, PastPaper]] | None:
+    """Rank against the precomputed whole-corpus index. None = index not
+    available (fall back); a list is a definitive ranking."""
+    ids, matrix = await _load_semantic_index()
+    if matrix is None or matrix.shape[0] == 0:
+        return None
+    try:
+        q_vec = model.encode(question_text, convert_to_numpy=True).astype(np.float32)
+    except Exception:
+        return None
+    q_norm = np.linalg.norm(q_vec)
+    if q_norm == 0 or q_vec.shape[0] != matrix.shape[1]:
+        return None
+    sims = matrix @ (q_vec / q_norm)
+
+    want = limit + (len(exclude_ids) if exclude_ids else 0)
+    if want < len(ids):
+        top = np.argpartition(-sims, want - 1)[:want]
+        top = top[np.argsort(-sims[top])]
+    else:
+        top = np.argsort(-sims)
+    picked = [
+        (ids[i], float(sims[i]))
+        for i in top
+        if not exclude_ids or ids[i] not in exclude_ids
+    ][:limit]
+    if not picked:
+        return []
+
+    async with models.SessionFactory() as session:
+        rows = (
+            await session.execute(
+                select(AlignedQuestion, PastPaper)
+                .join(PastPaper, AlignedQuestion.question_paper_id == PastPaper.id)
+                .where(AlignedQuestion.id.in_([row_id for row_id, _ in picked]))
+            )
+        ).all()
+    by_id = {aligned.id: (aligned, paper) for aligned, paper in rows}
+    return [
+        (score, *by_id[row_id]) for row_id, score in picked if row_id in by_id
+    ]
+
+
 async def _ranked_matches(
     question_text: str, limit: int = 3, exclude_ids: set[str] | None = None
 ) -> list[tuple[float, AlignedQuestion, PastPaper]]:
     model = get_embedding_model()
+
+    if model is not None:
+        ranked = await _semantic_matches(model, question_text, limit, exclude_ids)
+        if ranked is not None:
+            return ranked
+
     statement = (
         select(AlignedQuestion, PastPaper)
         .join(PastPaper, AlignedQuestion.question_paper_id == PastPaper.id)

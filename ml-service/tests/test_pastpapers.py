@@ -203,6 +203,52 @@ class TestTutorAnswering:
             assert res.status_code == 400
 
 
+class TestPrecomputedEmbeddings:
+    """Whole-corpus semantic index built from embeddings persisted on rows."""
+
+    def test_index_path_serves_strong_match(self, pipeline_env):
+        import numpy as np
+        from sqlalchemy import select
+
+        import app.pastpapers.models as models
+        from app.pastpapers import answering
+        from app.pastpapers.models import AlignedQuestion
+
+        model = answering.get_embedding_model()
+        if model is None:
+            pytest.skip("sentence-transformers unavailable")
+
+        with TestClient(app) as client:
+            client.post("/api/pipeline/discover", json={"folder": str(pipeline_env)})
+            client.post("/api/pipeline/process-next")
+
+            async def embed_all():
+                async with models.SessionFactory() as session:
+                    rows = (await session.execute(select(AlignedQuestion))).scalars().all()
+                    for row in rows:
+                        vec = model.encode(
+                            row.question_markdown, convert_to_numpy=True
+                        ).astype(np.float32)
+                        row.embedding = (vec / np.linalg.norm(vec)).tobytes()
+                    await session.commit()
+                    return len(rows)
+
+            embedded = asyncio.run(embed_all())
+            assert embedded == 3
+
+            res = client.post("/v1/tutor/answer", json={
+                "question": "Solve the equation 2x + 3 = 11 showing all working",
+            })
+            assert res.status_code == 200
+            body = res.json()
+            assert body["matched"] is True
+            assert "$x = 4$" in body["answer"]
+            # the answer came from the precomputed index, not request-time encoding
+            assert answering._index_matrix is not None
+            assert len(answering._index_ids) == 3
+            assert not answering._vector_cache
+
+
 class TestFrontMatterHandling:
     def test_cover_page_numbers_are_skipped(self):
         doc = """Cambridge International AS & A Level

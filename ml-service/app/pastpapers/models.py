@@ -13,7 +13,18 @@ import os
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+    inspect,
+    text,
+)
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -99,16 +110,39 @@ class AlignedQuestion(Base):
     question_number: Mapped[int] = mapped_column(Integer)
     question_markdown: Mapped[str] = mapped_column(Text)
     mark_scheme_markdown: Mapped[str] = mapped_column(Text)
+    # Precomputed sentence embedding of question_markdown: L2-normalised
+    # float32 vector stored raw (np.frombuffer round-trips it). NULL until
+    # scripts/embed_corpus.py has processed the row.
+    embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
 
     question_paper: Mapped[PastPaper] = relationship(
         back_populates="aligned_questions", foreign_keys=[question_paper_id]
     )
 
 
+def _migrate_columns(sync_conn) -> None:
+    """Add columns introduced after a table already existed.
+
+    create_all only creates missing *tables*, so pre-existing corpora
+    (local pastpapers.db files, the HF-hosted snapshot) need an ALTER.
+    Plain ADD COLUMN works on both SQLite and Postgres.
+    """
+    inspector = inspect(sync_conn)
+    if "aligned_questions" in inspector.get_table_names():
+        existing = {col["name"] for col in inspector.get_columns("aligned_questions")}
+        if "embedding" not in existing:
+            sync_conn.execute(
+                text("ALTER TABLE aligned_questions ADD COLUMN embedding BLOB")
+                if sync_conn.dialect.name == "sqlite"
+                else text("ALTER TABLE aligned_questions ADD COLUMN embedding BYTEA")
+            )
+
+
 async def init_db() -> None:
     """Create tables if missing — call once at application startup."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_migrate_columns)
 
 
 async def get_session() -> AsyncSession:
