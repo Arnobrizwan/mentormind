@@ -173,6 +173,7 @@ heuristic fallback, so nothing 503s when no model is loaded.
 | 🎓 **Exam readiness** | 0–100 blend of progress, quiz average, practice volume, accuracy (weights live-tunable). Rings on the student dashboard, weakest-first column on the instructor roster. |
 | ⏱ **Timed quizzes** | Instructors set per-quiz time limits; students get a countdown with auto-submit — real exam practice. |
 | 🔍 **Quiz review** | Per-question ✓/✗ breakdown after every attempt (never revealing the key), with weak-topic callouts feeding adaptive practice. |
+| 🎓 **Certificates** | Print-ready, shareable completion certificates (localized EN/BM) unlocked at 100% course progress. |
 | 🏅 **Gamification** | Points ledger, streaks (with a GitHub-style activity heatmap), badges (DB-defined rules), weekly leaderboard, daily login rewards. |
 
 ## The tutor model pipeline (fully self-hosted)

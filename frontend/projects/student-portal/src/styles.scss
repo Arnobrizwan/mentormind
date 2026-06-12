@@ -421,3 +421,47 @@ button:active:not(:disabled),
     transform: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Certificate printing — when a certificate is on the page, print ONLY the
+ * sheet (app shell, nav, and action buttons are suppressed) with clean
+ * margins on a landscape A4 page.
+ * ------------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  body:has(.cert-sheet) {
+    background: #fff;
+
+    * {
+      visibility: hidden;
+      box-shadow: none !important;
+    }
+
+    .cert-sheet,
+    .cert-sheet * {
+      visibility: visible;
+    }
+
+    .no-print,
+    .no-print * {
+      display: none !important;
+    }
+
+    .cert-sheet {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      aspect-ratio: auto;
+      margin: 0;
+      border-radius: 0;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+  }
+}

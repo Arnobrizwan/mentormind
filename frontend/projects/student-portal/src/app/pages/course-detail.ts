@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { CourseLeaderboardRow, LearningApi } from '../core/api';
 import { AuthService } from '../core/auth';
+import { LocaleService } from '../core/locale';
 import { SiteConfig } from '../core/site-config';
 import { apiErrorMessage } from '../core/errors';
 import { Course, Quiz } from '../core/models';
@@ -40,6 +41,11 @@ import { ShortAnswerApi } from '../core/short-answers';
                   <div class="progress__bar" [style.width.%]="e.progress_percentage"></div>
                 </div>
                 <span class="mono-label">{{ e.progress_percentage }}% complete</span>
+                @if (e.progress_percentage >= 100) {
+                  <a class="btn btn--accent cert-btn" [routerLink]="['/courses', c.slug, 'certificate']">
+                    {{ locale.t('cert.view') }}
+                  </a>
+                }
               } @else {
                 <button class="btn btn--accent" (click)="enroll()" [disabled]="busy()">
                   {{ busy() ? 'Enrolling…' : 'Enroll — it’s free' }}
@@ -269,6 +275,12 @@ import { ShortAnswerApi } from '../core/short-answers';
       transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
+    .cert-btn {
+      margin-top: 0.4rem;
+      font-size: 0.85rem;
+      padding: 0.5rem 1.1rem;
+    }
+
     .syllabus {
       padding-top: 2.2rem;
     }
@@ -378,6 +390,7 @@ export class CourseDetailPage {
   private readonly shortAnswers = inject(ShortAnswerApi);
   private readonly practiceInsights = inject(PracticeInsightsApi);
   private readonly auth = inject(AuthService);
+  protected readonly locale = inject(LocaleService);
   protected readonly config = inject(SiteConfig);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

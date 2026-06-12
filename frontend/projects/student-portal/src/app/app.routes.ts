@@ -55,6 +55,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/course-detail').then((m) => m.CourseDetailPage),
   },
   {
+    path: 'courses/:slug/certificate',
+    title: 'Certificate · MentorMinds',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/certificate').then((m) => m.CertificatePage),
+  },
+  {
     path: 'courses/:slug/lessons/:id',
     title: 'Lesson · MentorMinds',
     canActivate: [authGuard],

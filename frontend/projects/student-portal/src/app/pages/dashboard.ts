@@ -249,6 +249,14 @@ interface ContinueHero {
                 </div>
               }
               @if (slugFor(enrollment.course); as slug) {
+                @if (enrollment.progress_percentage >= 100) {
+                  <a
+                    class="btn btn--accent enrollment__btn"
+                    [routerLink]="['/courses', slug, 'certificate']"
+                  >
+                    {{ locale.t('cert.link') }}
+                  </a>
+                }
                 <a class="btn btn--ghost enrollment__btn" [routerLink]="['/courses', slug]">
                   {{ enrollment.progress_percentage >= 100 ? 'Review' : 'Continue' }} →
                 </a>
