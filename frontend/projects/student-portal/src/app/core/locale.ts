@@ -312,6 +312,7 @@ const MESSAGES: Record<LocaleId, Record<string, string>> = {
     'time.mAgo': 'm lalu',
     'time.hAgo': 'j lalu',
     'time.dAgo': 'h lalu',
+  },
 };
 
 /** BCP-47 tags for Web Speech API (dictation + read-aloud). */

@@ -787,7 +787,7 @@ interface ContinueHero {
 export class DashboardPage {
   protected readonly api = inject(LearningApi);
   protected readonly engagement = inject(EngagementApi);
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
   private readonly insights = inject(PracticeInsightsApi);
   private readonly revision = inject(RevisionApi);
   private readonly planner = inject(PlannerApi);
