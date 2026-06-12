@@ -19,3 +19,20 @@ class PointsEventAdmin(admin.ModelAdmin):
 @admin.register(AwardedBadge)
 class AwardedBadgeAdmin(admin.ModelAdmin):
     list_display = ("user", "badge", "awarded_at")
+
+
+from .models import DailyActivity, RemediationTicket  # noqa: E402
+
+
+@admin.register(RemediationTicket)
+class RemediationTicketAdmin(admin.ModelAdmin):
+    list_display = ("id", "student", "risk", "probability", "status", "created_at")
+    list_filter = ("status", "risk")
+    search_fields = ("student__email", "note")
+
+
+@admin.register(DailyActivity)
+class DailyActivityAdmin(admin.ModelAdmin):
+    list_display = ("user", "date")
+    list_filter = ("date",)
+    search_fields = ("user__email",)
