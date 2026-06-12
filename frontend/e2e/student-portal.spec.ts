@@ -42,7 +42,7 @@ test.describe('Student portal smoke', () => {
 
     // 3. Go to catalog to find and enroll in a course
     await page.goto('/');
-    const courseCard = page.locator('.course-card').first();
+    const courseCard = page.locator('main .card').first();
     await expect(courseCard).toBeVisible();
     await courseCard.click();
 

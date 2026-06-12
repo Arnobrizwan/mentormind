@@ -99,15 +99,30 @@ jobs:
     needs: frontend
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      # The journey test logs in, enrolls and chats — it needs a real,
+      # seeded API. DEBUG=1 gives permissive CORS for the 4173 origin.
+      - name: Boot seeded backend
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          DEBUG=1 python manage.py migrate -v0
+          DEBUG=1 python manage.py seed_demo
+          DEBUG=1 nohup python manage.py runserver 127.0.0.1:8000 &
+          until curl -sf http://127.0.0.1:8000/api/v1/health/ > /dev/null; do sleep 1; done
       - uses: actions/setup-node@v4
         with:
           node-version: "latest"
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-      - name: Build student portal
+      - name: Build student portal (wired to the CI backend)
         working-directory: frontend
-        run: npx ng build student-portal
+        run: |
+          npx ng build student-portal
+          MM_API_BASE_URL=http://127.0.0.1:8000 node scripts/inject-api-base.mjs
       - name: Install Playwright browser
         working-directory: frontend
         run: npx playwright install chromium --with-deps
