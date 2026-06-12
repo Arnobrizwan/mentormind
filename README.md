@@ -18,7 +18,8 @@ spaced repetition, adaptive practice, exam proctoring and dropout prediction —
 
 **$0 stack:** Vercel + Render + Hugging Face Spaces — no paid AI APIs. See [docs/FREE-DEMO-STACK.md](docs/FREE-DEMO-STACK.md).
 
-Demo logins below — the demo resets itself periodically. First request may take ~40s (free tier waking up).
+Demo logins below — the demo resets itself periodically, and **the AI tutor is live**
+(real attributed Cambridge mark-scheme answers, served from a private 68k-question corpus).
 
 ### 🚀 DIGITEX v2 Updates
 - **Full Student Portal i18n:** Complete English (EN) and Bahasa Malaysia (ms) support on all student pages (My Desk, Catalog, AI Tutor, Revision, Planner, and Profile).
@@ -77,7 +78,9 @@ cd ../frontend && npm ci && npx ng serve student-portal   # http://localhost:420
 | ⚙️ Admin | `admin@mentormind.dev` (`ng serve admin-console`, :4202) | `mentormind123` |
 
 The tutor works out of the box (retrieval + a deterministic stub). For real
-LLM answers, start the ml-service too — see [the model pipeline](#the-tutor-model-pipeline-fully-self-hosted).
+mark-scheme answers, start the ml-service too — the hosted demo runs it on a
+free Hugging Face Space with the corpus in a private dataset. See
+[the model pipeline](#the-tutor-model-pipeline-fully-self-hosted).
 
 Or deploy your own free demo API in one click:
 
@@ -256,9 +259,11 @@ curl -i http://localhost:8080/api/v1/health/   # repeat: X-Served-By alternates 
 
 ## Quality: measured, not promised
 
-- **180 automated tests** — 109 backend (Django) + 71 ml-service (pytest,
-  hermetic: the suite never loads the real model), run on every push by CI
-  alongside ruff and the Angular builds.
+- **181 automated tests + a real E2E journey** — 110 backend (Django) and
+  71 ml-service (pytest, hermetic: the suite never loads the real model),
+  plus Playwright specs that run the full login → enroll → quiz → tutor
+  journey against a seeded backend — all on every push, alongside ruff and
+  the Angular builds.
 - **A real evaluation harness for the AI** (`scripts/eval_tutor.py`): the
   tutor is scored against held-out past-paper questions by mark-scheme token
   recall, leave-one-out (a question can never retrieve itself). Prompt or
@@ -302,13 +307,14 @@ per-token costs anywhere.
 ## Tests & CI
 
 ```bash
-cd backend && DEBUG=1 .venv/bin/python manage.py test    # 109 tests
+cd backend && DEBUG=1 .venv/bin/python manage.py test    # 110 tests
 cd ml-service && .venv/bin/pytest                        # 71 tests (hermetic — no model load)
 cd frontend && npx ng build student-portal && npx ng build instructor-studio && npx ng build shared
 ```
 
-GitHub Actions CI runs ruff (backend + ml-service), both Python suites, and the
-Angular builds on every push. `ml-train.yml` retrains on demand; `load-test.yml`
+GitHub Actions CI runs ruff (backend + ml-service), both Python suites, the
+Angular builds, and the Playwright E2E journey (against a seeded backend) on
+every push. `ml-train.yml` retrains on demand; `load-test.yml`
 runs the k6 scenarios.
 
 ## Repo layout
