@@ -4,6 +4,8 @@
 # seed_demo, so the public demo resets itself to a clean, fully-featured
 # state. Point DATABASE_URL at a real Postgres for a persistent install.
 # No Redis needed: settings fall back to in-memory cache + eager Celery.
+# Do NOT set DATABASE_URL (SQLite) or REDIS_URL — both are paid upgrades.
+# Do NOT set Stripe/OpenAI/Mistral keys — not used in this stack.
 
 services:
   - type: web

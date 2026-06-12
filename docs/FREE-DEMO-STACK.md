@@ -57,15 +57,38 @@ Do **not** use `generateValue` on Render alone — the Space would reject reques
 | Demo data resets | Render free SQLite is ephemeral | `seed_demo` on every deploy — by design |
 | WebSocket chat | Needs Render **paid** or Redis for multi-worker | Free tier uses 2 gunicorn workers; chat works on single instance |
 
+## Copy-paste free env files
+
+```bash
+bash scripts/setup-free-tier.sh
+```
+
+| File | Purpose |
+|------|---------|
+| `backend/.env.free` → `backend/.env` | SQLite, no Redis, HF tutor URL, simulated payments |
+| `ml-service/.env.free` → `ml-service/.env` | Corpus retrieval, pypdf OCR, shared `ML_API_KEY` |
+| `ml-service/HF-SPACE-SECRETS.free` | Paste into Hugging Face Space → Settings → Variables |
+
+**Paid services are never required.** Optional upgrades and free defaults:
+
+| Paid (optional) | Free default in code |
+|-----------------|----------------------|
+| Postgres | `sqlite:///db.sqlite3` in `settings.py` |
+| Redis | `LocMemCache` + in-memory Channels in `settings.py` |
+| Stripe | `POST /api/v1/auth/subscribe/` in `accounts/views.py` (instant, no payment) |
+| OpenAI API | Corpus retrieval; optional **local** `CUSTOM_LLM_URL` (Ollama/vLLM) |
+| Mistral OCR | `pypdf` when `MISTRAL_API_KEY` unset in `pastpapers/ocr.py` |
+| Paid GPU | HF Spaces CPU Basic + retrieval tutor |
+
 ## Local dev ($0)
 
 ```bash
-# Backend — no keys required
+bash scripts/setup-free-tier.sh
+
 cd backend && python -m venv .venv && .venv/bin/pip install -r requirements.txt
 DEBUG=1 .venv/bin/python manage.py migrate && .venv/bin/python manage.py seed_demo
 DEBUG=1 .venv/bin/python manage.py runserver
 
-# Frontend
 cd frontend && npm ci && npx ng serve student-portal
 ```
 
