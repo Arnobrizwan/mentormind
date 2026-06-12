@@ -83,6 +83,9 @@ const STARTERS = [
             }
           </div>
           <div class="chat__pickers">
+            @if (session() && messages().length) {
+              <button type="button" class="btn btn--ghost" (click)="exportSession()" title="Download conversation as Markdown">⬇ Export</button>
+            }
             <select [value]="subject()" (change)="subject.set($any($event.target).value)" [disabled]="!!session()" aria-label="Subject">
               @for (s of subjects(); track s) { <option [value]="s">{{ s }}</option> }
             </select>
@@ -954,6 +957,24 @@ export class TutorPage {
         ? parseTutorReply(message.content).body
         : message.content;
     return renderMarkdown(text);
+  }
+
+  /** Download the open conversation as a Markdown file. */
+  protected exportSession(): void {
+    const session = this.session();
+    const messages = this.messages();
+    if (!session || !messages.length) return;
+    const lines = [`# ${session.title || 'Tutor session'}`, ''];
+    for (const message of messages) {
+      lines.push(message.role === 'user' ? '**You:**' : '**Tutor:**', '', message.content, '');
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `mentormind-tutor-${new Date().toISOString().slice(0, 10)}.md`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   protected copy(message: TutorMessage): void {

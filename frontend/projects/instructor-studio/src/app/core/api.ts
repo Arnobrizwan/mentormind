@@ -61,6 +61,12 @@ export class StudioApi {
   }
 
   /** Per-student exam readiness for a course, sorted weakest-first. */
+  courseInsights(slug: string) {
+    return firstValueFrom(
+      this.http.get<CourseInsights>(`/api/v1/courses/${slug}/insights/`),
+    );
+  }
+
   readiness(slug: string): Promise<ReadinessRow[]> {
     return firstValueFrom(this.http.get<ReadinessRow[]>(`/api/v1/courses/${slug}/readiness/`));
   }
@@ -195,4 +201,9 @@ export class StudioApi {
     form.append('num_options', String(numOptions));
     return firstValueFrom(this.http.post<OmrGradeResult>('/api/v1/omr/grade/', form));
   }
+}
+
+export interface CourseInsights {
+  quiz_topics: { topic: string; answers: number; accuracy: number }[];
+  short_answer_topics: { topic: string; submissions: number; avg_pct: number }[];
 }

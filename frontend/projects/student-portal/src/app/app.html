@@ -27,6 +27,8 @@
           @if (config.flagEnabled('ai_tutor')) {
             <a routerLink="/tutor" routerLinkActive="is-active">{{ locale.t('nav.tutor') }}</a>
           }
+          <a routerLink="/past-papers" routerLinkActive="is-active">{{ locale.t('nav.papers') }}</a>
+          <a routerLink="/mock-exam" routerLinkActive="is-active">{{ locale.t('nav.mock') }}</a>
           <a routerLink="/revision" routerLinkActive="is-active" class="nav__revision">
             {{ locale.t('nav.revision') }}
             @if (dueCount() > 0) {
@@ -82,6 +84,8 @@
           @if (config.flagEnabled('ai_tutor')) {
             <a routerLink="/tutor" routerLinkActive="is-active">{{ locale.t('nav.tutor') }}</a>
           }
+          <a routerLink="/past-papers" routerLinkActive="is-active">{{ locale.t('nav.papers') }}</a>
+          <a routerLink="/mock-exam" routerLinkActive="is-active">{{ locale.t('nav.mock') }}</a>
           <a routerLink="/revision" routerLinkActive="is-active" class="nav__revision">
             {{ locale.t('nav.revision') }}
             @if (dueCount() > 0) {

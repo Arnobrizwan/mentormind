@@ -204,6 +204,71 @@ class CourseViewSet(viewsets.ModelViewSet):
         return Response(readiness_module.course_readiness(course))
 
     @action(detail=True, methods=["get"], permission_classes=[IsInstructor])
+    def insights(self, request, slug=None):
+        """Class-wide topic performance — which topics to teach next.
+        Aggregated from per-question quiz detail and graded short answers."""
+        course = self.get_object()
+        if course.instructor != request.user and not request.user.is_staff:
+            return Response(
+                {"detail": "Only this course's instructor can view insights."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        from collections import defaultdict
+
+        correct = defaultdict(int)
+        total = defaultdict(int)
+        attempts = QuizAttempt.objects.using("default").filter(quiz__course=course)
+        for attempt in attempts:
+            for detail in (attempt.answers or {}).values():
+                if not isinstance(detail, dict):
+                    continue
+                topic = (detail.get("topic") or "").strip() or "General"
+                total[topic] += 1
+                if detail.get("correct"):
+                    correct[topic] += 1
+        quiz_topics = sorted(
+            (
+                {
+                    "topic": topic,
+                    "answers": total[topic],
+                    "accuracy": round(100.0 * correct[topic] / total[topic], 1),
+                }
+                for topic in total
+            ),
+            key=lambda item: item["accuracy"],
+        )
+
+        sa_score = defaultdict(float)
+        sa_max = defaultdict(float)
+        sa_count = defaultdict(int)
+        submissions = (
+            ShortAnswerSubmission.objects.using("default")
+            .filter(question__course=course)
+            .select_related("question")
+        )
+        for submission in submissions:
+            topic = (submission.question.topic or "").strip() or "General"
+            sa_count[topic] += 1
+            sa_score[topic] += submission.score
+            sa_max[topic] += submission.max_score
+        short_answer_topics = sorted(
+            (
+                {
+                    "topic": topic,
+                    "submissions": sa_count[topic],
+                    "avg_pct": round(100.0 * sa_score[topic] / sa_max[topic], 1)
+                    if sa_max[topic]
+                    else 0.0,
+                }
+                for topic in sa_count
+            ),
+            key=lambda item: item["avg_pct"],
+        )
+        return Response(
+            {"quiz_topics": quiz_topics, "short_answer_topics": short_answer_topics}
+        )
+
+    @action(detail=True, methods=["get"], permission_classes=[IsInstructor])
     def students(self, request, slug=None):
         """Roster with progress — only for this course's instructor/staff."""
         course = self.get_object()

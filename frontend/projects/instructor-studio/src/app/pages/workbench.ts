@@ -8,6 +8,7 @@ import { apiErrorMessage } from '../core/errors';
 import { Course, Enrollment, Lesson, Quiz, ReadinessRow } from '../core/models';
 import { FlashcardsTab } from './flashcards-tab';
 import { OmrTab } from './omr-tab';
+import { InsightsTab } from './insights-tab';
 import { ProctoringTab } from './proctoring-tab';
 import { QuizAiDraft, parseTimeLimit } from './quiz-ai-draft';
 import { ShortAnswersTab } from './short-answers-tab';
@@ -17,13 +18,15 @@ type Tab =
   | 'quizzes'
   | 'short answers'
   | 'flashcards'
+  | 'insights'
   | 'exam sessions'
   | 'omr grading'
   | 'roster';
 
 @Component({
   selector: 'st-workbench',
-  imports: [RouterLink, ShortAnswersTab, ProctoringTab, OmrTab, FlashcardsTab, QuizAiDraft, CountUp],
+  imports: [RouterLink, ShortAnswersTab, ProctoringTab,
+    InsightsTab, OmrTab, FlashcardsTab, QuizAiDraft, CountUp],
   template: `
     @if (loading()) {
       <p class="tag">Unrolling the blueprint…</p>
@@ -235,6 +238,9 @@ type Tab =
           <div class="tab-pane"><st-flashcards-tab [course]="c" /></div>
         }
 
+        @case ('insights') {
+          <div class="tab-pane"><st-insights-tab [course]="c" /></div>
+        }
         @case ('exam sessions') {
           <div class="tab-pane"><st-proctoring-tab [course]="c" /></div>
         }
@@ -533,6 +539,7 @@ export class WorkbenchPage {
     'quizzes',
     'short answers',
     'flashcards',
+    'insights',
     'exam sessions',
     'omr grading',
     'roster',

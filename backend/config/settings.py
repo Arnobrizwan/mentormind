@@ -186,6 +186,14 @@ CELERY_BEAT_SCHEDULE = {
             minute=0,
         ),
     },
+    "weekly-digest": {
+        "task": "apps.engagement.tasks.send_weekly_digest",
+        "schedule": crontab(
+            day_of_week=env("DIGEST_DAY", default="sun"),
+            hour=env.int("DIGEST_HOUR", default=17),
+            minute=0,
+        ),
+    },
     # Plans build before the risk scan so Monday's nudge reflects them.
     "weekly-study-plans": {
         "task": "apps.planner.tasks.build_weekly_plans",

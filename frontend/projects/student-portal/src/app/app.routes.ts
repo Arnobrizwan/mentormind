@@ -26,6 +26,18 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/tutor').then((m) => m.TutorPage),
   },
   {
+    path: 'past-papers',
+    title: 'Past Papers · MentorMinds',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/past-papers').then((m) => m.PastPapersPage),
+  },
+  {
+    path: 'mock-exam',
+    title: 'Mock Exam · MentorMinds',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/mock-exam').then((m) => m.MockExamPage),
+  },
+  {
     path: 'revision',
     title: 'Revision · MentorMinds',
     canActivate: [authGuard],

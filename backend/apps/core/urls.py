@@ -1,6 +1,12 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from .pastpapers_views import (
+    PaperQuestionDetailView,
+    PaperQuestionsView,
+    PaperSampleView,
+    PaperSubjectsView,
+)
 from .views import (
     AdminStatsView,
     CourseViewSet,
@@ -40,6 +46,10 @@ urlpatterns = [
         name="practice-readiness",
     ),
     path("admin/stats/", AdminStatsView.as_view(), name="admin-stats"),
+    path("pastpapers/subjects/", PaperSubjectsView.as_view(), name="paper-subjects"),
+    path("pastpapers/questions/", PaperQuestionsView.as_view(), name="paper-questions"),
+    path("pastpapers/questions/<str:question_id>/", PaperQuestionDetailView.as_view(), name="paper-question-detail"),
+    path("pastpapers/sample/", PaperSampleView.as_view(), name="paper-sample"),
     path("omr/grade/", OmrGradeView.as_view(), name="omr-grade"),
     path("", include(router.urls)),
 ]

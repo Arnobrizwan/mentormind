@@ -53,6 +53,14 @@ def post_json(path, payload, timeout=DEFAULT_TIMEOUT_SECONDS):
     return _send(request, path, timeout)
 
 
+def get_json(path, timeout=DEFAULT_TIMEOUT_SECONDS):
+    """GET a JSON document from the ml-service."""
+    request = urllib.request.Request(
+        _base_url() + path, headers=_auth_headers(), method="GET"
+    )
+    return _send(request, path, timeout)
+
+
 def post_image(
     path,
     image_bytes,

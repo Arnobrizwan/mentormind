@@ -19,6 +19,7 @@ from .auth import require_api_key
 from .flags import flag_enabled
 from .pastpapers import answering
 from .pastpapers import api as pastpapers_api
+from .pastpapers import browse
 from .pastpapers.models import init_db
 
 
@@ -33,6 +34,8 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="MentorMind ML Service", version="0.5.0", lifespan=lifespan)
 # Pipeline routes get the global key on top of their own PIPELINE_API_TOKEN.
 app.include_router(pastpapers_api.router, dependencies=[Depends(require_api_key)])
+# Read-only past-paper browsing for the frontend paper browser.
+app.include_router(browse.router, dependencies=[Depends(require_api_key)])
 
 # /metrics for the Prometheus scrape job — deliberately outside the API key.
 Instrumentator().instrument(app).expose(app)

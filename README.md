@@ -173,6 +173,10 @@ heuristic fallback, so nothing 503s when no model is loaded.
 | 🎓 **Exam readiness** | 0–100 blend of progress, quiz average, practice volume, accuracy (weights live-tunable). Rings on the student dashboard, weakest-first column on the instructor roster. |
 | ⏱ **Timed quizzes** | Instructors set per-quiz time limits; students get a countdown with auto-submit — real exam practice. |
 | 🔍 **Quiz review** | Per-question ✓/✗ breakdown after every attempt (never revealing the key), with weak-topic callouts feeding adaptive practice. |
+| 📜 **Past-paper practice** | Browse 68k+ real Cambridge questions by subject; attempt, then reveal the official mark scheme. |
+| ⏰ **Mock exams** | Timed papers sampled from the corpus with self-marking against official schemes. |
+| 📊 **Class insights** | Instructors see per-topic class accuracy ("teach next" callouts) from real attempt data. |
+| 📬 **Weekly digest** | Sunday email/notification: points, streak, due cards, weakest topic. |
 | 🎓 **Certificates** | Print-ready, shareable completion certificates (localized EN/BM) unlocked at 100% course progress. |
 | 🏅 **Gamification** | Points ledger, streaks (with a GitHub-style activity heatmap), badges (DB-defined rules), weekly leaderboard, daily login rewards. |
 
