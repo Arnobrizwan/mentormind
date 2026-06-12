@@ -519,8 +519,17 @@ class RecommendationTests(TestCase):
 
 
 class SystemStatusTests(TestCase):
-    def test_system_status_is_public_and_healthy(self):
-        res = self.client.get("/api/v1/system/")
+    def test_system_status_is_staff_only_and_healthy(self):
+        # students/anonymous get nothing — infra detail is admin-only
+        self.assertIn(self.client.get("/api/v1/system/").status_code, (401, 403))
+
+        admin = User.objects.create_user(
+            email="sys-admin@mentormind.dev", password="password123",
+            is_staff=True,
+        )
+        client = APIClient()
+        client.force_authenticate(user=admin)
+        res = client.get("/api/v1/system/")
         self.assertEqual(res.status_code, 200)
         body = res.json()
         self.assertTrue(body["healthy"])

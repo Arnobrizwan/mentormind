@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 interface ComponentStatus {
@@ -17,24 +18,23 @@ interface SystemStatus {
 const POLL_MS = 5000;
 
 @Component({
-  selector: 'mm-system',
+  selector: 'ac-system',
+  imports: [RouterLink],
   template: `
-    <section class="board rise">
-      <p class="mono-label">The Machine Room — live, refreshes every 5s</p>
-      <h1>
-        System status:
-        @if (status(); as s) {
-          <em [class.is-down]="!s.healthy">{{ s.healthy ? 'all clear.' : 'degraded.' }}</em>
-        } @else {
-          <em>listening…</em>
-        }
-      </h1>
+    <p class="label"><a routerLink="/" class="crumb">← console</a></p>
+    <h1 class="screen-title">
+      $ system --watch
       @if (status(); as s) {
-        <p class="board__meta mono-label">
-          answered by {{ s.instance }} · poll #{{ polls() }}
-        </p>
+        <span class="verdict" [class.verdict--down]="!s.healthy">
+          [{{ s.healthy ? 'ALL CLEAR' : 'DEGRADED' }}]
+        </span>
+      } @else {
+        <span class="verdict">[LISTENING…]</span>
       }
-    </section>
+    </h1>
+    @if (status(); as s) {
+      <p class="label">answered by {{ s.instance }} · poll #{{ polls() }} · refreshes every 5s</p>
+    }
 
     @if (error(); as message) {
       <p class="error-note" role="alert">{{ message }}</p>
@@ -42,17 +42,16 @@ const POLL_MS = 5000;
 
     @if (status(); as s) {
       <div class="grid">
-        @for (entry of entries(); track entry.name; let i = $index) {
+        @for (entry of entries(); track entry.name) {
           <div
-            class="cell rise"
+            class="cell"
             [class.cell--ok]="isGood(entry.value.status)"
             [class.cell--err]="entry.value.status === 'error'"
-            [style.animation-delay.ms]="i * 60"
           >
             <span class="cell__light" aria-hidden="true"></span>
             <div class="cell__body">
               <span class="cell__name">{{ label(entry.name) }}</span>
-              <span class="mono-label">
+              <span class="label">
                 {{ entry.value.status }}
                 @if (entry.value.latency_ms !== undefined) {
                   · {{ entry.value.latency_ms }}ms
@@ -68,68 +67,67 @@ const POLL_MS = 5000;
     }
   `,
   styles: `
-    .board h1 {
-      font-size: clamp(2.2rem, 5vw, 3.6rem);
-      margin: 0.8rem 0 0.6rem;
-
-      em {
-        font-style: italic;
-        color: var(--sage-deep);
-      }
-
-      em.is-down {
-        color: var(--danger);
-      }
+    .crumb {
+      color: var(--text-dim);
+      text-decoration: none;
+      &:hover { color: var(--phosphor); }
     }
 
-    .board__meta {
-      margin-bottom: 1.5rem;
+    .screen-title {
+      font-family: var(--font-mono);
+      font-size: clamp(1.4rem, 3.4vw, 2.1rem);
+      margin: 0.7rem 0 0.4rem;
     }
+
+    .verdict { color: var(--phosphor); }
+    .verdict--down { color: var(--alarm); }
 
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 1rem;
-      margin-top: 1.6rem;
+      gap: 0.9rem;
+      margin-top: 1.5rem;
     }
 
     .cell {
       display: flex;
-      gap: 0.9rem;
+      gap: 0.85rem;
       align-items: flex-start;
-      padding: 1.1rem 1.2rem;
-      background: var(--card);
-      border: 1.5px solid var(--line-strong);
-      border-radius: 12px;
-      box-shadow: var(--shadow-card);
+      padding: 1rem 1.1rem;
+      background: var(--bay);
+      border: 1px solid var(--line);
+      border-radius: 8px;
     }
 
-    .cell--ok { border-color: var(--sage); }
-    .cell--err { border-color: var(--danger); }
+    .cell--ok { border-color: var(--phosphor); }
+    .cell--err { border-color: var(--alarm); }
 
     .cell__light {
-      width: 11px;
-      height: 11px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       margin-top: 6px;
-      background: var(--ink-soft);
+      background: var(--text-dim);
       flex-shrink: 0;
     }
 
     .cell--ok .cell__light {
-      background: var(--sage);
-      box-shadow: 0 0 0 4px color-mix(in srgb, var(--sage) 18%, transparent);
-      animation: pulse 2.4s ease-in-out infinite;
+      background: var(--phosphor);
+      box-shadow: 0 0 8px var(--phosphor-dim);
+      animation: sys-pulse 2.4s ease-in-out infinite;
     }
 
     .cell--err .cell__light {
-      background: var(--danger);
-      box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 20%, transparent);
+      background: var(--alarm);
+      box-shadow: 0 0 8px rgba(255, 107, 94, 0.4);
     }
 
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--sage) 10%, transparent); }
-      50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--sage) 25%, transparent); }
+    @keyframes sys-pulse {
+      50% { opacity: 0.45; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cell__light { animation: none; }
     }
 
     .cell__body {
@@ -138,14 +136,11 @@ const POLL_MS = 5000;
       gap: 0.15rem;
     }
 
-    .cell__name {
-      font-weight: 700;
-      font-size: 1.02rem;
-    }
+    .cell__name { font-weight: 600; }
 
     .cell__detail {
       font-size: 0.78rem;
-      color: var(--danger);
+      color: var(--alarm);
       word-break: break-word;
     }
   `,

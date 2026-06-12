@@ -777,9 +777,10 @@ class EnrollmentViewSet(viewsets.ReadOnlyModelViewSet):
 
 class SystemStatusView(APIView):
     """Aggregate live status of every architectural component — feeds the
-    /system page. Public by design: this project is a system-design showcase."""
+    admin console's system page. Staff-only: infrastructure detail isn't
+    for students (and shouldn't be public)."""
 
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.IsAdminUser]
 
     def get(self, request):
         components = {}

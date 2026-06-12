@@ -303,7 +303,7 @@ docs/         architecture notes
 3. ✅ Infra showcase — nginx micro-cache, Redis leaderboard, R2/S3 uploads, Channels websocket chat, notifications with Celery email mirror
 4. ✅ ML features — OpenCV proctoring, OMR bubble-sheet grading, Tesseract OCR, co-occurrence recommendations
 5. ✅ MLOps — DVC pipeline (prepare→train→evaluate→drift), MLflow registry hooks, GitHub Actions train/deploy with drift gate
-6. ✅ Kubernetes manifests (api×2 + HPA, worker, ml-service, ingress), k6 load tests, `/system` live status page
+6. ✅ Kubernetes manifests (api×2 + HPA, worker, ml-service, ingress), k6 load tests, live system-status board (admin console, staff-only)
 7. ✅ Self-hosted AI tutor — past-paper OCR/alignment pipeline, LoRA fine-tune, retrieval-grounded serving, multimodal + voice input
 8. ✅ AI assessment & intervention — rubric grading, AI quiz/flashcard drafting with human review, proctoring timelines, dropout remediation loop
 9. ✅ Adaptive learning — weak-topic practice, SM-2 spaced repetition, agentic weekly study plans, exam-readiness scoring

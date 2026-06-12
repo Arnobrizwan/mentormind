@@ -14,11 +14,6 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/auth-page').then((m) => m.AuthPage),
   },
   {
-    path: 'system',
-    title: 'System Status · MentorMinds',
-    loadComponent: () => import('./pages/system').then((m) => m.SystemPage),
-  },
-  {
     path: 'dashboard',
     title: 'Dashboard · MentorMinds',
     canActivate: [authGuard],
