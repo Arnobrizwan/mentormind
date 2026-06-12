@@ -56,8 +56,8 @@ const STARTERS = [
     <div class="layout rise">
       <!-- sessions sidebar -->
       <aside class="sidebar">
-        <button class="btn btn--accent sidebar__new" (click)="newChat()">+ New chat</button>
-        <p class="mono-label">Previous sessions</p>
+        <button class="btn btn--accent sidebar__new" (click)="newChat()">{{ locale.t('tutor.newChat') }}</button>
+        <p class="mono-label">{{ locale.t('tutor.prevSessions') }}</p>
         @for (s of sessions(); track s.id) {
           <button
             type="button"
@@ -65,11 +65,11 @@ const STARTERS = [
             [class.is-active]="session()?.id === s.id"
             (click)="openSession(s.id)"
           >
-            <strong>{{ s.title || s.subject || 'Untitled' }}</strong>
+            <strong>{{ s.title || s.subject || locale.t('tutor.untitled') }}</strong>
             <span class="mono-label">{{ s.subject }} · {{ s.level }}</span>
           </button>
         } @empty {
-          <p class="sidebar__empty">No sessions yet.</p>
+          <p class="sidebar__empty">{{ locale.t('tutor.noSessions') }}</p>
         }
       </aside>
 
@@ -95,14 +95,14 @@ const STARTERS = [
         @if (quota(); as q) {
           @if (q.limit !== null && q.remaining !== null && q.remaining <= 2 && q.remaining > 0) {
             <p class="banner banner--warn mono-label">
-              {{ q.used }}/{{ q.limit }} messages used today — {{ q.remaining }} left on the free plan.
+              {{ q.used }}/{{ q.limit }} {{ locale.t('tutor.quota.messagesUsed') }} {{ q.remaining }} {{ locale.t('tutor.quota.leftFree') }}
             </p>
           }
           @if (q.limit !== null && q.remaining === 0) {
             <div class="banner banner--limit">
-              <p><strong>Daily limit reached.</strong> Upgrade for unlimited tutoring.</p>
+              <p><strong>{{ locale.t('tutor.quota.limitReached') }}</strong> {{ locale.t('tutor.quota.upgradePrompt') }}</p>
               <button class="btn btn--accent" (click)="upgrade()" [disabled]="busy()">
-                {{ busy() ? 'Upgrading…' : 'Go Premium (simulated)' }}
+                {{ busy() ? locale.t('tutor.quota.upgrading') : locale.t('tutor.quota.upgradeBtn') }}
               </button>
             </div>
           }
@@ -111,7 +111,7 @@ const STARTERS = [
         @if (loadError(); as message) {
           <p class="error-note" role="alert">
             {{ message }}
-            <button type="button" class="retry" (click)="reload()">retry</button>
+            <button type="button" class="retry" (click)="reload()">{{ locale.t('tutor.retry') }}</button>
           </p>
         }
 
@@ -122,7 +122,7 @@ const STARTERS = [
               @if (message.role === 'assistant' && sourceCitation(message); as src) {
                 <div class="source-card" role="note">
                   <span class="source-card__icon" aria-hidden="true">📑</span>
-                  <span class="source-card__label">Mark scheme</span>
+                  <span class="source-card__label">{{ locale.t('tutor.markScheme') }}</span>
                   <span class="source-card__text">{{ src }}</span>
                 </div>
               }
@@ -158,7 +158,7 @@ const STARTERS = [
             </div>
           } @empty {
             <div class="starters">
-              <p class="mono-label">Ask anything — or try one of these:</p>
+              <p class="mono-label">{{ locale.t('tutor.startersPrompt') }}</p>
               @for (starter of starters; track starter) {
                 <button type="button" class="starters__chip" (click)="draft.set(starter)">
                   {{ starter }}
@@ -176,7 +176,7 @@ const STARTERS = [
         @if (error(); as message) {
           <p class="error-note" role="alert">
             {{ message }}
-            <button type="button" class="retry" (click)="send()">retry</button>
+            <button type="button" class="retry" (click)="send()">{{ locale.t('tutor.retry') }}</button>
           </p>
         }
 
@@ -186,7 +186,7 @@ const STARTERS = [
               <img class="attach-chip__thumb" [src]="url" alt="Snap & Solve preview" />
             }
             <span class="attach-chip__name">
-              {{ thinking() ? 'Reading your question…' : 'Snap & Solve · ' + file.name }}
+              {{ thinking() ? locale.t('tutor.readingQuestion') : locale.t('tutor.snapAndSolve') + file.name }}
             </span>
             <button
               type="button"
@@ -211,8 +211,8 @@ const STARTERS = [
             class="composer__snap"
             (click)="snapPhoto(fileInput)"
             [disabled]="thinking()"
-            title="Snap & Solve — photograph a question"
-            aria-label="Snap and Solve — photograph a question"
+            [title]="locale.t('tutor.snapAndSolve')"
+            [attr.aria-label]="locale.t('tutor.snapAndSolve')"
           >
             <span aria-hidden="true">📷</span>
             <span class="composer__snap-label">{{ locale.t('tutor.snap') }}</span>
@@ -247,7 +247,7 @@ const STARTERS = [
             type="submit"
             [disabled]="thinking() || (!draft().trim() && !attachment())"
           >
-            Send
+            {{ locale.t('tutor.send') }}
           </button>
         </form>
       </section>
@@ -718,7 +718,7 @@ export class TutorPage {
       this.sessions.set(sessions);
       this.quota.set(quota);
     } catch (err) {
-      this.loadError.set(apiErrorMessage(err, 'Could not load your tutor sessions.'));
+      this.loadError.set(apiErrorMessage(err, this.locale.t('tutor.error.loadSessions')));
     }
   }
 
@@ -756,10 +756,10 @@ export class TutorPage {
       this.zone.run(() => {
         if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
           this.error.set(
-            'Microphone access was blocked — allow it in your browser settings to dictate.',
+            this.locale.t('tutor.error.micBlocked'),
           );
         } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
-          this.error.set('Dictation hit a snag — try again.');
+          this.error.set(this.locale.t('tutor.error.dictation'));
         }
         this.listening.set(false);
       });
@@ -777,7 +777,7 @@ export class TutorPage {
       this.listening.set(true);
     } catch {
       this.recognition = null;
-      this.error.set('Could not start the microphone — try again.');
+      this.error.set(this.locale.t('tutor.error.mic'));
     }
   }
 
@@ -834,7 +834,7 @@ export class TutorPage {
     const native = await pickQuestionPhoto();
     if (native) {
       if (native.size > TutorPage.MAX_IMAGE_BYTES) {
-        this.error.set('That image is too large — the limit is 8 MB.');
+        this.error.set(this.locale.t('tutor.error.imageTooLarge'));
         return;
       }
       this.error.set(null);
@@ -851,7 +851,7 @@ export class TutorPage {
     input.value = '';
     if (!file) return;
     if (file.size > TutorPage.MAX_IMAGE_BYTES) {
-      this.error.set('That image is too large — the limit is 8 MB.');
+      this.error.set(this.locale.t('tutor.error.imageTooLarge'));
       return;
     }
     this.error.set(null);
@@ -882,7 +882,7 @@ export class TutorPage {
       this.stopMic();
       this.stopSpeech();
     } catch (err) {
-      this.loadError.set(apiErrorMessage(err, 'Could not open that session.'));
+      this.loadError.set(apiErrorMessage(err, this.locale.t('tutor.error.openSession')));
     }
   }
 
@@ -920,9 +920,9 @@ export class TutorPage {
       this.lastFailed = content;
       if (err instanceof HttpErrorResponse && err.status === 429) {
         this.quota.set(await this.api.quota().catch(() => this.quota()));
-        this.error.set('Daily limit reached — upgrade to keep going.');
+        this.error.set(this.locale.t('tutor.quota.limitReachedMsg'));
       } else {
-        this.error.set(apiErrorMessage(err, 'The tutor had trouble answering.'));
+        this.error.set(apiErrorMessage(err, this.locale.t('tutor.error.answer')));
       }
     } finally {
       this.thinking.set(false);
@@ -936,7 +936,7 @@ export class TutorPage {
       const updated = await this.api.feedback(active.id, message.id, value);
       this.messages.update((all) => all.map((m) => (m.id === updated.id ? updated : m)));
     } catch (err) {
-      this.error.set(apiErrorMessage(err, 'Could not record your feedback — try again.'));
+      this.error.set(apiErrorMessage(err, this.locale.t('tutor.error.feedback')));
     }
   }
 
@@ -968,7 +968,7 @@ export class TutorPage {
       this.quota.set(await this.api.quota());
       this.error.set(null);
     } catch (err) {
-      this.error.set(apiErrorMessage(err, 'Upgrade failed — try again.'));
+      this.error.set(apiErrorMessage(err, this.locale.t('tutor.error.upgrade')));
     } finally {
       this.busy.set(false);
     }

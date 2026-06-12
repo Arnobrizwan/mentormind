@@ -24,6 +24,8 @@ from .pastpapers.models import init_db
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    from .pastpapers.bootstrap import bootstrap_corpus
+    bootstrap_corpus()
     await init_db()
     yield
 
@@ -230,4 +232,4 @@ async def tutor_answer(request: TutorAnswerRequest):
     question = request.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="question is required.")
-    return await answering.answer_question(question, request.subject, request.level)
+    return await answering.answer_question(question, request.subject, request.level, history=request.history)

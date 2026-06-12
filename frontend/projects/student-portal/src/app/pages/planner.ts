@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { apiErrorMessage } from '../core/errors';
+import { LocaleService } from '../core/locale';
 import { PlanItem, PlanItemKind, PlannerApi, WeekPlan } from '../core/planner';
 
 const KIND_ICONS: Record<PlanItemKind, string> = {
@@ -17,9 +18,9 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
   template: `
     <section class="plan rise">
       <header class="plan__head">
-        <p class="mono-label">Study planner</p>
+        <p class="mono-label">{{ locale.t('planner.title') }}</p>
         @if (plan(); as p) {
-          <h1>Week of {{ weekLabel(p.week_start) }}</h1>
+          <h1>{{ locale.t('planner.weekOf') }} {{ weekLabel(p.week_start) }}</h1>
           <div class="plan__meter">
             <div
               class="progress"
@@ -31,18 +32,18 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
             >
               <div class="progress__bar" [style.width.%]="p.completion_pct"></div>
             </div>
-            <span class="mono-label">{{ p.completion_pct }}% done</span>
+            <span class="mono-label">{{ p.completion_pct }}{{ locale.t('planner.donePct') }}</span>
             <button
               type="button"
               class="btn btn--ghost plan__refresh"
               (click)="refresh()"
               [disabled]="busy()"
             >
-              {{ busy() ? 'Rebuilding…' : '↻ Refresh plan' }}
+              {{ busy() ? locale.t('planner.rebuilding') : locale.t('planner.refresh') }}
             </button>
           </div>
         } @else if (loading()) {
-          <h1>This week</h1>
+          <h1>{{ locale.t('planner.thisWeek') }}</h1>
         }
       </header>
 
@@ -54,7 +55,7 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
       }
 
       @if (loading()) {
-        <p class="mono-label">Sketching out your week…</p>
+        <p class="mono-label">{{ locale.t('planner.loading') }}</p>
       } @else if (plan(); as p) {
         <ul class="items">
           @for (item of p.items; track item.id) {
@@ -81,8 +82,8 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
             </li>
           } @empty {
             <li class="items__empty">
-              <p>Nothing on the plan yet — enroll in a course and check back.</p>
-              <a routerLink="/" class="btn btn--ghost">Browse the catalog</a>
+              <p>{{ locale.t('planner.empty.title') }}</p>
+              <a routerLink="/" class="btn btn--ghost">{{ locale.t('planner.empty.browse') }}</a>
             </li>
           }
         </ul>
@@ -200,6 +201,7 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
 })
 export class PlannerPage {
   private readonly api = inject(PlannerApi);
+  protected readonly locale = inject(LocaleService);
 
   protected readonly plan = signal<WeekPlan | null>(null);
   protected readonly loading = signal(true);
@@ -221,7 +223,7 @@ export class PlannerPage {
     try {
       this.plan.set(await this.api.week());
     } catch (err) {
-      this.error.set(apiErrorMessage(err, 'Could not load this week’s plan.'));
+      this.error.set(apiErrorMessage(err, this.locale.t('planner.error.load')));
     } finally {
       this.loading.set(false);
     }
@@ -234,7 +236,7 @@ export class PlannerPage {
     try {
       this.plan.set(await this.api.rebuild());
     } catch (err) {
-      this.error.set(apiErrorMessage(err, 'Could not rebuild the plan — try again.'));
+      this.error.set(apiErrorMessage(err, this.locale.t('planner.error.rebuild')));
     } finally {
       this.busy.set(false);
     }
@@ -254,7 +256,7 @@ export class PlannerPage {
       this.plan.set(await this.api.toggle(item.id));
     } catch (err) {
       checkbox.checked = item.done;
-      this.error.set(apiErrorMessage(err, 'Could not update that item — try again.'));
+      this.error.set(apiErrorMessage(err, this.locale.t('planner.error.update')));
     } finally {
       this.togglingId.set(null);
     }
@@ -267,6 +269,6 @@ export class PlannerPage {
   protected weekLabel(weekStart: string): string {
     const date = new Date(`${weekStart}T00:00:00`);
     if (Number.isNaN(date.getTime())) return weekStart;
-    return date.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+    return date.toLocaleDateString(this.locale.id() === 'ms' ? 'ms-MY' : 'en-US', { day: 'numeric', month: 'long' });
   }
 }

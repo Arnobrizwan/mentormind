@@ -83,7 +83,7 @@ def _load():
 LOCK_TIMEOUT_SECONDS = float(os.getenv("LOCAL_LLM_LOCK_TIMEOUT", "60"))
 
 
-def generate(question: str, system_prompt: str, context: str = "") -> str | None:
+def generate(question: str, system_prompt: str, context: str = "", history: list[dict] | None = None) -> str | None:
     """Generate a tutor answer locally. Returns None if local inference is
     disabled, busy past the lock timeout, or fails (callers fall back)."""
     global _load_failed
@@ -115,8 +115,11 @@ def generate(question: str, system_prompt: str, context: str = "") -> str | None
 
         messages = [
             {"role": "system", "content": system},
-            {"role": "user", "content": question},
         ]
+        if history:
+            for msg in history:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+        messages.append({"role": "user", "content": question})
         try:
             prompt = tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True

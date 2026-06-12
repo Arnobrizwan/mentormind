@@ -25,6 +25,18 @@ class IsInstructor(permissions.BasePermission):
         return is_instructor(request.user)
 
 
+class IsCronOrInstructor(permissions.BasePermission):
+    """Allows access to instructors, staff, superusers, or requests carrying
+    the shared ML_API_KEY in the X-Cron-Key header."""
+
+    def has_permission(self, request, view):
+        from django.conf import settings
+        cron_key = request.headers.get("X-Cron-Key")
+        if cron_key and getattr(settings, "ML_API_KEY", "") and cron_key == settings.ML_API_KEY:
+            return True
+        return is_instructor(request.user)
+
+
 class IsEnrolledStudentOrInstructor(permissions.BasePermission):
     """Allows reading details of course content (like lesson contents or quizzes)
 

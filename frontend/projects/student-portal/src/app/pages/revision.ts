@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { ConfettiBurst } from '../core/confetti';
 import { apiErrorMessage } from '../core/errors';
+import { LocaleService } from '../core/locale';
 import { RevisionApi, RevisionCard } from '../core/revision';
 
 /** Button order on screen ↔ keyboard keys 1-4. */
@@ -20,12 +21,12 @@ const GRADES = [
   template: `
     <section class="rev rise">
       <header class="rev__head">
-        <p class="mono-label">Spaced repetition</p>
-        <h1>Revision</h1>
+        <p class="mono-label">{{ locale.t('rev.spacedRep') }}</p>
+        <h1>{{ locale.t('nav.revision') }}</h1>
         @if (!loading()) {
           <p class="mono-label rev__due" aria-live="polite">
-            {{ dueCount() }} {{ dueCount() === 1 ? 'card' : 'cards' }} due ·
-            {{ queue().length }} in this session
+            {{ dueCount() }} {{ dueCount() === 1 ? locale.t('rev.card') : locale.t('rev.cards') }} {{ locale.t('rev.dueAnd') }}
+            {{ queue().length }} {{ locale.t('rev.inSession') }}
           </p>
         }
       </header>
@@ -38,7 +39,7 @@ const GRADES = [
       }
 
       @if (loading()) {
-        <p class="mono-label">Shuffling your cards…</p>
+        <p class="mono-label">{{ locale.t('rev.loading') }}</p>
       } @else if (current(); as card) {
         <div class="flip" [class.flip--flipped]="revealed()" [class.flip--enter]="entering()">
           <div class="flip__inner">
@@ -72,7 +73,7 @@ const GRADES = [
         @if (!revealed()) {
           <div class="rev__actions">
             <button type="button" class="btn btn--accent rev__flip" (click)="flip()">
-              Show answer <kbd>space</kbd>
+              {{ locale.t('rev.showAnswer') }} <kbd>space</kbd>
             </button>
           </div>
         } @else {
@@ -85,9 +86,9 @@ const GRADES = [
                 [class.grade-btn--easy]="option.kind === 'easy'"
                 [disabled]="busy()"
                 (click)="grade(option.grade)"
-                [attr.aria-label]="option.label + ' — comes back in ' + intervalHint(card, option.grade)"
+                [attr.aria-label]="locale.t('rev.grade.' + option.kind) + ' — comes back in ' + intervalHint(card, option.grade)"
               >
-                <span class="grade-btn__label">{{ option.label }}</span>
+                <span class="grade-btn__label">{{ locale.t('rev.grade.' + option.kind) }}</span>
                 <span class="grade-btn__hint mono-label">
                   {{ intervalHint(card, option.grade) }} · {{ option.key }}
                 </span>
@@ -97,9 +98,9 @@ const GRADES = [
         }
       } @else {
         <div class="done rise">
-          <h2 class="done__title">All caught up 🎉<mm-confetti /></h2>
-          <p>No cards are due right now — come back tomorrow.</p>
-          <a routerLink="/dashboard" class="btn btn--ghost">← Back to my desk</a>
+          <h2 class="done__title">{{ locale.t('rev.done.title') }}<mm-confetti /></h2>
+          <p>{{ locale.t('rev.done.sub') }}</p>
+          <a routerLink="/dashboard" class="btn btn--ghost">{{ locale.t('rev.done.back') }}</a>
         </div>
       }
     </section>
@@ -310,6 +311,7 @@ const GRADES = [
 })
 export class RevisionPage {
   private readonly api = inject(RevisionApi);
+  protected readonly locale = inject(LocaleService);
 
   protected readonly grades = GRADES;
 
@@ -350,7 +352,7 @@ export class RevisionPage {
       this.dueCount.set(queue.due_count);
       this.revealed.set(false);
     } catch (err) {
-      this.loadError.set(apiErrorMessage(err, 'Could not load your revision queue.'));
+      this.loadError.set(apiErrorMessage(err, this.locale.t('rev.error.load')));
     } finally {
       this.loading.set(false);
     }
@@ -384,7 +386,7 @@ export class RevisionPage {
         void this.load();
       }
     } catch (err) {
-      this.error.set(apiErrorMessage(err, 'Could not record that review — try again.'));
+      this.error.set(apiErrorMessage(err, this.locale.t('rev.error.review')));
     } finally {
       this.busy.set(false);
     }

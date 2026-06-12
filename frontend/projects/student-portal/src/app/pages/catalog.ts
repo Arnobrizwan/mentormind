@@ -28,14 +28,14 @@ import { SiteConfig } from '../core/site-config';
       </div>
     } @else if (courses().length === 0) {
       <div class="empty rise">
-        <h2>The shelves are bare.</h2>
-        <p>No published courses yet — check back soon, the mentors are writing.</p>
+        <h2>{{ locale.t('catalog.empty.title') }}</h2>
+        <p>{{ locale.t('catalog.empty.sub') }}</p>
       </div>
     } @else {
       @if (recommended().length > 0) {
         <section class="recs rise">
           <div class="ledger-row">
-            <span class="mono-label">Picked for you</span>
+            <span class="mono-label">{{ locale.t('catalog.recs.title') }}</span>
             <hr class="hairline" style="flex:1" />
           </div>
           <div class="grid grid--recs">
@@ -45,7 +45,7 @@ import { SiteConfig } from '../core/site-config';
                 [routerLink]="['/courses', course.slug]"
                 [style.animation-delay.ms]="stagger(i)"
               >
-                <span class="mono-label">Recommended</span>
+                <span class="mono-label">{{ locale.t('catalog.recs.badge') }}</span>
                 <h2 class="card__title">{{ course.title }}</h2>
                 <p class="card__desc">{{ course.description }}</p>
                 <span class="card__arrow" aria-hidden="true">→</span>
@@ -56,7 +56,7 @@ import { SiteConfig } from '../core/site-config';
       }
 
       <div class="ledger-row">
-        <span class="mono-label">{{ courses().length }} course(s) on record</span>
+        <span class="mono-label">{{ courses().length }} {{ locale.t('catalog.record') }}</span>
         <hr class="hairline" style="flex:1" />
       </div>
       <div class="grid">
@@ -69,17 +69,17 @@ import { SiteConfig } from '../core/site-config';
             <div class="card__top">
               <span class="mono-label">No. {{ serial(i) }}</span>
               @if (enrolledIn(course)) {
-                <span class="stamp">Enrolled</span>
+                <span class="stamp">{{ locale.t('catalog.enrolled') }}</span>
               }
             </div>
             <h2 class="card__title">{{ course.title }}</h2>
             <p class="card__byline">
-              taught by <strong>{{ course.instructor_name || 'a mentor' }}</strong>
+              {{ locale.t('catalog.taughtBy') }} <strong>{{ course.instructor_name || locale.t('catalog.aMentor') }}</strong>
             </p>
             <p class="card__desc">{{ course.description }}</p>
             <div class="card__meta">
-              <span class="mono-label">{{ course.lessons.length }} lessons</span>
-              <span class="mono-label">{{ course.quizzes.length }} quizzes</span>
+              <span class="mono-label">{{ course.lessons.length }} {{ locale.t('catalog.lessonsCount') }}</span>
+              <span class="mono-label">{{ course.quizzes.length }} {{ locale.t('catalog.quizzesCount') }}</span>
               <span class="card__arrow" aria-hidden="true">→</span>
             </div>
           </a>

@@ -1,0 +1,40 @@
+name: Scheduled Weekly Sweeps
+
+on:
+  schedule:
+    # Every Monday at 6:00 AM UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "API Base URL override (optional)"
+        required: false
+        default: "https://mentormind-api.onrender.com"
+
+jobs:
+  weekly-sweeps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve API URL
+        id: resolve-url
+        run: |
+          # Use workflow input if manually triggered, otherwise fallback to default env/secret
+          OVERRIDE_URL="${{ github.event.inputs.api_base_url }}"
+          DEFAULT_URL="https://mentormind-api.onrender.com"
+          echo "api_url=${OVERRIDE_URL:-$DEFAULT_URL}" >> $GITHUB_OUTPUT
+
+      - name: Trigger Weekly Study Planner Rebuild
+        run: |
+          echo "Rebuilding weekly study plans..."
+          curl -f -X POST "${{ steps.resolve-url.outputs.api_url }}/api/v1/planner/rebuild/" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Key: ${{ secrets.ML_API_KEY }}" \
+            -w "\nHTTP Status: %{http_code}\nTime: %{time_total}s\n"
+
+      - name: Trigger Weekly Student Dropout Risk Scan
+        run: |
+          echo "Scanning student engagement and updating risk tickets..."
+          curl -f -X POST "${{ steps.resolve-url.outputs.api_url }}/api/v1/engagement/risk/tickets/scan/" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Key: ${{ secrets.ML_API_KEY }}" \
+            -w "\nHTTP Status: %{http_code}\nTime: %{time_total}s\n"

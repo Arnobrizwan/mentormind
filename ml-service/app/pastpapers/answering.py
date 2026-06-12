@@ -22,6 +22,7 @@ import os
 import re
 
 import httpx
+import numpy as np
 from sqlalchemy import select
 
 from . import local_llm, models
@@ -33,18 +34,38 @@ STOPWORDS = frozenset(
     "find show state give which what how why your you".split()
 )
 
-# Retrieval/LLM knobs — env-tunable without a redeploy.
-STRONG_MATCH = float(os.getenv("TUTOR_STRONG_MATCH", "0.45"))
-WEAK_MATCH = float(os.getenv("TUTOR_WEAK_MATCH", "0.18"))
 # Corpus rows scanned per query — plenty for CAIE scale.
 MAX_CANDIDATES = int(os.getenv("TUTOR_MAX_CANDIDATES", "5000"))
 
 CUSTOM_LLM_TIMEOUT = float(os.getenv("CUSTOM_LLM_TIMEOUT", "30"))
 
 # Token sets per aligned-question row id, built lazily on first retrieval.
-# The corpus is append-mostly and capped at MAX_CANDIDATES rows, so caching
-# every row is cheap; the size guard only trips if the DB is swapped out.
 _token_cache: dict[int, set[str]] = {}
+
+_embedding_model = None
+_vector_cache: dict[str, np.ndarray] = {}
+
+def get_embedding_model():
+    global _embedding_model
+    if _embedding_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            # Use a fast, small model that runs great on CPU
+            _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("Failed to load sentence-transformers: %s", exc)
+    return _embedding_model
+
+def get_thresholds():
+    model = get_embedding_model()
+    is_vector = model is not None
+    strong_default = "0.75" if is_vector else "0.45"
+    weak_default = "0.50" if is_vector else "0.18"
+    return (
+        float(os.getenv("TUTOR_STRONG_MATCH", strong_default)),
+        float(os.getenv("TUTOR_WEAK_MATCH", weak_default))
+    )
 
 
 def _allowed_llm_url(url: str) -> bool:
@@ -83,7 +104,7 @@ def _source_of(paper: PastPaper, question: AlignedQuestion) -> dict:
 async def _ranked_matches(
     question_text: str, limit: int = 3, exclude_ids: set[str] | None = None
 ) -> list[tuple[float, AlignedQuestion, PastPaper]]:
-    query = _tokens(question_text)
+    model = get_embedding_model()
     statement = (
         select(AlignedQuestion, PastPaper)
         .join(PastPaper, AlignedQuestion.question_paper_id == PastPaper.id)
@@ -95,6 +116,47 @@ async def _ranked_matches(
         statement = statement.where(AlignedQuestion.id.notin_(exclude_ids))
     async with models.SessionFactory() as session:
         rows = (await session.execute(statement)).all()
+
+    if model is not None:
+        if len(_vector_cache) > 2 * MAX_CANDIDATES:
+            _vector_cache.clear()
+        try:
+            q_vec = model.encode(question_text, convert_to_numpy=True)
+            q_norm = np.linalg.norm(q_vec)
+            if q_norm > 0:
+                q_vec = q_vec / q_norm
+        except Exception:
+            q_vec = None
+
+        if q_vec is not None:
+            uncached_indices = []
+            uncached_texts = []
+            for idx, (aligned, paper) in enumerate(rows):
+                if aligned.id not in _vector_cache:
+                    uncached_indices.append(idx)
+                    uncached_texts.append(aligned.question_markdown)
+
+            if uncached_texts:
+                try:
+                    embeddings = model.encode(uncached_texts, convert_to_numpy=True)
+                    for i, idx in enumerate(uncached_indices):
+                        aligned = rows[idx][0]
+                        v = embeddings[i]
+                        norm = np.linalg.norm(v)
+                        _vector_cache[aligned.id] = v / norm if norm > 0 else v
+                except Exception:
+                    pass
+
+            scored = []
+            for aligned, paper in rows:
+                v = _vector_cache.get(aligned.id)
+                sim = float(np.dot(q_vec, v)) if v is not None else 0.0
+                scored.append((sim, aligned, paper))
+            scored.sort(key=lambda item: item[0], reverse=True)
+            return scored[:limit]
+
+    # Fallback to token-overlap similarity
+    query = _tokens(question_text)
     if len(_token_cache) > 2 * MAX_CANDIDATES:
         _token_cache.clear()  # only on a corpus swap; normal growth never trips this
     scored = []
@@ -115,14 +177,24 @@ def _system_prompt(subject: str, level: str, context: str) -> str:
     )
 
 
-async def _generate_answer(question: str, subject: str, level: str, context: str) -> str | None:
+async def _generate_answer(
+    question: str,
+    subject: str,
+    level: str,
+    context: str,
+    history: list[dict] | None = None,
+) -> str | None:
     """Generate from the fine-tuned model. Tries fully-offline in-process
     inference first (LOCAL_LLM=1), then an OpenAI-compatible server
     (CUSTOM_LLM_URL). Returns None if neither is available."""
     # In-process inference is CPU/GPU-bound and takes seconds — run it in a
     # worker thread so it can't stall the event loop.
     local = await asyncio.to_thread(
-        local_llm.generate, question, _system_prompt(subject, level, ""), context
+        local_llm.generate,
+        question,
+        _system_prompt(subject, level, ""),
+        context,
+        history,
     )
     if local:
         return local
@@ -130,12 +202,18 @@ async def _generate_answer(question: str, subject: str, level: str, context: str
     url = os.getenv("CUSTOM_LLM_URL", "")
     if not url or not _allowed_llm_url(url):
         return None
+
+    messages = [
+        {"role": "system", "content": _system_prompt(subject, level, context)},
+    ]
+    if history:
+        for msg in history:
+            messages.append({"role": msg["role"], "content": msg["content"]})
+    messages.append({"role": "user", "content": question})
+
     payload = {
         "model": os.getenv("CUSTOM_LLM_MODEL", "mentormind-tutor"),
-        "messages": [
-            {"role": "system", "content": _system_prompt(subject, level, context)},
-            {"role": "user", "content": question},
-        ],
+        "messages": messages,
         "temperature": 0.2,
     }
     try:
@@ -156,17 +234,19 @@ async def answer_question(
     subject: str = "",
     level: str = "",
     exclude_ids: set[str] | None = None,
+    history: list[dict] | None = None,
 ) -> dict:
     """Answer a student's question from the past-paper corpus.
 
     Returns {"answer": str, "matched": bool, "source": dict | None}.
     exclude_ids is for the evaluation harness only (leave-one-out).
     """
+    strong_match, weak_match = get_thresholds()
     matches = await _ranked_matches(question, exclude_ids=exclude_ids)
     best = matches[0] if matches else None
 
     # 1) Strong match — return the real mark-scheme working verbatim.
-    if best and best[0] >= STRONG_MATCH:
+    if best and best[0] >= strong_match:
         score, aligned, paper = best
         answer = (
             "Here is the official mark-scheme working for this question:\n\n"
@@ -179,15 +259,15 @@ async def answer_question(
     context = "\n\n---\n\n".join(
         f"Q: {aligned.question_markdown}\nMark scheme: {aligned.mark_scheme_markdown}"
         for score, aligned, paper in matches
-        if score >= WEAK_MATCH
+        if score >= weak_match
     )
-    generated = await _generate_answer(question, subject, level, context)
+    generated = await _generate_answer(question, subject, level, context, history)
     if generated:
         source = _source_of(matches[0][2], matches[0][1]) if context else None
         return {"answer": generated, "matched": False, "source": source}
 
     # 3) Retrieval guidance from the nearest mark scheme.
-    if best and best[0] >= WEAK_MATCH:
+    if best and best[0] >= weak_match:
         score, aligned, paper = best
         answer = (
             "I couldn't find this exact question in the corpus, but here is "

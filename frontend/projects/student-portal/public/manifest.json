@@ -1,0 +1,17 @@
+{
+  "name": "MentorMinds Student Portal",
+  "short_name": "MentorMinds",
+  "description": "Learn anything, taught by real mentors.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121214",
+  "theme_color": "#ff5ca3",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "16x16 32x32 48x48 64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

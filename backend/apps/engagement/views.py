@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.permissions import IsInstructor
+from apps.core.permissions import IsInstructor, IsCronOrInstructor
 
 from . import services
 from .models import Badge, PointsEvent, RemediationTicket
@@ -113,9 +113,16 @@ class RemediationTicketViewSet(viewsets.ModelViewSet):
     trigger an on-demand scan."""
 
     serializer_class = RemediationTicketSerializer
-    permission_classes = [IsInstructor]
+    permission_classes = [IsCronOrInstructor]
     http_method_names = ["get", "patch", "post"]
     filterset_fields = ["status", "risk"]
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        from apps.flags.services import flag_enabled
+        from rest_framework.exceptions import PermissionDenied
+        if not flag_enabled("dropout_risk", default=True):
+            raise PermissionDenied("Dropout risk prediction is currently disabled.")
 
     def get_queryset(self):
         queryset = RemediationTicket.objects.using("default").select_related("student")
@@ -141,16 +148,34 @@ class RemediationTicketViewSet(viewsets.ModelViewSet):
         Single-flight: the platform-wide sweep hits the ml-service once per
         student, so concurrent or repeated triggers are refused."""
         from django.core.cache import cache
+        from django.conf import settings
 
-        from .tasks import scan_dropout_risk
+        cron_key = request.headers.get("X-Cron-Key")
+        is_cron = cron_key and getattr(settings, "ML_API_KEY", "") and cron_key == settings.ML_API_KEY
 
         if not cache.add("engagement:dropout-scan-lock", 1, timeout=600):
             return Response(
                 {"queued": False, "detail": "A scan is already in progress."},
                 status=status.HTTP_409_CONFLICT,
             )
-        result = scan_dropout_risk.delay()
-        return Response(
-            {"queued": True, "task_id": result.id},
-            status=status.HTTP_202_ACCEPTED,
-        )
+
+        try:
+            if is_cron:
+                # Run synchronously to support free Render environments without Celery workers
+                from .risk import scan_students
+                scanned, flagged = scan_students()
+                cache.delete("engagement:dropout-scan-lock")
+                return Response({
+                    "queued": False,
+                    "detail": f"scanned {scanned} student(s), flagged {flagged} high-risk"
+                }, status=status.HTTP_200_OK)
+            else:
+                from .tasks import scan_dropout_risk
+                result = scan_dropout_risk.delay()
+                return Response(
+                    {"queued": True, "task_id": result.id},
+                    status=status.HTTP_202_ACCEPTED,
+                )
+        except Exception as e:
+            cache.delete("engagement:dropout-scan-lock")
+            raise e

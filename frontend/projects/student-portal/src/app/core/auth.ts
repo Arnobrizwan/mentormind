@@ -153,4 +153,16 @@ export class AuthService {
     this.accessTokenValue = null;
     this.user.set(null);
   }
+
+  async requestPasswordReset(email: string): Promise<any> {
+    return firstValueFrom(
+      this.http.post('/api/v1/auth/password-reset/', { email })
+    );
+  }
+
+  async confirmPasswordReset(payload: any): Promise<any> {
+    return firstValueFrom(
+      this.http.post('/api/v1/auth/password-reset-confirm/', payload)
+    );
+  }
 }

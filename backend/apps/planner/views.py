@@ -65,3 +65,16 @@ class ToggleItemView(APIView):
             {"error": "No such item in this week's plan."},
             status=status.HTTP_404_NOT_FOUND,
         )
+
+
+class GlobalPlannerRebuildView(APIView):
+    """Trigger the Monday-morning sweep for all active students' plans."""
+    from apps.core.permissions import IsCronOrInstructor
+    permission_classes = [IsCronOrInstructor]
+
+    def post(self, request):
+        from .builder import build_weekly_plans as run
+        built, escalated = run()
+        return Response({
+            "detail": f"built {built} plan(s), escalated {escalated} slipping student(s)"
+        }, status=status.HTTP_200_OK)

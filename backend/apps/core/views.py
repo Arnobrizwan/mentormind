@@ -408,6 +408,12 @@ class QuizViewSet(viewsets.ModelViewSet):
         suggestions only — the instructor reviews/edits and saves through
         the normal quiz/question endpoints, so AI output is never published
         unreviewed."""
+        from apps.flags.services import flag_enabled
+        if not flag_enabled("quiz_generation", default=True):
+            return Response(
+                {"detail": "Quiz generation is currently disabled."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         lesson_id = request.data.get("lesson")
         try:
             lesson = (
@@ -467,6 +473,12 @@ class QuizViewSet(viewsets.ModelViewSet):
         ml-service face detector; only the verdict is stored — never the
         image. After PROCTOR_ALERT_STREAK consecutive flagged frames the
         course instructor gets one notification."""
+        from apps.flags.services import flag_enabled
+        if not flag_enabled("proctoring", default=True):
+            return Response(
+                {"detail": "Exam proctoring is currently disabled."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         quiz = self.get_object()
         enrollment = (
             Enrollment.objects.using("default")
@@ -623,6 +635,12 @@ class ShortAnswerQuestionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def submit(self, request, pk=None):
         """Grade the student's free-text answer against the mark scheme."""
+        from apps.flags.services import flag_enabled
+        if not flag_enabled("short_answer_grading", default=True):
+            return Response(
+                {"detail": "Short-answer grading is currently disabled."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         question = self.get_object()
 
         # One in-flight submission per user+question — protects the attempt

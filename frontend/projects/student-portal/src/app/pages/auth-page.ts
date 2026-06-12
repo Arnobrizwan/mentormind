@@ -22,26 +22,32 @@ import { apiErrorMessage } from '../core/errors';
       </div>
 
       <div class="auth__card">
-        <div class="auth__tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            [attr.aria-selected]="mode() === 'login'"
-            [class.is-active]="mode() === 'login'"
-            (click)="switchMode('login')"
-          >
-            Sign in
-          </button>
-          <button
-            type="button"
-            role="tab"
-            [attr.aria-selected]="mode() === 'register'"
-            [class.is-active]="mode() === 'register'"
-            (click)="switchMode('register')"
-          >
-            Create account
-          </button>
-        </div>
+        @if (mode() === 'login' || mode() === 'register') {
+          <div class="auth__tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="mode() === 'login'"
+              [class.is-active]="mode() === 'login'"
+              (click)="switchMode('login')"
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="mode() === 'register'"
+              [class.is-active]="mode() === 'register'"
+              (click)="switchMode('register')"
+            >
+              Create account
+            </button>
+          </div>
+        } @else if (mode() === 'forgot') {
+          <h2 style="margin-bottom: 1rem; font-size: 1.3rem;">Forgot Password</h2>
+        } @else if (mode() === 'reset') {
+          <h2 style="margin-bottom: 1rem; font-size: 1.3rem;">Reset Password</h2>
+        }
 
         <form (submit)="submit($event)">
           @if (mode() === 'register') {
@@ -56,36 +62,52 @@ import { apiErrorMessage } from '../core/errors';
               />
             </label>
           }
-          <label class="field">
-            <span class="mono-label">Email</span>
-            <input
-              type="email"
-              required
-              autocomplete="email"
-              placeholder="you@example.com"
-              [value]="email()"
-              (input)="email.set($any($event.target).value)"
-            />
-          </label>
-          <label class="field">
-            <span class="mono-label">Password</span>
-            <input
-              type="password"
-              required
-              [attr.autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"
-              placeholder="••••••••"
-              [value]="password()"
-              (input)="password.set($any($event.target).value)"
-            />
-          </label>
+          @if (mode() !== 'reset') {
+            <label class="field">
+              <span class="mono-label">Email</span>
+              <input
+                type="email"
+                required
+                autocomplete="email"
+                placeholder="you@example.com"
+                [value]="email()"
+                (input)="email.set($any($event.target).value)"
+              />
+            </label>
+          }
+          @if (mode() !== 'forgot') {
+            <label class="field">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="mono-label">{{ mode() === 'reset' ? 'New Password' : 'Password' }}</span>
+                @if (mode() === 'login') {
+                  <a href="#" (click)="switchMode('forgot'); $event.preventDefault();" style="font-size: 0.8rem; color: var(--accent);">Forgot?</a>
+                }
+              </div>
+              <input
+                type="password"
+                required
+                [attr.autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"
+                placeholder="••••••••"
+                [value]="password()"
+                (input)="password.set($any($event.target).value)"
+              />
+            </label>
+          }
 
           @if (error(); as message) {
             <p class="error-note" role="alert">{{ message }}</p>
           }
+          @if (successMessage(); as message) {
+            <p class="success-note" role="status" style="color: var(--teal); font-size: 0.85rem; margin: 0.4rem 0;">{{ message }}</p>
+          }
 
           <button class="btn btn--accent auth__submit" type="submit" [disabled]="busy()">
-            {{ busy() ? 'One moment…' : mode() === 'login' ? 'Sign in' : 'Enroll me' }}
+            {{ busy() ? 'One moment…' : mode() === 'login' ? 'Sign in' : mode() === 'register' ? 'Enroll me' : mode() === 'forgot' ? 'Send reset link' : 'Reset password' }}
           </button>
+
+          @if (mode() === 'forgot' || mode() === 'reset') {
+            <a href="#" (click)="switchMode('forgot'); switchMode('login'); $event.preventDefault();" style="font-size: 0.85rem; color: var(--accent); margin-top: 0.5rem; text-align: center; display: block;">Back to sign in</a>
+          }
         </form>
       </div>
     </section>
@@ -175,16 +197,31 @@ export class AuthPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly mode = signal<'login' | 'register'>('login');
+  protected readonly mode = signal<'login' | 'register' | 'forgot' | 'reset'>('login');
   protected readonly email = signal('');
   protected readonly password = signal('');
   protected readonly displayName = signal('');
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly successMessage = signal<string | null>(null);
+  protected readonly uid = signal('');
+  protected readonly token = signal('');
 
-  protected switchMode(mode: 'login' | 'register'): void {
+  constructor() {
+    const mode = this.route.snapshot.queryParamMap.get('mode');
+    const uid = this.route.snapshot.queryParamMap.get('uid');
+    const token = this.route.snapshot.queryParamMap.get('token');
+    if (mode === 'reset' && uid && token) {
+      this.mode.set('reset');
+      this.uid.set(uid);
+      this.token.set(token);
+    }
+  }
+
+  protected switchMode(mode: 'login' | 'register' | 'forgot' | 'reset'): void {
     this.mode.set(mode);
     this.error.set(null);
+    this.successMessage.set(null);
   }
 
   protected async submit(event: Event): Promise<void> {
@@ -192,22 +229,43 @@ export class AuthPage {
     if (this.busy()) return;
     this.busy.set(true);
     this.error.set(null);
+    this.successMessage.set(null);
     try {
       if (this.mode() === 'login') {
         await this.auth.login(this.email(), this.password());
-      } else {
+        await this.api.refreshEnrollments();
+        const next = this.route.snapshot.queryParamMap.get('next') ?? '/dashboard';
+        await this.router.navigateByUrl(next);
+      } else if (this.mode() === 'register') {
         await this.auth.register(this.email(), this.password(), this.displayName());
+        await this.api.refreshEnrollments();
+        const next = this.route.snapshot.queryParamMap.get('next') ?? '/dashboard';
+        await this.router.navigateByUrl(next);
+      } else if (this.mode() === 'forgot') {
+        const res = await this.auth.requestPasswordReset(this.email());
+        let msg = 'If the email exists, a password reset link has been sent.';
+        if (res && res.debug_link) {
+          msg += ` (Debug link: ${res.debug_link})`;
+        }
+        this.successMessage.set(msg);
+      } else if (this.mode() === 'reset') {
+        await this.auth.confirmPasswordReset({
+          uid: this.uid(),
+          token: this.token(),
+          password: this.password(),
+        });
+        this.successMessage.set('Password reset successfully! Please sign in with your new password.');
+        this.mode.set('login');
       }
-      await this.api.refreshEnrollments();
-      const next = this.route.snapshot.queryParamMap.get('next') ?? '/dashboard';
-      await this.router.navigateByUrl(next);
     } catch (err) {
       this.error.set(
         apiErrorMessage(
           err,
           this.mode() === 'login'
             ? 'Sign-in failed — check your email and password.'
-            : 'Registration failed — try a different email or stronger password.',
+            : this.mode() === 'register'
+            ? 'Registration failed — try a different email or stronger password.'
+            : 'Action failed — please try again.',
         ),
       );
     } finally {
