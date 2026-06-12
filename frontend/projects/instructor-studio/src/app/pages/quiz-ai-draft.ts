@@ -55,7 +55,12 @@ interface DraftForm {
             </button>
           </div>
           @if (generating()) {
-            <p class="tag ai__wait" role="status">Drafting questions… this can take a minute.</p>
+            <div class="ai__wait" role="status">
+              <p class="tag">Drafting questions… this can take a minute.</p>
+              <div class="ai__bar" aria-hidden="true">
+                <div class="ai__bar-sweep"></div>
+              </div>
+            </div>
           }
         }
       } @else if (draft(); as d) {
@@ -145,7 +150,31 @@ interface DraftForm {
 
     .ai__wait {
       margin-top: 0.9rem;
-      color: var(--amber);
+
+      .tag { color: var(--amber); }
+    }
+
+    /* Indeterminate processing bar while the AI drafts. */
+    .ai__bar {
+      height: 4px;
+      margin-top: 0.55rem;
+      max-width: 420px;
+      border-radius: 99px;
+      background: rgba(154, 100, 2, 0.15);
+      overflow: hidden;
+    }
+
+    .ai__bar-sweep {
+      height: 100%;
+      width: 35%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, rgba(154, 100, 2, 0.25), var(--amber), rgba(154, 100, 2, 0.25));
+      animation: ai-sweep 1.3s ease-in-out infinite;
+    }
+
+    @keyframes ai-sweep {
+      from { transform: translateX(-120%); }
+      to { transform: translateX(420%); }
     }
 
     .ai__note {

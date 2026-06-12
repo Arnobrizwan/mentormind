@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 
+import { prefersReducedMotion, staggerDelay } from '../core/animations';
 import { StudioApi } from '../core/api';
 import { apiErrorMessage } from '../core/errors';
 import { Course, Flashcard, FlashcardSource } from '../core/models';
@@ -62,8 +63,12 @@ const SOURCE_BADGE: Record<FlashcardSource, string> = {
         @if (drafts().length === 0) {
           <p class="tag" style="padding: 0.4rem 0">No drafts — generate from a lesson or add cards manually.</p>
         }
-        @for (card of drafts(); track card.id) {
-          <div class="panel card">
+        @for (card of drafts(); track card.id; let i = $index) {
+          <div
+            class="panel card sheet-in"
+            [class.card--leaving]="leavingId() === card.id"
+            [style.animation-delay.ms]="leavingId() === card.id ? 0 : stagger(i)"
+          >
             @if (editingId() === card.id) {
               <form (submit)="saveEdit($event, card)">
                 <p class="tag">Editing card</p>
@@ -112,8 +117,8 @@ const SOURCE_BADGE: Record<FlashcardSource, string> = {
         @if (published().length === 0) {
           <p class="tag" style="padding: 0.4rem 0">No published cards yet — approve a draft to go live.</p>
         }
-        @for (card of published(); track card.id) {
-          <div class="panel card">
+        @for (card of published(); track card.id; let i = $index) {
+          <div class="panel card sheet-in" [style.animation-delay.ms]="stagger(i)">
             @if (editingId() === card.id) {
               <form (submit)="saveEdit($event, card)">
                 <p class="tag">Editing card</p>
@@ -225,6 +230,30 @@ const SOURCE_BADGE: Record<FlashcardSource, string> = {
       margin-top: 0.5rem;
     }
 
+    /* An approved draft collapses + fades out before the list refreshes. */
+    .card--leaving {
+      animation: card-out 250ms ease forwards;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    @keyframes card-out {
+      from {
+        opacity: 1;
+        max-height: 480px;
+        transform: translateY(0);
+      }
+      to {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-width: 0;
+        margin-bottom: -0.9rem;
+        transform: translateY(-6px);
+      }
+    }
+
     .card__head {
       display: flex;
       align-items: center;
@@ -315,6 +344,9 @@ export class FlashcardsTab {
   protected readonly generateLessonId = signal<number | null>(null);
   protected readonly generationQueued = signal(false);
 
+  /** Draft currently animating out after approval, or null. */
+  protected readonly leavingId = signal<number | null>(null);
+
   // Edit-in-place form state.
   protected readonly editingId = signal<number | null>(null);
   protected readonly editTopic = signal('');
@@ -339,6 +371,11 @@ export class FlashcardsTab {
 
   protected sourceBadge(source: FlashcardSource): string {
     return SOURCE_BADGE[source];
+  }
+
+  /** Entrance-stagger delay (ms) for the nth card, capped at ~10. */
+  protected stagger(index: number): number {
+    return staggerDelay(index);
   }
 
   private async load(courseId: number): Promise<void> {
@@ -427,10 +464,15 @@ export class FlashcardsTab {
   }
 
   protected approve(card: Flashcard): void {
-    void this.run(
-      () => this.api.updateFlashcard(card.id, { is_published: true }),
-      'Could not approve the card.',
-    );
+    if (this.busy()) return;
+    this.leavingId.set(card.id);
+    void this.run(async () => {
+      // Let the card finish its collapse before the list refreshes.
+      const exit = prefersReducedMotion()
+        ? Promise.resolve()
+        : new Promise((resolve) => setTimeout(resolve, 250));
+      await Promise.all([this.api.updateFlashcard(card.id, { is_published: true }), exit]);
+    }, 'Could not approve the card.').finally(() => this.leavingId.set(null));
   }
 
   protected unpublish(card: Flashcard): void {

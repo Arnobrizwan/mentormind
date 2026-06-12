@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { ConfettiBurst } from '../core/confetti';
 import { apiErrorMessage } from '../core/errors';
 import { RevisionApi, RevisionCard } from '../core/revision';
 
@@ -14,7 +15,7 @@ const GRADES = [
 
 @Component({
   selector: 'mm-revision',
-  imports: [RouterLink],
+  imports: [RouterLink, ConfettiBurst],
   host: { '(window:keydown)': 'onKey($event)' },
   template: `
     <section class="rev rise">
@@ -39,18 +40,29 @@ const GRADES = [
       @if (loading()) {
         <p class="mono-label">Shuffling your cards…</p>
       } @else if (current(); as card) {
-        <div class="card" [class.card--flipped]="revealed()">
-          <div class="card__labels">
-            @if (card.topic) {
-              <span class="card__topic mono-label">{{ card.topic }}</span>
-            }
-            <span class="mono-label card__course">{{ card.course_title }}</span>
+        <div class="flip" [class.flip--flipped]="revealed()" [class.flip--enter]="entering()">
+          <div class="flip__inner">
+            <div class="card flip__face" [attr.aria-hidden]="revealed()">
+              <div class="card__labels">
+                @if (card.topic) {
+                  <span class="card__topic mono-label">{{ card.topic }}</span>
+                }
+                <span class="mono-label card__course">{{ card.course_title }}</span>
+              </div>
+              <p class="card__face">{{ card.front }}</p>
+            </div>
+            <div class="card flip__face flip__face--back" [attr.aria-hidden]="!revealed()">
+              <div class="card__labels">
+                @if (card.topic) {
+                  <span class="card__topic mono-label">{{ card.topic }}</span>
+                }
+                <span class="mono-label card__course">{{ card.course_title }}</span>
+              </div>
+              <p class="card__front-echo">{{ card.front }}</p>
+              <hr class="card__rule" />
+              <p class="card__face card__face--back">{{ card.back }}</p>
+            </div>
           </div>
-          <p class="card__face">{{ card.front }}</p>
-          @if (revealed()) {
-            <hr class="card__rule" />
-            <p class="card__face card__face--back">{{ card.back }}</p>
-          }
         </div>
 
         @if (error(); as message) {
@@ -85,7 +97,7 @@ const GRADES = [
         }
       } @else {
         <div class="done rise">
-          <h2>All caught up 🎉</h2>
+          <h2 class="done__title">All caught up 🎉<mm-confetti /></h2>
           <p>No cards are due right now — come back tomorrow.</p>
           <a routerLink="/dashboard" class="btn btn--ghost">← Back to my desk</a>
         </div>
@@ -109,6 +121,59 @@ const GRADES = [
 
     .rev__due { color: var(--ink-soft); }
 
+    /* ---- 3D flip ------------------------------------------------ */
+
+    .flip {
+      perspective: 1200px;
+      margin-bottom: 1.1rem;
+    }
+
+    .flip__inner {
+      display: grid;
+      transform-style: preserve-3d;
+      transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .flip--flipped .flip__inner {
+      transform: rotateY(180deg);
+    }
+
+    /* While a graded card swaps out, snap the new one to its front
+       face instead of visibly un-flipping. */
+    .flip:not(.flip--enter) .flip__inner {
+      transition: none;
+    }
+
+    .flip__face {
+      grid-area: 1 / 1;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .flip__face--back {
+      transform: rotateY(180deg);
+    }
+
+    .flip--enter {
+      animation: card-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes card-in {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .flip__inner { transition: none; }
+      .flip--enter { animation: none; }
+    }
+
     .card {
       display: flex;
       flex-direction: column;
@@ -118,7 +183,6 @@ const GRADES = [
       background: var(--card);
       border: 2px solid var(--line-strong);
       border-radius: 14px;
-      margin-bottom: 1.1rem;
     }
 
     .card__labels {
@@ -153,6 +217,14 @@ const GRADES = [
       font-family: var(--font-body);
       font-size: 1.05rem;
       color: var(--ink);
+    }
+
+    .card__front-echo {
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--ink-soft);
+      white-space: pre-wrap;
     }
 
     .card__rule {
@@ -226,6 +298,11 @@ const GRADES = [
       .btn { margin-top: 0.5rem; }
     }
 
+    .done__title {
+      position: relative;
+      display: inline-block;
+    }
+
     @media (max-width: 560px) {
       .grades { grid-template-columns: repeat(2, 1fr); }
     }
@@ -239,6 +316,12 @@ export class RevisionPage {
   protected readonly queue = signal<RevisionCard[]>([]);
   protected readonly dueCount = signal(0);
   protected readonly revealed = signal(false);
+  /**
+   * Drives the next-card slide-up: dropped just before the queue advances
+   * (which also snaps the flip back to the front face without a visible
+   * un-flip), then restored a frame later so the entrance animation re-runs.
+   */
+  protected readonly entering = signal(true);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -285,9 +368,16 @@ export class RevisionPage {
     this.error.set(null);
     try {
       await this.api.review(card.id, grade);
+      // Swap instantly (no visible un-flip), then slide the next card in.
+      this.entering.set(false);
       this.queue.update((cards) => cards.filter((c) => c.id !== card.id));
       this.dueCount.update((count) => Math.max(0, count - 1));
       this.revealed.set(false);
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => requestAnimationFrame(() => this.entering.set(true)));
+      } else {
+        this.entering.set(true);
+      }
       if (this.queue().length === 0 && !this.confirmedEmpty) {
         // Refetch once to confirm nothing else came due mid-session.
         this.confirmedEmpty = true;

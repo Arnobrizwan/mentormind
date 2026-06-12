@@ -380,15 +380,28 @@ const STARTERS = [
       }
     }
 
-    .dots span {
-      animation: blink-dot 1.2s infinite;
-      &:nth-child(2) { animation-delay: 0.2s; }
-      &:nth-child(3) { animation-delay: 0.4s; }
+    .dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.62rem;
+      color: var(--accent-deep);
     }
 
-    @keyframes blink-dot {
-      0%, 100% { opacity: 0.2; }
-      50% { opacity: 1; }
+    .dots span {
+      display: inline-block;
+      animation: bounce-dot 0.9s ease-in-out infinite;
+      &:nth-child(2) { animation-delay: 0.15s; }
+      &:nth-child(3) { animation-delay: 0.3s; }
+    }
+
+    @keyframes bounce-dot {
+      0%, 100% { transform: translateY(0); opacity: 0.35; }
+      40% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .dots span { animation: none; opacity: 0.6; }
     }
 
     .starters {

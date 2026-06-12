@@ -3,6 +3,8 @@ import { RouterLink } from '@angular/router';
 
 import { LearningApi } from '../core/api';
 import { AuthService } from '../core/auth';
+import { ConfettiBurst } from '../core/confetti';
+import { CountUpDirective } from '../core/count-up';
 import { EngagementApi } from '../core/engagement';
 import { QuizAttempt } from '../core/models';
 import { PlannerApi } from '../core/planner';
@@ -21,7 +23,7 @@ interface CourseRef {
 
 @Component({
   selector: 'mm-dashboard',
-  imports: [RouterLink],
+  imports: [RouterLink, ConfettiBurst, CountUpDirective],
   template: `
     <section class="desk rise">
       <p class="mono-label">My Desk</p>
@@ -31,8 +33,8 @@ interface CourseRef {
       </h1>
       @if (engagement.me(); as eng) {
         <div class="spark-row">
-          <span class="mono-label">🔥 {{ eng.streak }}-day streak</span>
-          <span class="mono-label">★ {{ eng.points_total }} pts</span>
+          <span class="mono-label">🔥 <span [mmCountUp]="eng.streak"></span>-day streak</span>
+          <span class="mono-label">★ <span [mmCountUp]="eng.points_total"></span> pts</span>
           @if (!eng.daily_login_claimed) {
             <button class="btn btn--accent claim-btn" (click)="claimDaily()" [disabled]="claiming()">
               Claim today's +{{ eng.daily_login_points }} pts
@@ -41,13 +43,13 @@ interface CourseRef {
             <span class="stamp">Daily reward claimed</span>
           }
           @if (claimBurst(); as burst) {
-            <span class="claim-burst" aria-live="polite">+{{ burst }} pts!</span>
+            <span class="claim-burst" aria-live="polite">+{{ burst }} pts!<mm-confetti /></span>
           }
         </div>
       }
     </section>
 
-    <div class="stats rise" style="animation-delay: 90ms">
+    <div class="stats">
       <div class="stat">
         <span class="stat__number">{{ api.enrollments().length }}</span>
         <span class="mono-label">courses enrolled</span>
@@ -172,7 +174,11 @@ interface CourseRef {
     }
 
     @if (loading()) {
-      <p class="mono-label state-note">Tidying the desk…</p>
+      <div class="skeletons" role="status" aria-label="Loading your desk">
+        <div class="skeleton skeleton--row"></div>
+        <div class="skeleton skeleton--row"></div>
+        <div class="skeleton skeleton--row"></div>
+      </div>
     } @else if (api.enrollments().length === 0) {
       <div class="empty rise">
         <h2>Your desk is clear.</h2>
@@ -205,7 +211,7 @@ interface CourseRef {
                   </span>
                   <span class="mono-label">
                     Exam readiness:
-                    <strong class="ready__num">{{ ready.readiness }}%</strong>
+                    <strong class="ready__num"><span [mmCountUp]="ready.readiness"></span>%</strong>
                   </span>
                 </div>
               }
@@ -323,6 +329,7 @@ interface CourseRef {
     }
 
     .claim-burst {
+      position: relative;
       font-weight: 800;
       color: var(--accent);
       animation: burst-pop 1.8s ease forwards;
@@ -560,10 +567,20 @@ interface CourseRef {
       flex-direction: column;
       gap: 0.2rem;
       padding: 1.2rem 1.4rem;
+      /* staggered entrance, once per load (rise-in lives in styles.scss) */
+      animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-delay: 90ms;
+
+      &:nth-child(2) { animation-delay: 145ms; }
+      &:nth-child(3) { animation-delay: 200ms; }
 
       & + .stat {
         border-left: 1px solid var(--line);
       }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stat { animation: none; }
     }
 
     .stat__number {
@@ -576,6 +593,15 @@ interface CourseRef {
     }
 
     .state-note { padding: 1.5rem 0; }
+
+    .skeletons {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      padding: 0.5rem 0 1.5rem;
+    }
+
+    .skeleton--row { height: 76px; }
 
     .empty {
       display: flex;

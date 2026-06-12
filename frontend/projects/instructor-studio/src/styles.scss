@@ -235,10 +235,43 @@ button { font-family: inherit; }
   animation: sheet-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* ---- skeleton loaders ----------------------------------------- */
+
+.skeleton {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(31, 28, 22, 0.06) 25%,
+    rgba(31, 28, 22, 0.13) 45%,
+    rgba(31, 28, 22, 0.06) 65%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton--title { height: 1.2rem; width: 45%; margin-bottom: 0.8rem; }
+.skeleton--line { height: 0.8rem; width: 90%; margin-bottom: 0.5rem; }
+.skeleton--line.skeleton--short { width: 60%; }
+.skeleton--chip { height: 0.7rem; width: 120px; display: inline-block; }
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  /* New motion layers: shimmer/sweep loops stop entirely, staggered
+     entrances and count-ups collapse to their final state instantly. */
+  .skeleton {
+    animation: none !important;
+    background: rgba(31, 28, 22, 0.08);
+  }
+  .ai__bar-sweep { animation: none !important; width: 100% !important; }
+  .sheet-in, .tab-pane { animation: none !important; opacity: 1 !important; transform: none !important; }
 }

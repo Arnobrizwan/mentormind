@@ -1,5 +1,6 @@
 import { Component, effect, inject, input, signal } from '@angular/core';
 
+import { staggerDelay } from '../core/animations';
 import { StudioApi } from '../core/api';
 import { apiErrorMessage } from '../core/errors';
 import { Course, ShortAnswerQuestion, ShortAnswerSubmission } from '../core/models';
@@ -25,8 +26,8 @@ import { Course, ShortAnswerQuestion, ShortAnswerSubmission } from '../core/mode
           </p>
         }
 
-        @for (question of questions(); track question.id) {
-          <div class="panel sa">
+        @for (question of questions(); track question.id; let i = $index) {
+          <div class="panel sa sheet-in" [style.animation-delay.ms]="stagger(i)">
             @if (editingId() === question.id) {
               <form (submit)="saveEdit($event, question)">
                 <p class="tag">Editing question</p>
@@ -106,8 +107,8 @@ import { Course, ShortAnswerQuestion, ShortAnswerSubmission } from '../core/mode
                     <p class="tag" style="margin-top: 0.8rem">No submissions yet for this question.</p>
                   } @else {
                     <div class="subs__list">
-                      @for (sub of submissions(); track sub.id) {
-                        <article class="panel sub">
+                      @for (sub of submissions(); track sub.id; let si = $index) {
+                        <article class="panel sub sheet-in" [style.animation-delay.ms]="stagger(si)">
                           <header class="sub__head">
                             <strong>{{ sub.student_name || sub.student_email }}</strong>
                             <span class="tag">{{ sub.created_at.slice(0, 10) }}</span>
@@ -390,6 +391,11 @@ export class ShortAnswersTab {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /** Entrance-stagger delay (ms) for the nth row, capped at ~10. */
+  protected stagger(index: number): number {
+    return staggerDelay(index);
   }
 
   protected criteria(question: ShortAnswerQuestion): string[] {

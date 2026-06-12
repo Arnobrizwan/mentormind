@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 
+import { staggerDelay } from '../core/animations';
 import { StudioApi } from '../core/api';
 import { apiErrorMessage } from '../core/errors';
 import { RiskTicket, RiskTicketStatus } from '../core/models';
@@ -51,7 +52,16 @@ type StatusFilter = RiskTicketStatus | 'all';
     </nav>
 
     @if (loading()) {
-      <p class="tag" style="padding: 1.2rem 0">Checking the attendance ledgers…</p>
+      <p class="tag" style="padding: 1.2rem 0 0" role="status">Checking the attendance ledgers…</p>
+      <div class="list" style="margin-top: 1.2rem" aria-hidden="true">
+        @for (s of [0, 1, 2]; track s) {
+          <div class="panel ticket">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--line"></div>
+            <div class="skeleton skeleton--line skeleton--short"></div>
+          </div>
+        }
+      </div>
     } @else if (tickets().length === 0) {
       <div class="panel empty sheet-in">
         <h2>All clear on this shelf.</h2>
@@ -69,7 +79,8 @@ type StatusFilter = RiskTicketStatus | 'all';
           <article
             class="panel ticket sheet-in"
             [class.is-high]="ticket.risk === 'high'"
-            [style.animation-delay.ms]="i * 40"
+            [class.just-saved]="savedId() === ticket.id"
+            [style.animation-delay.ms]="stagger(i)"
           >
             <header class="ticket__head">
               <div class="ticket__who">
@@ -113,7 +124,7 @@ type StatusFilter = RiskTicketStatus | 'all';
               @if (savingId() === ticket.id) {
                 <span>Saving…</span>
               } @else if (savedId() === ticket.id) {
-                <span class="ticket__saved">Saved</span>
+                <span class="ticket__saved" role="status"><span class="ticket__tick" aria-hidden="true">✓</span> Saved</span>
               }
             </footer>
           </article>
@@ -253,7 +264,36 @@ type StatusFilter = RiskTicketStatus | 'all';
       border-top: 1px dashed var(--line);
     }
 
-    .ticket__saved { color: var(--teal); }
+    .ticket__saved {
+      color: var(--teal);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .ticket__tick {
+      display: inline-block;
+      animation: tick-pop 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    /* Success pulse when a PATCH lands; sheet-in is kept in the list so it
+       does not replay when the class is later removed. */
+    .ticket.just-saved {
+      animation:
+        sheet-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both,
+        saved-pulse 600ms ease;
+    }
+
+    @keyframes saved-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(14, 125, 104, 0.35); }
+      100% { box-shadow: 0 0 0 14px rgba(14, 125, 104, 0); }
+    }
+
+    @keyframes tick-pop {
+      from { opacity: 0; transform: scale(0.4); }
+      60% { transform: scale(1.25); }
+      to { opacity: 1; transform: scale(1); }
+    }
 
     @media (max-width: 700px) {
       .ticket__controls { grid-template-columns: 1fr; }
@@ -294,6 +334,11 @@ export class StudentSuccessPage {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** Entrance-stagger delay (ms) for the nth ticket, capped at ~10. */
+  protected stagger(index: number): number {
+    return staggerDelay(index, 40);
   }
 
   protected setFilter(filter: StatusFilter): void {

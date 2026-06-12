@@ -22,7 +22,11 @@ import { Course } from '../core/models';
     </section>
 
     @if (loading()) {
-      <p class="mono-label state-note">Fetching the catalog…</p>
+      <div class="grid" role="status" aria-label="Loading the catalog">
+        @for (s of skeletonSlots; track s) {
+          <div class="skeleton skeleton--card"></div>
+        }
+      </div>
     } @else if (courses().length === 0) {
       <div class="empty rise">
         <h2>The shelves are bare.</h2>
@@ -38,7 +42,7 @@ import { Course } from '../core/models';
           <a
             class="card rise"
             [routerLink]="['/courses', course.slug]"
-            [style.animation-delay.ms]="80 + i * 70"
+            [style.animation-delay.ms]="stagger(i)"
           >
             <div class="card__top">
               <span class="mono-label">No. {{ serial(i) }}</span>
@@ -87,6 +91,8 @@ import { Course } from '../core/models';
     .state-note {
       padding: 2rem 0;
     }
+
+    .skeleton--card { height: 230px; }
 
     .empty {
       padding: 3rem 0;
@@ -179,6 +185,7 @@ export class CatalogPage {
 
   protected readonly courses = signal<Course[]>([]);
   protected readonly loading = signal(true);
+  protected readonly skeletonSlots = [0, 1, 2, 3, 4, 5];
 
   constructor() {
     void this.load();
@@ -194,6 +201,11 @@ export class CatalogPage {
 
   protected serial(index: number): string {
     return String(index + 1).padStart(3, '0');
+  }
+
+  /** Per-card entrance delay — 55ms steps, capped after 8 items. */
+  protected stagger(index: number): number {
+    return 80 + Math.min(index, 8) * 55;
   }
 
   protected enrolledIn(course: Course): boolean {

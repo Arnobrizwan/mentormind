@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 
+import { staggerDelay } from '../core/animations';
 import { StudioApi } from '../core/api';
 import { apiErrorMessage } from '../core/errors';
 import { Course, ProctorLog, ProctorSession } from '../core/models';
@@ -48,8 +49,12 @@ const VERDICT_LABEL: Record<ProctorLog['verdict'], string> = {
         </div>
 
         <ul class="sessions">
-          @for (session of sortedSessions(); track session.enrollment) {
-            <li class="panel session" [class.has-violations]="session.violations > 0">
+          @for (session of sortedSessions(); track session.enrollment; let si = $index) {
+            <li
+              class="panel session sheet-in"
+              [class.has-violations]="session.violations > 0"
+              [style.animation-delay.ms]="sessionDelay(si)"
+            >
               <div class="session__head">
                 <strong>{{ session.student_name || session.student_email }}</strong>
                 <span class="tag">{{ session.student_email }}</span>
@@ -62,13 +67,14 @@ const VERDICT_LABEL: Record<ProctorLog['verdict'], string> = {
                 }
               </div>
               <div class="strip" role="img" [attr.aria-label]="stripLabel(session)">
-                @for (log of session.logs; track log.id) {
+                @for (log of session.logs; track log.id; let di = $index) {
                   <span
                     class="dot"
                     [class.dot--ok]="log.verdict === 'ok'"
                     [class.dot--no-face]="log.verdict === 'no_face'"
                     [class.dot--multi]="log.verdict === 'multiple_faces'"
                     [title]="logTitle(log)"
+                    [style.animation-delay.ms]="dotDelay(di, session.logs.length)"
                   ></span>
                 }
               </div>
@@ -235,6 +241,19 @@ export class ProctoringTab {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** Entrance-stagger delay (ms) for the nth session card, capped at ~10. */
+  protected sessionDelay(index: number): number {
+    return staggerDelay(index);
+  }
+
+  /**
+   * Left-to-right cascade so each timeline "replays": ~45ms per dot, but
+   * compressed for long strips so the whole sweep finishes within ~1.2s.
+   */
+  protected dotDelay(index: number, count: number): number {
+    return index * Math.min(45, 1200 / Math.max(count, 1));
   }
 
   protected logTitle(log: ProctorLog): string {

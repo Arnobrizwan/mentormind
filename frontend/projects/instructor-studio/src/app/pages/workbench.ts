@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
+import { CountUp, staggerDelay } from '../core/animations';
 import { StudioApi } from '../core/api';
 import { apiErrorMessage } from '../core/errors';
 import { Course, Enrollment, Lesson, Quiz, ReadinessRow } from '../core/models';
@@ -14,7 +15,7 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
 
 @Component({
   selector: 'st-workbench',
-  imports: [RouterLink, ShortAnswersTab, ProctoringTab, FlashcardsTab, QuizAiDraft],
+  imports: [RouterLink, ShortAnswersTab, ProctoringTab, FlashcardsTab, QuizAiDraft, CountUp],
   template: `
     @if (loading()) {
       <p class="tag">Unrolling the blueprint…</p>
@@ -79,9 +80,9 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
 
       @switch (tab()) {
         @case ('lessons') {
-          <div class="rows">
-            @for (lesson of c.lessons; track lesson.id) {
-              <div class="panel row">
+          <div class="rows tab-pane">
+            @for (lesson of c.lessons; track lesson.id; let i = $index) {
+              <div class="panel row sheet-in" [style.animation-delay.ms]="stagger(i)">
                 <span class="tag row__no">{{ lesson.order }}</span>
                 <div class="row__body">
                   <strong>{{ lesson.title }}</strong>
@@ -120,9 +121,9 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
         }
 
         @case ('quizzes') {
-          <div class="rows">
-            @for (quiz of c.quizzes; track quiz.id) {
-              <div class="panel quiz">
+          <div class="rows tab-pane">
+            @for (quiz of c.quizzes; track quiz.id; let i = $index) {
+              <div class="panel quiz sheet-in" [style.animation-delay.ms]="stagger(i)">
                 <div class="quiz__head">
                   <strong>{{ quiz.title }}</strong>
                   <button class="btn btn--danger btn--sm" (click)="removeQuiz(quiz)" [disabled]="busy()">
@@ -190,18 +191,19 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
         }
 
         @case ('short answers') {
-          <st-short-answers-tab [course]="c" />
+          <div class="tab-pane"><st-short-answers-tab [course]="c" /></div>
         }
 
         @case ('flashcards') {
-          <st-flashcards-tab [course]="c" />
+          <div class="tab-pane"><st-flashcards-tab [course]="c" /></div>
         }
 
         @case ('exam sessions') {
-          <st-proctoring-tab [course]="c" />
+          <div class="tab-pane"><st-proctoring-tab [course]="c" /></div>
         }
 
         @case ('roster') {
+          <div class="tab-pane">
           @if (roster().length === 0) {
             <p class="tag" style="padding: 1.2rem 0">No students enrolled yet.</p>
           } @else {
@@ -216,8 +218,8 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
                 </tr>
               </thead>
               <tbody>
-                @for (enrollment of roster(); track enrollment.id) {
-                  <tr>
+                @for (enrollment of roster(); track enrollment.id; let i = $index) {
+                  <tr class="sheet-in" [style.animation-delay.ms]="stagger(i)">
                     <td>{{ enrollment.student_name || enrollment.student_email }}</td>
                     <td class="tag">{{ enrollment.enrolled_at.slice(0, 10) }}</td>
                     <td>
@@ -241,9 +243,8 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
                           [class.ready--mid]="r.readiness >= 40 && r.readiness < 70"
                           [class.ready--low]="r.readiness < 40"
                           [title]="readinessTitle(r)"
-                        >
-                          {{ r.readiness }}
-                        </span>
+                          [stCountUp]="r.readiness"
+                        ></span>
                       } @else {
                         <span class="tag">—</span>
                       }
@@ -253,6 +254,7 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
               </tbody>
             </table>
           }
+          </div>
         }
       }
     }
@@ -316,6 +318,16 @@ type Tab = 'lessons' | 'quizzes' | 'short answers' | 'flashcards' | 'exam sessio
           border-bottom-color: var(--amber);
         }
       }
+    }
+
+    /* Each tab's content cross-fades in with a slight rise on switch. */
+    .tab-pane {
+      animation: tab-in 200ms ease both;
+    }
+
+    @keyframes tab-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .rows {
@@ -501,6 +513,11 @@ export class WorkbenchPage {
   /** Reload the course after a child tab persists something (e.g. AI quiz draft). */
   protected refresh(): void {
     void this.reload();
+  }
+
+  /** Entrance-stagger delay (ms) for the nth list item, capped at ~10 items. */
+  protected stagger(index: number): number {
+    return staggerDelay(index);
   }
 
   protected readinessFor(enrollmentId: number): ReadinessRow | undefined {

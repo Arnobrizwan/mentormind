@@ -1,6 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { CountUp, staggerDelay } from '../core/animations';
 import { StudioApi } from '../core/api';
 import { AuthService } from '../core/auth';
 import { apiErrorMessage } from '../core/errors';
@@ -8,7 +9,7 @@ import { Course } from '../core/models';
 
 @Component({
   selector: 'st-dashboard',
-  imports: [RouterLink],
+  imports: [RouterLink, CountUp],
   template: `
     <section class="head sheet-in">
       <p class="tag">Course drawer</p>
@@ -16,8 +17,45 @@ import { Course } from '../core/models';
     </section>
 
     @if (loading()) {
-      <p class="tag">Pulling blueprints…</p>
+      <p class="tag" role="status">Pulling blueprints…</p>
+      <div class="layout" aria-hidden="true">
+        <div class="list">
+          @for (s of [0, 1, 2]; track s) {
+            <div class="panel">
+              <div class="skeleton skeleton--title"></div>
+              <div class="skeleton skeleton--line"></div>
+              <div class="skeleton skeleton--line skeleton--short"></div>
+            </div>
+          }
+        </div>
+        <div class="panel">
+          <div class="skeleton skeleton--chip"></div>
+          <div class="skeleton skeleton--title" style="margin-top: 0.8rem"></div>
+          <div class="skeleton skeleton--line"></div>
+          <div class="skeleton skeleton--line skeleton--short"></div>
+        </div>
+      </div>
     } @else {
+      @if (courses().length > 0) {
+        <div class="stats sheet-in">
+          <div class="stat">
+            <span class="stat__num" [stCountUp]="courses().length"></span>
+            <span class="tag">courses</span>
+          </div>
+          <div class="stat">
+            <span class="stat__num" [stCountUp]="totalLessons()"></span>
+            <span class="tag">lessons</span>
+          </div>
+          <div class="stat">
+            <span class="stat__num" [stCountUp]="totalQuizzes()"></span>
+            <span class="tag">quizzes</span>
+          </div>
+          <div class="stat">
+            <span class="stat__num stat__num--live" [stCountUp]="liveCount()"></span>
+            <span class="tag">live</span>
+          </div>
+        </div>
+      }
       <div class="layout">
         <div class="list">
           @if (courses().length === 0) {
@@ -30,7 +68,7 @@ import { Course } from '../core/models';
             <a
               class="panel course sheet-in"
               [routerLink]="['/courses', course.slug]"
-              [style.animation-delay.ms]="i * 60"
+              [style.animation-delay.ms]="stagger(i)"
             >
               <div class="course__head">
                 <h2>{{ course.title }}</h2>
@@ -94,6 +132,34 @@ import { Course } from '../core/models';
       font-size: clamp(1.9rem, 4vw, 2.8rem);
       margin-top: 0.5rem;
     }
+
+    .stats {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-top: 1.3rem;
+      padding: 0.9rem 1.2rem;
+      border: 1px dashed var(--line-strong);
+      border-radius: 10px;
+      background: var(--panel-raised);
+    }
+
+    .stat {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .stat__num {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 640;
+      color: var(--amber);
+      font-variant-numeric: tabular-nums;
+      min-width: 1ch;
+    }
+
+    .stat__num--live { color: var(--teal); }
 
     .layout {
       display: grid;
@@ -173,6 +239,15 @@ export class DashboardPage {
   protected readonly auth = inject(AuthService);
 
   protected readonly courses = signal<Course[]>([]);
+  protected readonly totalLessons = computed(() =>
+    this.courses().reduce((sum, c) => sum + c.lessons.length, 0),
+  );
+  protected readonly totalQuizzes = computed(() =>
+    this.courses().reduce((sum, c) => sum + c.quizzes.length, 0),
+  );
+  protected readonly liveCount = computed(
+    () => this.courses().filter((c) => c.is_published).length,
+  );
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -192,6 +267,11 @@ export class DashboardPage {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** Entrance-stagger delay (ms) for the nth course card, capped at ~10. */
+  protected stagger(index: number): number {
+    return staggerDelay(index, 60);
   }
 
   protected onTitle(value: string): void {

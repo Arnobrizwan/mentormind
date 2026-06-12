@@ -130,6 +130,7 @@ flowchart LR
 | Backend | Django 6 + DRF + Celery (worker + beat) + SimpleJWT (Python 3.14) |
 | Frontend | Angular (latest, signals + standalone) — `student-portal` (:4200), `instructor-studio` (:4201), `admin-console` (:4202), `shared` lib |
 | Mobile | Capacitor (iOS + Android) wrapping the student portal — same codebase, native camera/mic |
+| Design | Hand-rolled light design system ("Fresh Air" teal/sky) — 3D flashcard flips, count-up stats, staggered entrances, skeleton loaders, celebration micro-moments; all `prefers-reduced-motion` safe |
 | ML service | FastAPI + PyTorch (MPS/CUDA/CPU) + transformers/peft + OpenCV (Python 3.13) |
 | Tutor model | Qwen2.5-0.5B-Instruct + LoRA adapter fine-tuned on aligned Cambridge past papers, served in-process |
 | Data | PostgreSQL primary + read replica, Redis, SQLite (past-paper corpus) |
@@ -315,10 +316,6 @@ keep it self-hosted (no third-party AI APIs), gate AI output behind human
 review or mark-scheme grounding, and ship tests with features.
 
 If MentorMind is useful to you, **a ⭐ helps more people find it.**
-
-## Star history
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Arnobrizwan/mentormind&type=Date)](https://star-history.com/#Arnobrizwan/mentormind&Date)
 
 ## License
 

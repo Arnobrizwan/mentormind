@@ -12,13 +12,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { LearningApi } from '../core/api';
+import { ConfettiBurst } from '../core/confetti';
 import { apiErrorMessage } from '../core/errors';
 import { Course, Quiz, QuizAttempt } from '../core/models';
 import { SiteConfig } from '../core/site-config';
 
 @Component({
   selector: 'mm-quiz',
-  imports: [RouterLink],
+  imports: [RouterLink, ConfettiBurst],
   template: `
     @if (loading()) {
       <p class="mono-label">Sharpening pencils…</p>
@@ -69,6 +70,9 @@ import { SiteConfig } from '../core/site-config';
         @if (result(); as attempt) {
           <section class="result">
             <div class="result__score" [class.result__score--pass]="attempt.score >= passThreshold()">
+              @if (attempt.score >= passThreshold()) {
+                <mm-confetti />
+              }
               <span class="result__number">{{ attempt.score }}<small>%</small></span>
               <span class="mono-label">
                 {{ attempt.correct_answers }} / {{ attempt.total_questions }} correct
@@ -302,6 +306,7 @@ import { SiteConfig } from '../core/site-config';
     }
 
     .result__score {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -313,11 +318,27 @@ import { SiteConfig } from '../core/site-config';
       border-radius: 50%;
       transform: rotate(-3deg);
       color: var(--accent-deep);
+      animation: score-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 
       &--pass {
         border-color: var(--sage);
         color: var(--sage-deep);
       }
+    }
+
+    @keyframes score-pop {
+      from {
+        opacity: 0;
+        transform: rotate(-3deg) scale(0.6);
+      }
+      to {
+        opacity: 1;
+        transform: rotate(-3deg) scale(1);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .result__score { animation: none; }
     }
 
     .result__number {
