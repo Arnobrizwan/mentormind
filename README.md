@@ -12,6 +12,11 @@ spaced repetition, adaptive practice, exam proctoring and dropout prediction —
 [![Python](https://img.shields.io/badge/python-3.13%20%7C%203.14-blue.svg)](#-try-it-in-2-minutes)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
+**[🎓 Live demo (student)](https://mentormind-demo.vercel.app) ·
+[🧑‍🏫 Live demo (instructor studio)](https://mentormind-studio.vercel.app) ·
+[📱 Android APK](https://github.com/Arnobrizwan/mentormind/releases/latest)**
+Demo logins below — the demo resets itself periodically. First request may take ~40s (free tier waking up).
+
 </div>
 
 ## ✨ See it
@@ -61,6 +66,10 @@ cd ../frontend && npm ci && npx ng serve student-portal   # http://localhost:420
 
 The tutor works out of the box (retrieval + a deterministic stub). For real
 LLM answers, start the ml-service too — see [the model pipeline](#the-tutor-model-pipeline-fully-self-hosted).
+
+Or deploy your own free demo API in one click:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Arnobrizwan/mentormind)
 
 ## Why self-hosted AI?
 
