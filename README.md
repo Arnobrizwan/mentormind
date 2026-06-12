@@ -231,6 +231,10 @@ and `ANDROID_HOME` set. The demo script auto-detects Homebrew `openjdk@21` on ma
 After changing `CORS_ALLOWED_ORIGINS` in `render.yaml`, redeploy the API so the
 APK’s `https://localhost` origin is allowed.
 
+**Student portal extras:** Bahasa Malaysia UI toggle (Profile → Language), a
+service worker for offline shell + catalog cache, Capacitor native camera for
+Snap & Solve, and Playwright smoke tests (`cd frontend && npm run test:e2e`).
+
 ## Full architecture demo (Docker)
 
 ```bash

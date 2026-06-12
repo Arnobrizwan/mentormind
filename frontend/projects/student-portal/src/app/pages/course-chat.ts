@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { LearningApi } from '../core/api';
+import { LocaleService } from '../core/locale';
 import { ChatMessage, ChatSocketMessage, CourseChatApi } from '../core/chat';
 import { EngagementApi } from '../core/engagement';
 import { SiteConfig } from '../core/site-config';
@@ -55,15 +56,15 @@ import { apiErrorMessage } from '../core/errors';
         <form class="composer" (submit)="send($event)">
           <input
             type="text"
-            placeholder="Message the room…"
-            aria-label="Chat message"
+            [placeholder]="locale.t('chat.placeholder')"
+            [attr.aria-label]="locale.t('chat.placeholder')"
             [value]="draft()"
             (input)="draft.set($any($event.target).value)"
             [disabled]="!connected() || sending()"
             maxlength="2000"
           />
           <button class="btn btn--accent" type="submit" [disabled]="!connected() || sending() || !draft().trim()">
-            Send
+            {{ locale.t('chat.send') }}
           </button>
         </form>
       </article>
@@ -171,6 +172,7 @@ export class CourseChatPage {
   protected readonly chat = inject(CourseChatApi);
   private readonly engagement = inject(EngagementApi);
   protected readonly config = inject(SiteConfig);
+  protected readonly locale = inject(LocaleService);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly threadEl = viewChild<ElementRef<HTMLElement>>('thread');

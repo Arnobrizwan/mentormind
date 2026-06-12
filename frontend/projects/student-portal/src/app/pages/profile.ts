@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../core/auth';
+import { LocaleId, LocaleService } from '../core/locale';
 import { apiErrorMessage } from '../core/errors';
 import { User } from '../core/models';
 import {
@@ -118,6 +119,29 @@ function isoLocal(date: Date): string {
         @if (nameError(); as msg) {
           <p class="error-note" role="alert">{{ msg }}</p>
         }
+      </section>
+
+      <section class="card-block rise" style="animation-delay: 145ms" aria-label="Language">
+        <h2>{{ locale.t('profile.language') }}</h2>
+        <p class="plan-note">{{ locale.t('profile.language.hint') }}</p>
+        <div class="lang-row">
+          <button
+            type="button"
+            class="btn btn--ghost btn--small"
+            [class.is-active]="locale.id() === 'en'"
+            (click)="setLanguage('en')"
+          >
+            {{ locale.t('profile.language.en') }}
+          </button>
+          <button
+            type="button"
+            class="btn btn--ghost btn--small"
+            [class.is-active]="locale.id() === 'ms'"
+            (click)="setLanguage('ms')"
+          >
+            {{ locale.t('profile.language.ms') }}
+          </button>
+        </div>
       </section>
 
       <section
@@ -333,6 +357,18 @@ function isoLocal(date: Date): string {
       a { color: var(--accent-deep); }
     }
 
+    .lang-row {
+      display: flex;
+      gap: 0.6rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+
+      .is-active {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--chip-pink) 50%, var(--card));
+      }
+    }
+
     .heatmap {
       display: grid;
       grid-template-rows: repeat(7, 12px);
@@ -421,6 +457,7 @@ function isoLocal(date: Date): string {
 export class ProfilePage {
   private readonly api = inject(ProfileApi);
   private readonly auth = inject(AuthService);
+  protected readonly locale = inject(LocaleService);
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -511,6 +548,10 @@ export class ProfilePage {
     void this.load();
     void this.loadActivity();
     void this.loadMore();
+  }
+
+  protected setLanguage(id: LocaleId): void {
+    this.locale.setLocale(id);
   }
 
   /** Capped stagger so late cells don't drag the entrance out. */

@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { LearningApi } from '../core/api';
 import { AuthService } from '../core/auth';
 import { Course } from '../core/models';
+import { LocaleService } from '../core/locale';
 import { SiteConfig } from '../core/site-config';
 
 @Component({
@@ -11,15 +12,12 @@ import { SiteConfig } from '../core/site-config';
   imports: [RouterLink],
   template: `
     <section class="hero rise">
-      <p class="mono-label">Vol. 1 — The Course Catalog</p>
+      <p class="mono-label">{{ locale.t('catalog.hero.label') }}</p>
       <h1>
-        Field notes for the<br />
-        <em>endlessly curious.</em>
+        {{ locale.t('catalog.hero.line1') }}<br />
+        <em>{{ locale.t('catalog.hero.line2') }}</em>
       </h1>
-      <p class="hero__sub">
-        Every course is a working notebook — lessons, quizzes, and a mentor who
-        has actually done the thing. Pick one up and start scribbling.
-      </p>
+      <p class="hero__sub">{{ locale.t('catalog.hero.sub') }}</p>
     </section>
 
     @if (loading()) {
@@ -217,6 +215,7 @@ import { SiteConfig } from '../core/site-config';
 export class CatalogPage {
   private readonly learningApi = inject(LearningApi);
   protected readonly auth = inject(AuthService);
+  protected readonly locale = inject(LocaleService);
   private readonly config = inject(SiteConfig);
 
   protected readonly courses = signal<Course[]>([]);

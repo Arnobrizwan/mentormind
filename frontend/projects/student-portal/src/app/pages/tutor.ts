@@ -3,7 +3,9 @@ import { Component, DestroyRef, NgZone, computed, inject, signal } from '@angula
 
 import { AuthService } from '../core/auth';
 import { apiErrorMessage } from '../core/errors';
+import { LocaleService } from '../core/locale';
 import { parseTutorReply, renderMarkdown } from '../core/markdown';
+import { pickQuestionPhoto } from '../core/native-camera';
 import { TutorApi, TutorMessage, TutorQuota, TutorSession } from '../core/tutor';
 
 /**
@@ -74,7 +76,12 @@ const STARTERS = [
       <!-- chat column -->
       <section class="chat">
         <header class="chat__head">
-          <h1>AI Tutor</h1>
+          <div class="chat__title-row">
+            <h1>AI Tutor</h1>
+            @if (speechSupported && ttsSupported) {
+              <span class="voice-badge mono-label">{{ locale.t('tutor.voiceMode') }}</span>
+            }
+          </div>
           <div class="chat__pickers">
             <select [value]="subject()" (change)="subject.set($any($event.target).value)" [disabled]="!!session()" aria-label="Subject">
               @for (s of subjects(); track s) { <option [value]="s">{{ s }}</option> }
@@ -202,13 +209,13 @@ const STARTERS = [
           <button
             type="button"
             class="composer__snap"
-            (click)="fileInput.click()"
+            (click)="snapPhoto(fileInput)"
             [disabled]="thinking()"
             title="Snap & Solve — photograph a question"
             aria-label="Snap and Solve — photograph a question"
           >
             <span aria-hidden="true">📷</span>
-            <span class="composer__snap-label">Snap</span>
+            <span class="composer__snap-label">{{ locale.t('tutor.snap') }}</span>
           </button>
           @if (speechSupported) {
             <button
@@ -229,8 +236,8 @@ const STARTERS = [
           }
           <input
             type="text"
-            placeholder="Ask your tutor…"
-            aria-label="Ask your tutor"
+            [placeholder]="locale.t('tutor.placeholder')"
+            [attr.aria-label]="locale.t('tutor.placeholder')"
             [value]="draft()"
             (input)="draft.set($any($event.target).value)"
             [disabled]="thinking()"
@@ -305,6 +312,18 @@ const STARTERS = [
       margin-bottom: 1rem;
 
       h1 { font-size: 2rem; }
+    }
+
+    .chat__title-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .voice-badge {
+      color: var(--accent-deep);
+      max-width: 28ch;
+      line-height: 1.35;
     }
 
     .chat__pickers {
@@ -633,6 +652,7 @@ const STARTERS = [
 export class TutorPage {
   private readonly api = inject(TutorApi);
   private readonly auth = inject(AuthService);
+  protected readonly locale = inject(LocaleService);
 
   // Include the open session's values so older sessions whose
   // subject/level predate these lists never render a blank select.
@@ -720,7 +740,7 @@ export class TutorPage {
     const Ctor = dictationCtor();
     if (!Ctor) return;
     const recognition = new Ctor();
-    recognition.lang = navigator.language || 'en-US';
+    recognition.lang = this.locale.speechLang();
     recognition.interimResults = true;
     recognition.continuous = true;
     const existing = this.draft().trimEnd();
@@ -784,6 +804,7 @@ export class TutorPage {
         ? parseTutorReply(message.content).body
         : message.content;
     const utterance = new SpeechSynthesisUtterance(this.speechText(text));
+    utterance.lang = this.locale.speechLang();
     utterance.onend = () => this.zone.run(() => this.speakingId.set(null));
     utterance.onerror = () => this.zone.run(() => this.speakingId.set(null));
     this.speakingId.set(message.id);
@@ -807,6 +828,20 @@ export class TutorPage {
       .replace(/[*_~|]/g, '')
       .replace(/\s{2,}/g, ' ')
       .trim();
+  }
+
+  protected async snapPhoto(fileInput: HTMLInputElement): Promise<void> {
+    const native = await pickQuestionPhoto();
+    if (native) {
+      if (native.size > TutorPage.MAX_IMAGE_BYTES) {
+        this.error.set('That image is too large — the limit is 8 MB.');
+        return;
+      }
+      this.error.set(null);
+      this.setAttachment(native);
+      return;
+    }
+    fileInput.click();
   }
 
   protected onFileSelected(event: Event): void {

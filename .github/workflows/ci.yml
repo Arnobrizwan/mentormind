@@ -93,3 +93,24 @@ jobs:
           npx ng build student-portal
           npx ng build instructor-studio
           npx ng build admin-console
+
+  e2e-student-portal:
+    runs-on: ubuntu-latest
+    needs: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "latest"
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Build student portal
+        working-directory: frontend
+        run: npx ng build student-portal
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install chromium --with-deps
+      - name: E2E smoke tests
+        working-directory: frontend
+        run: npm run test:e2e

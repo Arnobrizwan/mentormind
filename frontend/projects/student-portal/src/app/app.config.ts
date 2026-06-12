@@ -12,6 +12,7 @@ import { API_BASE_URL, apiBaseUrlFromWindow } from './core/api-base-url';
 import { AuthService } from './core/auth';
 import { authInterceptor } from './core/auth-interceptor';
 import { slowApiInterceptor } from './core/slow-api';
+import { LocaleService } from './core/locale';
 import { SiteConfig } from './core/site-config';
 
 export const appConfig: ApplicationConfig = {
@@ -31,5 +32,9 @@ export const appConfig: ApplicationConfig = {
     }),
     // Bootstrap branding + flags from the settings engine (dynamic-first).
     provideAppInitializer(() => inject(SiteConfig).load()),
+    provideAppInitializer(() => {
+      const locale = inject(LocaleService);
+      locale.setLocale(locale.id());
+    }),
   ],
 };

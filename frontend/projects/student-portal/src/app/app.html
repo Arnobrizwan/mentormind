@@ -1,7 +1,7 @@
 <div class="frame">
   @if (!connectivity.online()) {
     <div class="offline-banner" role="status">
-      <span aria-hidden="true">📡</span> You're offline — cached catalog and enrollments still work; chat and quizzes need a connection.
+      <span aria-hidden="true">📡</span> {{ locale.t('offline.banner') }}
     </div>
   }
   @if (slowApi.waking()) {
@@ -21,23 +21,23 @@
       </a>
 
       <nav class="nav nav--desktop" aria-label="Primary">
-        <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Catalog</a>
+        <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">{{ locale.t('nav.catalog') }}</a>
         @if (auth.isLoggedIn()) {
-          <a routerLink="/dashboard" routerLinkActive="is-active">My Desk</a>
+          <a routerLink="/dashboard" routerLinkActive="is-active">{{ locale.t('nav.desk') }}</a>
           @if (config.flagEnabled('ai_tutor')) {
-            <a routerLink="/tutor" routerLinkActive="is-active">AI Tutor</a>
+            <a routerLink="/tutor" routerLinkActive="is-active">{{ locale.t('nav.tutor') }}</a>
           }
           <a routerLink="/revision" routerLinkActive="is-active" class="nav__revision">
-            Revision
+            {{ locale.t('nav.revision') }}
             @if (dueCount() > 0) {
               <span class="nav__badge" [attr.aria-label]="dueCount() + ' cards due'">{{
                 dueCount() > 99 ? '99+' : dueCount()
               }}</span>
             }
           </a>
-          <a routerLink="/planner" routerLinkActive="is-active">Planner</a>
-          <a routerLink="/profile" routerLinkActive="is-active">Profile</a>
-          <a routerLink="/notifications" routerLinkActive="is-active">Alerts</a>
+          <a routerLink="/planner" routerLinkActive="is-active">{{ locale.t('nav.planner') }}</a>
+          <a routerLink="/profile" routerLinkActive="is-active">{{ locale.t('nav.profile') }}</a>
+          <a routerLink="/notifications" routerLinkActive="is-active">{{ locale.t('nav.alerts') }}</a>
         }
       </nav>
 
@@ -55,7 +55,7 @@
           <mm-notifications-bell />
           <mm-user-menu (signOut)="logout()" />
         } @else {
-          <a routerLink="/auth" class="btn btn--accent nav__btn tools__signin">Sign in</a>
+          <a routerLink="/auth" class="btn btn--accent nav__btn tools__signin">{{ locale.t('nav.signIn') }}</a>
         }
         <button
           type="button"
@@ -76,26 +76,26 @@
     @if (mobileOpen()) {
       <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile">
         <mm-global-search [menuMode]="true" class="mobile-menu__search" />
-        <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Catalog</a>
+        <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">{{ locale.t('nav.catalog') }}</a>
         @if (auth.isLoggedIn()) {
-          <a routerLink="/dashboard" routerLinkActive="is-active">My Desk</a>
+          <a routerLink="/dashboard" routerLinkActive="is-active">{{ locale.t('nav.desk') }}</a>
           @if (config.flagEnabled('ai_tutor')) {
-            <a routerLink="/tutor" routerLinkActive="is-active">AI Tutor</a>
+            <a routerLink="/tutor" routerLinkActive="is-active">{{ locale.t('nav.tutor') }}</a>
           }
           <a routerLink="/revision" routerLinkActive="is-active" class="nav__revision">
-            Revision
+            {{ locale.t('nav.revision') }}
             @if (dueCount() > 0) {
               <span class="nav__badge" [attr.aria-label]="dueCount() + ' cards due'">{{
                 dueCount() > 99 ? '99+' : dueCount()
               }}</span>
             }
           </a>
-          <a routerLink="/planner" routerLinkActive="is-active">Planner</a>
-          <a routerLink="/profile" routerLinkActive="is-active">Profile</a>
-          <a routerLink="/notifications" routerLinkActive="is-active">Alerts</a>
-          <button type="button" class="mobile-menu__signout" (click)="logout()">Sign out</button>
+          <a routerLink="/planner" routerLinkActive="is-active">{{ locale.t('nav.planner') }}</a>
+          <a routerLink="/profile" routerLinkActive="is-active">{{ locale.t('nav.profile') }}</a>
+          <a routerLink="/notifications" routerLinkActive="is-active">{{ locale.t('nav.alerts') }}</a>
+          <button type="button" class="mobile-menu__signout" (click)="logout()">{{ locale.t('nav.signOut') }}</button>
         } @else {
-          <a routerLink="/auth" class="btn btn--accent mobile-menu__signin">Sign in</a>
+          <a routerLink="/auth" class="btn btn--accent mobile-menu__signin">{{ locale.t('nav.signIn') }}</a>
         }
       </nav>
     }

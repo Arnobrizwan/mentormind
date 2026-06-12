@@ -27,3 +27,11 @@ services:
         value: https://mentormind-demo.vercel.app,https://mentormind-studio.vercel.app,https://localhost,capacitor://localhost,http://localhost
       - key: INSTANCE_NAME
         value: render-free
+      - key: ML_SERVICE_URL
+        value: https://arnob666666-mentormind-ml.hf.space
+      - key: TUTOR_MODEL_URL
+        value: https://arnob666666-mentormind-ml.hf.space/v1/tutor/answer
+      - key: ML_API_KEY
+        generateValue: true
+      - key: TUTOR_MODEL_TIMEOUT_SECONDS
+        value: "60"
