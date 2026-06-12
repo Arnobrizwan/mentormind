@@ -15,6 +15,9 @@ spaced repetition, adaptive practice, exam proctoring and dropout prediction —
 **[🎓 Live demo (student)](https://mentormind-demo.vercel.app) ·
 [🧑‍🏫 Live demo (instructor studio)](https://mentormind-studio.vercel.app) ·
 [📱 Android APK](https://github.com/Arnobrizwan/mentormind/releases/latest)**
+
+**$0 stack:** Vercel + Render + Hugging Face Spaces — no paid AI APIs. See [docs/FREE-DEMO-STACK.md](docs/FREE-DEMO-STACK.md).
+
 Demo logins below — the demo resets itself periodically. First request may take ~40s (free tier waking up).
 
 </div>

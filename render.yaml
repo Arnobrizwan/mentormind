@@ -31,7 +31,8 @@ services:
         value: https://arnob666666-mentormind-ml.hf.space
       - key: TUTOR_MODEL_URL
         value: https://arnob666666-mentormind-ml.hf.space/v1/tutor/answer
+      # Must match HF Space secret ML_API_KEY (see docs/FREE-DEMO-STACK.md).
       - key: ML_API_KEY
-        generateValue: true
+        value: mentormind-public-demo-ml-key
       - key: TUTOR_MODEL_TIMEOUT_SECONDS
         value: "60"
