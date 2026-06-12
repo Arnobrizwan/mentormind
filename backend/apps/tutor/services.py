@@ -142,10 +142,12 @@ def _custom_model_reply(session, history):
 
 
 def _stub_reply(session, history):
+    # No model is connected, so never pretend to know the subject matter —
+    # offer the universal problem-solving scaffold and say what this is.
     question = history[-1].content if history else ""
-    subject = session.subject or "your subject"
     return (
-        f"Great question about **{subject}**! Let's work through it step by step.\n\n"
+        "I can't give a full worked answer right now (no tutor model is "
+        "connected), but here's how to attack it step by step:\n\n"
         f"> {question[:200]}\n\n"
         "1. **Identify what's being asked** — restate the problem in your own words.\n"
         "2. **List what you know** — write down the given values or facts.\n"

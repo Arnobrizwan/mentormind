@@ -6,7 +6,7 @@ import { AuthService } from '../core/auth';
 import { ConfettiBurst } from '../core/confetti';
 import { CountUpDirective } from '../core/count-up';
 import { EngagementApi } from '../core/engagement';
-import { QuizAttempt } from '../core/models';
+import { Course, Enrollment, QuizAttempt } from '../core/models';
 import { PlannerApi } from '../core/planner';
 import {
   CourseReadiness,
@@ -19,6 +19,12 @@ import { RevisionApi } from '../core/revision';
 interface CourseRef {
   course: number;
   slug: string;
+}
+
+interface ContinueHero {
+  enrollment: Enrollment;
+  slug: string | null;
+  lessonLine: string;
 }
 
 @Component({
@@ -48,6 +54,30 @@ interface CourseRef {
         </div>
       }
     </section>
+
+    @if (hero(); as h) {
+      <section class="hero rise" style="animation-delay: 60ms" aria-label="Continue learning">
+        <p class="mono-label hero__label">Continue learning</p>
+        <h2 class="hero__title">{{ h.enrollment.course_title }}</h2>
+        <p class="hero__lesson">{{ h.lessonLine }}</p>
+        <div class="hero__progress">
+          <div
+            class="progress hero__bar"
+            role="progressbar"
+            [attr.aria-valuenow]="h.enrollment.progress_percentage"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-label="Course progress"
+          >
+            <div class="progress__bar" [style.width.%]="h.enrollment.progress_percentage"></div>
+          </div>
+          <span class="mono-label">{{ h.enrollment.progress_percentage }}%</span>
+        </div>
+        @if (h.slug) {
+          <a class="btn btn--accent hero__btn" [routerLink]="['/courses', h.slug]">Continue →</a>
+        }
+      </section>
+    }
 
     <div class="stats">
       <div class="stat">
@@ -257,6 +287,50 @@ interface CourseRef {
     }
   `,
   styles: `
+    .hero {
+      margin-top: 1.8rem;
+      padding: 1.7rem 1.9rem;
+      border-radius: 18px;
+      /* accent gradient border over a soft teal-tinted card */
+      border: 2px solid transparent;
+      background:
+        linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--accent) 7%, var(--card)) 0%,
+            var(--card) 65%
+          )
+          padding-box,
+        var(--grad-hero) border-box;
+      box-shadow: var(--shadow-card);
+    }
+
+    .hero__label { color: var(--accent-deep); }
+
+    .hero__title {
+      font-size: clamp(1.6rem, 3.4vw, 2.3rem);
+      margin: 0.55rem 0 0.35rem;
+    }
+
+    .hero__lesson {
+      font-size: 1.02rem;
+      color: var(--ink-soft);
+      margin-bottom: 1rem;
+    }
+
+    .hero__progress {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .hero__bar {
+      width: min(320px, 100%);
+      height: 10px;
+
+      .progress__bar { background: var(--grad-btn); }
+    }
+
     .spark-row {
       display: flex;
       align-items: center;
@@ -711,6 +785,7 @@ export class DashboardPage {
 
   protected readonly loading = signal(true);
   private readonly courseRefs = signal<CourseRef[]>([]);
+  private readonly courses = signal<Course[]>([]);
 
   protected readonly focus = signal<PracticeRecommendations | null>(null);
   private readonly readiness = signal<CourseReadiness[]>([]);
@@ -727,6 +802,44 @@ export class DashboardPage {
       .flatMap((e) => e.quiz_attempts)
       .sort((a, b) => b.completed_at.localeCompare(a.completed_at)),
   );
+
+  /**
+   * "Continue learning" focal card: the in-progress enrollment closest to
+   * the finish line (most recent breaks ties). Hidden when everything is
+   * complete or nothing is enrolled.
+   */
+  protected readonly hero = computed<ContinueHero | null>(() => {
+    const candidates = this.api.enrollments().filter((e) => e.progress_percentage < 100);
+    if (candidates.length === 0) return null;
+    const enrollment = [...candidates].sort(
+      (a, b) =>
+        b.progress_percentage - a.progress_percentage ||
+        b.enrolled_at.localeCompare(a.enrolled_at),
+    )[0];
+    const course = this.courses().find((c) => c.id === enrollment.course) ?? null;
+    return {
+      enrollment,
+      slug: course?.slug ?? null,
+      lessonLine: this.heroLessonLine(enrollment, course),
+    };
+  });
+
+  /** "Lesson n of total: title" when lesson data is on hand, else a progress summary. */
+  private heroLessonLine(enrollment: Enrollment, course: Course | null): string {
+    const done = new Set(enrollment.completed_lessons);
+    if (course && course.lessons.length > 0) {
+      const ordered = [...course.lessons].sort((a, b) => a.order - b.order);
+      const index = ordered.findIndex((lesson) => !done.has(lesson.id));
+      if (index >= 0) {
+        return `Lesson ${index + 1} of ${ordered.length}: ${ordered[index].title}`;
+      }
+      return `${ordered.length}/${ordered.length} lessons · ${enrollment.progress_percentage}%`;
+    }
+    return (
+      `${done.size} lesson${done.size === 1 ? '' : 's'} done · ` +
+      `${enrollment.progress_percentage}%`
+    );
+  }
 
   protected readonly averageProgress = computed(() => {
     const all = this.api.enrollments();
@@ -764,6 +877,7 @@ export class DashboardPage {
           .then((plan) => this.planPct.set(plan.completion_pct))
           .catch(() => undefined),
       ]);
+      this.courses.set(courses);
       this.courseRefs.set(courses.map((c) => ({ course: c.id, slug: c.slug })));
     } finally {
       this.loading.set(false);

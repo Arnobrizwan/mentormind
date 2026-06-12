@@ -38,6 +38,18 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/planner').then((m) => m.PlannerPage),
   },
   {
+    path: 'profile',
+    title: 'Profile · MentorMinds',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/profile').then((m) => m.ProfilePage),
+  },
+  {
+    path: 'notifications',
+    title: 'Notifications · MentorMinds',
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/notifications').then((m) => m.NotificationsPage),
+  },
+  {
     path: 'courses/:slug',
     title: 'Course · MentorMinds',
     loadComponent: () => import('./pages/course-detail').then((m) => m.CourseDetailPage),

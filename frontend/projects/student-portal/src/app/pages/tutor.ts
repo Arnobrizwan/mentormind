@@ -110,7 +110,7 @@ const STARTERS = [
         <div class="thread" aria-live="polite">
           @for (message of messages(); track message.id) {
             <div class="bubble" [class.bubble--mine]="message.role === 'user'">
-              <div class="bubble__content">{{ message.content }}</div>
+              <div class="bubble__content" [innerHTML]="rendered(message)"></div>
               @if (message.role === 'assistant') {
                 <div class="bubble__tools">
                   @if (ttsSupported) {
@@ -349,7 +349,23 @@ const STARTERS = [
     .bubble--mine {
       align-self: flex-end;
 
-      .bubble__content {
+      .bubble__content .md-quote {
+      display: inline-block;
+      border-left: 3px solid var(--accent);
+      padding-left: 0.55rem;
+      color: var(--ink-soft);
+      font-style: italic;
+    }
+
+    .bubble__content code {
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      background: color-mix(in srgb, var(--accent) 9%, transparent);
+      padding: 0.08em 0.35em;
+      border-radius: 5px;
+    }
+
+    .bubble__content {
         background: var(--ink);
         color: var(--paper);
       }
@@ -826,6 +842,28 @@ export class TutorPage {
     } catch (err) {
       this.error.set(apiErrorMessage(err, 'Could not record your feedback — try again.'));
     }
+  }
+
+  /** Minimal, safe markdown for tutor bubbles: HTML is escaped first,
+   * then bold/italic/inline-code/blockquote/ordered-bullet lines and line
+   * breaks are converted. No raw HTML ever passes through. */
+  protected rendered(message: TutorMessage): string {
+    const escaped = message.content
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+    const lines = escaped.split('\n').map((line) => {
+      let out = line;
+      if (/^\s*&gt;\s?/.test(out)) {
+        out = `<span class="md-quote">${out.replace(/^\s*&gt;\s?/, '')}</span>`;
+      }
+      return out;
+    });
+    let html = lines.join('<br>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/(^|[\s>])_([^_]+)_(?=[\s<.,!?)]|$)/g, '$1<em>$2</em>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    return html;
   }
 
   protected copy(message: TutorMessage): void {

@@ -10,6 +10,7 @@
       Waking the demo server (free tier) — this first load can take up to a minute. Thanks for waiting!
     </div>
   }
+
   <header class="masthead">
     <p class="masthead__ticker mono-label">
       {{ config.siteName() }} · Student Portal · {{ config.tagline() }}
@@ -18,20 +19,79 @@
       <a routerLink="/" class="wordmark">
         {{ config.brandParts()[0] }}<em>{{ config.brandParts()[1] }}</em>
       </a>
-      <nav class="nav">
+
+      <nav class="nav nav--desktop" aria-label="Primary">
         <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Catalog</a>
         @if (auth.isLoggedIn()) {
           <a routerLink="/dashboard" routerLinkActive="is-active">My Desk</a>
           <a routerLink="/tutor" routerLinkActive="is-active">AI Tutor</a>
-        }
-        @if (auth.user(); as user) {
-          <span class="nav__user mono-label">{{ user.display_name || user.email }}</span>
-          <button type="button" class="btn btn--ghost nav__btn" (click)="logout()">Sign out</button>
-        } @else {
-          <a routerLink="/auth" class="btn btn--accent nav__btn">Sign in</a>
+          <a routerLink="/revision" routerLinkActive="is-active" class="nav__revision">
+            Revision
+            @if (dueCount() > 0) {
+              <span class="nav__badge" [attr.aria-label]="dueCount() + ' cards due'">{{
+                dueCount() > 99 ? '99+' : dueCount()
+              }}</span>
+            }
+          </a>
+          <a routerLink="/planner" routerLinkActive="is-active">Planner</a>
         }
       </nav>
+
+      <div class="masthead__tools">
+        <mm-global-search class="tools__search" />
+        @if (auth.isLoggedIn()) {
+          @if (engagement.me(); as me) {
+            <span
+              class="streak-chip"
+              [title]="me.streak + '-day streak · ' + me.points_total + ' points'"
+            >
+              <span aria-hidden="true">🔥</span>{{ me.streak }} · {{ me.points_total }} pts
+            </span>
+          }
+          <mm-notifications-bell />
+          <mm-user-menu (signOut)="logout()" />
+        } @else {
+          <a routerLink="/auth" class="btn btn--accent nav__btn tools__signin">Sign in</a>
+        }
+        <button
+          type="button"
+          class="hamburger"
+          [class.is-open]="mobileOpen()"
+          (click)="toggleMenu()"
+          [attr.aria-expanded]="mobileOpen()"
+          [attr.aria-label]="mobileOpen() ? 'Close menu' : 'Open menu'"
+          aria-controls="mobile-menu"
+        >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </button>
+      </div>
     </div>
+
+    @if (mobileOpen()) {
+      <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile">
+        <mm-global-search [menuMode]="true" class="mobile-menu__search" />
+        <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Catalog</a>
+        @if (auth.isLoggedIn()) {
+          <a routerLink="/dashboard" routerLinkActive="is-active">My Desk</a>
+          <a routerLink="/tutor" routerLinkActive="is-active">AI Tutor</a>
+          <a routerLink="/revision" routerLinkActive="is-active" class="nav__revision">
+            Revision
+            @if (dueCount() > 0) {
+              <span class="nav__badge" [attr.aria-label]="dueCount() + ' cards due'">{{
+                dueCount() > 99 ? '99+' : dueCount()
+              }}</span>
+            }
+          </a>
+          <a routerLink="/planner" routerLinkActive="is-active">Planner</a>
+          <a routerLink="/profile" routerLinkActive="is-active">Profile</a>
+          <button type="button" class="mobile-menu__signout" (click)="logout()">Sign out</button>
+        } @else {
+          <a routerLink="/auth" class="btn btn--accent mobile-menu__signin">Sign in</a>
+        }
+      </nav>
+    }
     <hr class="hairline hairline--bold" />
   </header>
 
@@ -41,8 +101,62 @@
 
   <footer class="colophon">
     <hr class="hairline" />
-    <div class="colophon__row">
-      <span class="mono-label">{{ config.siteName() }} — an open academy</span>
+    <div class="colophon__grid">
+      <div class="colophon__col colophon__brand">
+        <a routerLink="/" class="wordmark wordmark--footer">
+          {{ config.brandParts()[0] }}<em>{{ config.brandParts()[1] }}</em>
+        </a>
+        <p class="colophon__blurb">Self-hosted AI learning — your data never leaves your server.</p>
+      </div>
+
+      <nav class="colophon__col" aria-label="Learn">
+        <p class="mono-label colophon__heading">Learn</p>
+        <a routerLink="/" class="colophon__link">Catalog</a>
+        @if (auth.isLoggedIn()) {
+          <a routerLink="/dashboard" class="colophon__link">My Desk</a>
+          <a routerLink="/tutor" class="colophon__link">AI Tutor</a>
+          <a routerLink="/revision" class="colophon__link">Revision</a>
+          <a routerLink="/planner" class="colophon__link">Planner</a>
+        } @else {
+          <a routerLink="/auth" class="colophon__link">Sign in</a>
+        }
+      </nav>
+
+      <nav class="colophon__col" aria-label="Project">
+        <p class="mono-label colophon__heading">Project</p>
+        <a
+          href="https://github.com/Arnobrizwan/mentormind"
+          target="_blank"
+          rel="noopener"
+          class="colophon__link"
+          >GitHub</a
+        >
+        <a
+          href="https://github.com/Arnobrizwan/mentormind/releases/latest"
+          target="_blank"
+          rel="noopener"
+          class="colophon__link"
+          >Release v1.0.0</a
+        >
+        <a
+          href="https://github.com/Arnobrizwan/mentormind/blob/main/LICENSE"
+          target="_blank"
+          rel="noopener"
+          class="colophon__link"
+          >MIT License</a
+        >
+        <a
+          href="https://render.com/deploy?repo=https://github.com/Arnobrizwan/mentormind"
+          target="_blank"
+          rel="noopener"
+          class="colophon__link"
+          >Deploy your own</a
+        >
+      </nav>
     </div>
+    <hr class="hairline" />
+    <p class="colophon__bottom mono-label">
+      © {{ year }} {{ config.siteName() }} · open source · made for the endlessly curious.
+    </p>
   </footer>
 </div>
