@@ -1,55 +1,67 @@
 /* ============================================================
-   MentorMind Admin Console — "Control Room" design system
-   Phosphor terminal: near-black, mono type, green/amber signal
-   lights, faint scanlines.
+   MentorMind Admin Console — light poster brand
+   Warm pink paper, magenta accent. Legacy --phosphor aliases
+   point at accent so existing panels keep working.
    ============================================================ */
 
 :root {
-  --void: #0b0e0d;
-  --bay: #111614;
-  --bay-raised: #16201c;
-  --text: #cfe3d8;
-  --text-dim: #6f8a7e;
-  --phosphor: #46d97e;
-  --phosphor-dim: rgba(70, 217, 126, 0.16);
-  --amber: #ffb454;
-  --alarm: #ff6b5e;
-  --line: rgba(207, 227, 216, 0.12);
-  --line-strong: rgba(207, 227, 216, 0.3);
+  --paper: #fff5fa;
+  --void: var(--paper);
+  --bay: #ffffff;
+  --bay-raised: #fff8fc;
+  --text: #140f1a;
+  --text-dim: #3a2f42;
+  --line: rgba(20, 15, 26, 0.09);
+  --line-strong: rgba(20, 15, 26, 0.14);
 
-  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', monospace;
-  --font-sans: 'IBM Plex Sans', 'Helvetica Neue', sans-serif;
+  --accent: #ff5ca3;
+  --accent-deep: #e84e92;
+  --accent-2: #7c3aed;
+  --accent-dim: color-mix(in srgb, var(--accent) 14%, transparent);
+  --phosphor: var(--accent);
+  --phosphor-dim: var(--accent-dim);
+  --amber: #ffd23f;
+  --alarm: #d93a52;
+
+  --grad-btn: linear-gradient(120deg, #ff5ca3 0%, #e84e92 100%);
+  --shadow-sm: 0 1px 2px rgba(20, 15, 26, 0.04), 0 8px 20px -12px rgba(255, 92, 163, 0.14);
+  --glow: 0 6px 18px -6px rgba(255, 92, 163, 0.28);
+
+  --font-display: 'Unbounded', 'Arial Black', sans-serif;
+  --font-mono: 'Spline Sans Mono', 'SFMono-Regular', monospace;
+  --font-sans: 'Plus Jakarta Sans', 'Avenir Next', sans-serif;
+
+  --speed: 180ms;
+  --ease: cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   min-height: 100dvh;
-  background-color: var(--void);
-  /* faint scanlines + a phosphor glow at the top */
+  background-color: var(--paper);
   background-image:
-    radial-gradient(90% 40% at 50% 0%, rgba(70, 217, 126, 0.06) 0%, transparent 70%),
-    repeating-linear-gradient(
-      0deg,
-      transparent 0,
-      transparent 3px,
-      rgba(0, 0, 0, 0.18) 3px,
-      rgba(0, 0, 0, 0.18) 4px
-    );
+    radial-gradient(70% 38% at 8% -4%, rgba(255, 92, 163, 0.1) 0%, transparent 60%),
+    radial-gradient(60% 34% at 96% 2%, rgba(124, 58, 237, 0.07) 0%, transparent 60%);
+  background-attachment: fixed;
   color: var(--text);
-  font-family: var(--font-mono);
-  font-size: 14.5px;
-  line-height: 1.6;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3 {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
   line-height: 1.15;
   margin: 0;
 }
@@ -59,16 +71,35 @@ a { color: inherit; }
 button { font-family: inherit; }
 
 ::selection {
-  background: var(--phosphor);
-  color: var(--void);
+  background: var(--amber);
+  color: var(--text);
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  transition:
+    background-color var(--speed) var(--ease),
+    color var(--speed) var(--ease),
+    border-color var(--speed) var(--ease),
+    box-shadow var(--speed) var(--ease),
+    transform var(--speed) var(--ease);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* ---- primitives ---------------------------------------------- */
 
 .label {
+  font-family: var(--font-mono);
   font-size: 0.66rem;
   font-weight: 500;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--text-dim);
 }
@@ -76,31 +107,43 @@ button { font-family: inherit; }
 .bay {
   background: var(--bay);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 14px;
   padding: 1.3rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--speed) var(--ease), box-shadow var(--speed) var(--ease), border-color var(--speed) var(--ease);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--glow);
+    border-color: color-mix(in srgb, var(--accent) 22%, var(--line));
+  }
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 1.1rem;
-  border: 1px solid var(--phosphor);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--phosphor);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  gap: 0.45rem;
+  padding: 0.55rem 1.15rem;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  background: var(--grad-btn);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: transform var(--speed) var(--ease), box-shadow var(--speed) var(--ease), filter var(--speed) var(--ease);
 
   &:hover:not(:disabled) {
-    background: var(--phosphor);
-    color: var(--void);
+    filter: brightness(1.05);
+    transform: translateY(-2px);
+    box-shadow: var(--glow);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
   }
 
   &:disabled {
@@ -110,18 +153,19 @@ button { font-family: inherit; }
 }
 
 .btn--alarm {
+  background: transparent;
   border-color: var(--alarm);
   color: var(--alarm);
 
   &:hover:not(:disabled) {
-    background: var(--alarm);
-    color: var(--void);
+    background: color-mix(in srgb, var(--alarm) 8%, transparent);
+    box-shadow: none;
   }
 }
 
 .btn--sm {
-  padding: 0.28rem 0.7rem;
-  font-size: 0.7rem;
+  padding: 0.32rem 0.85rem;
+  font-size: 0.74rem;
 }
 
 .field {
@@ -130,18 +174,19 @@ button { font-family: inherit; }
   gap: 0.35rem;
 
   input, textarea, select {
-    padding: 0.6rem 0.75rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 4px;
-    background: var(--void);
+    padding: 0.65rem 0.85rem;
+    border: 1.5px solid var(--line-strong);
+    border-radius: 12px;
+    background: var(--bay);
     color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    transition: border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease);
 
     &:focus {
       outline: none;
-      border-color: var(--phosphor);
-      box-shadow: 0 0 0 3px var(--phosphor-dim);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-dim);
     }
   }
 
@@ -152,23 +197,23 @@ button { font-family: inherit; }
 }
 
 .error-note {
-  padding: 0.6rem 0.85rem;
+  padding: 0.65rem 0.9rem;
   border-left: 3px solid var(--alarm);
-  background: rgba(255, 107, 94, 0.08);
+  background: color-mix(in srgb, var(--alarm) 7%, transparent);
   color: var(--alarm);
-  font-size: 0.82rem;
+  font-size: 0.86rem;
+  border-radius: 0 10px 10px 0;
 }
 
-/* toggle switch */
 .switch {
   position: relative;
-  width: 42px;
-  height: 22px;
-  border: 1px solid var(--line-strong);
+  width: 44px;
+  height: 24px;
+  border: 1.5px solid var(--line-strong);
   border-radius: 99px;
-  background: var(--void);
+  background: var(--bay-raised);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color var(--speed) var(--ease), background var(--speed) var(--ease);
   flex-shrink: 0;
 
   &::after {
@@ -180,32 +225,41 @@ button { font-family: inherit; }
     height: 16px;
     border-radius: 50%;
     background: var(--text-dim);
-    transition: transform 0.18s ease, background 0.18s ease;
+    transition: transform 0.2s var(--ease), background var(--speed) var(--ease);
   }
 
   &.is-on {
-    border-color: var(--phosphor);
-    background: var(--phosphor-dim);
+    border-color: var(--accent);
+    background: var(--accent-dim);
 
     &::after {
       transform: translateX(20px);
-      background: var(--phosphor);
+      background: var(--accent);
     }
   }
 }
 
 @keyframes boot-in {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .boot-in {
-  animation: boot-in 0.4s ease-out both;
+  animation: boot-in 0.45s var(--ease) both;
 }
+
+.stagger-rise > * {
+  animation: boot-in 0.45s var(--ease) both;
+}
+
+.stagger-rise > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-rise > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-rise > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-rise > *:nth-child(4) { animation-delay: 180ms; }
 
 @keyframes blink {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.25; }
+  50% { opacity: 0.35; }
 }
 
 .blink {
@@ -213,8 +267,13 @@ button { font-family: inherit; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+
+  .boot-in, .stagger-rise > *, .blink { animation: none !important; }
+  .bay:hover { transform: none; }
 }

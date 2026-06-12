@@ -1,7 +1,7 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 
-/** Palette pulled from the "Fresh Air" design tokens. */
-const COLORS = ['#0d9488', '#0284c7', '#ffe177', '#fb7185', '#0e8a58'];
+/** Poster brand palette — magenta, purple, yellow, coral. */
+const COLORS = ['#ff5ca3', '#7c3aed', '#ffd23f', '#fb7185', '#e84e92'];
 
 interface Piece {
   tx: string;

@@ -32,7 +32,7 @@
 }
 
 .brand__cursor {
-  color: var(--phosphor);
+  color: var(--accent);
 }
 
 .brand__path {
@@ -66,6 +66,6 @@
   transition: color 160ms ease;
 
   &:hover {
-    color: var(--phosphor);
+    color: var(--accent-deep);
   }
 }

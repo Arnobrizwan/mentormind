@@ -1,35 +1,36 @@
 /* ============================================================
-   MentorMind Student Portal — aligned with DIGITEX poster brand
-   Light surfaces, soft magenta primary, purple secondary, pastel chips.
-   Variable names are kept stable so every component adopts the
-   new look without template changes.
+   MentorMind Student Portal — DIGITEX poster brand
+   Warm pink paper, magenta primary, purple secondary, pastel chips.
    ============================================================ */
 
 :root {
-  /* surfaces — light, cool-tinted */
-  --paper: #f7fbfc;
-  --paper-deep: #e9f5f6;     /* soft aqua section bg */
+  /* surfaces — warm light (poster #fff5fa) */
+  --paper: #fff5fa;
+  --paper-deep: #fceef5;
   --card: #ffffff;
-  --card-2: #f1f9f9;
-  /* text — near-black slate ink (WCAG AA preserved) */
-  --ink: #16282f;
-  --ink-soft: #5c7079;
-  --line: rgba(22, 40, 47, 0.1);
-  --line-strong: rgba(22, 40, 47, 0.16);   /* gentle outline (was sticker black) */
+  --card-2: #fff8fc;
+  /* text */
+  --ink: #140f1a;
+  --ink-soft: #3a2f42;
+  --line: rgba(20, 15, 26, 0.09);
+  --line-strong: rgba(20, 15, 26, 0.14);
   /* accents — poster magenta / purple */
   --accent: #ff5ca3;
   --accent-deep: #e84e92;
   --accent-2: #7c3aed;
-  --sage: #0e8a58;           /* leaf green (chip text) */
-  --sage-deep: #0b6e47;
-  --marker: #ffe177;         /* soft highlighter yellow */
-  --hot: #fb7185;            /* coral pop */
+  /* success / progress — purple (no teal/green) */
+  --success: #7c3aed;
+  --success-deep: #6d28d9;
+  --sage: var(--success);
+  --sage-deep: var(--success-deep);
+  --marker: #ffd23f;
+  --hot: #fb7185;
   --danger: #d93a52;
   /* pastel chips */
-  --chip-pink: #ffe7ee;
-  --chip-mint: #d9f4e7;
-  --chip-yellow: #fdf1cd;
-  --chip-lav: #e8ecfb;
+  --chip-pink: #fbdcea;
+  --chip-mint: #e7d6ff;
+  --chip-yellow: #ffe9a8;
+  --chip-lav: #e7d6ff;
 
   --grad-hero: linear-gradient(115deg, #ff5ca3 0%, #e84e92 52%, #7c3aed 100%);
   --grad-btn: linear-gradient(120deg, #ff5ca3 0%, #e84e92 100%);
@@ -38,13 +39,11 @@
   --font-body: 'Plus Jakarta Sans', 'Avenir Next', sans-serif;
   --font-mono: 'Spline Sans Mono', 'SFMono-Regular', monospace;
 
-  /* soft, diffuse, low-alpha shadows */
-  --shadow-card: 0 1px 2px rgba(22, 40, 47, 0.04), 0 10px 24px -16px rgba(255, 92, 163, 0.16);
-  --shadow-lift: 0 2px 4px rgba(22, 40, 47, 0.05), 0 18px 36px -18px rgba(255, 92, 163, 0.22);
-  --glow: 0 6px 20px -6px rgba(255, 92, 163, 0.32);
+  --shadow-card: 0 1px 2px rgba(20, 15, 26, 0.04), 0 10px 24px -16px rgba(255, 92, 163, 0.18);
+  --shadow-lift: 0 2px 4px rgba(20, 15, 26, 0.05), 0 18px 36px -18px rgba(255, 92, 163, 0.24);
+  --glow: 0 6px 20px -6px rgba(255, 92, 163, 0.35);
 
-  /* shared motion */
-  --speed: 160ms;
+  --speed: 180ms;
   --ease: cubic-bezier(0.33, 1, 0.68, 1);
 }
 
@@ -60,11 +59,10 @@ body {
   margin: 0;
   min-height: 100dvh;
   background-color: var(--paper);
-  /* gentle teal/sky glows top + bottom */
   background-image:
-    radial-gradient(70% 38% at 8% -4%, rgba(255, 92, 163, 0.09) 0%, transparent 60%),
-    radial-gradient(60% 34% at 96% 2%, rgba(124, 58, 237, 0.07) 0%, transparent 60%),
-    radial-gradient(80% 30% at 50% 104%, rgba(255, 92, 163, 0.06) 0%, transparent 65%);
+    radial-gradient(70% 38% at 8% -4%, rgba(255, 92, 163, 0.11) 0%, transparent 60%),
+    radial-gradient(60% 34% at 96% 2%, rgba(124, 58, 237, 0.08) 0%, transparent 60%),
+    radial-gradient(80% 30% at 50% 104%, rgba(255, 210, 63, 0.07) 0%, transparent 65%);
   background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-body);
@@ -133,7 +131,6 @@ button:active:not(:disabled),
   outline-offset: 1px;
 }
 
-/* hover lift for card-like tiles */
 .card,
 .stat,
 .quick__tile,
@@ -151,17 +148,15 @@ button:active:not(:disabled),
 .stat:hover,
 .quick__tile:hover,
 .enrollment:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   box-shadow: var(--shadow-lift);
 }
 
-/* animated progress bars / meters */
 .progress__bar,
 [class*='meter-fill'] {
-  transition: width 0.45s var(--ease);
+  transition: width 0.55s var(--ease);
 }
 
-/* readiness ring: settle-in pop + gentle hover scale */
 @keyframes ring-pop {
   from {
     opacity: 0;
@@ -174,7 +169,7 @@ button:active:not(:disabled),
 }
 
 .ready__ring {
-  animation: ring-pop 0.3s var(--ease) both;
+  animation: ring-pop 0.35s var(--ease) both;
   transition: transform var(--speed) var(--ease), box-shadow var(--speed) var(--ease);
 }
 
@@ -182,11 +177,10 @@ button:active:not(:disabled),
   transform: scale(1.08);
 }
 
-/* page content entrance: fade + rise once */
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -195,7 +189,16 @@ button:active:not(:disabled),
 }
 
 .page > * {
-  animation: page-in 240ms var(--ease) both;
+  animation: page-in 280ms var(--ease) both;
+}
+
+@keyframes float-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.float-soft {
+  animation: float-soft 3.2s var(--ease) infinite;
 }
 
 /* ---- shared primitives -------------------------------------- */
@@ -259,7 +262,7 @@ button:active:not(:disabled),
 }
 
 .btn--ghost:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   border-color: var(--accent);
   color: var(--accent-deep);
 }
@@ -267,15 +270,15 @@ button:active:not(:disabled),
 .stamp {
   display: inline-block;
   padding: 0.3rem 0.75rem;
-  border: 1.5px solid color-mix(in srgb, var(--sage) 45%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--accent-2) 45%, transparent);
   border-radius: 999px;
-  color: var(--sage);
+  color: var(--success-deep);
   font-family: var(--font-mono);
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  background: color-mix(in srgb, var(--sage) 10%, transparent);
+  background: color-mix(in srgb, var(--accent-2) 10%, transparent);
 }
 
 .hairline {
@@ -343,13 +346,24 @@ button:active:not(:disabled),
   animation: rise-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* ---- skeleton loaders (gradient shimmer) ---------------------- */
+.stagger-rise > * {
+  animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.stagger-rise > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-rise > *:nth-child(2) { animation-delay: 55ms; }
+.stagger-rise > *:nth-child(3) { animation-delay: 110ms; }
+.stagger-rise > *:nth-child(4) { animation-delay: 165ms; }
+.stagger-rise > *:nth-child(5) { animation-delay: 220ms; }
+.stagger-rise > *:nth-child(6) { animation-delay: 275ms; }
+
+/* ---- skeleton loaders ---------------------------------------- */
 
 .skeleton {
   position: relative;
   overflow: hidden;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--ink) 6%, var(--card));
+  background: color-mix(in srgb, var(--accent) 6%, var(--card));
 }
 
 .skeleton::after {
@@ -360,7 +374,7 @@ button:active:not(:disabled),
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.65) 50%,
+    rgba(255, 255, 255, 0.7) 50%,
     transparent 100%
   );
   animation: skeleton-sweep 1.4s ease-in-out infinite;
@@ -371,8 +385,6 @@ button:active:not(:disabled),
     transform: translateX(100%);
   }
 }
-
-/* ---- reduced motion: disable all of the above ----------------- */
 
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -387,7 +399,9 @@ button:active:not(:disabled),
 
   .page > *,
   .rise,
+  .stagger-rise > *,
   .ready__ring,
+  .float-soft,
   .skeleton::after {
     animation: none !important;
   }

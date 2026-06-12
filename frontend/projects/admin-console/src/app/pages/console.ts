@@ -272,7 +272,7 @@ const POLL_MS = 5000;
       gap: 0.1rem;
     }
 
-    .light--ok { border-color: rgba(70, 217, 126, 0.5); }
+    .light--ok { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
     .light--bad { border-color: var(--alarm); }
 
     .light__name {

@@ -59,9 +59,14 @@
     border-bottom: 2px solid transparent;
     transition: border-color 0.15s ease;
 
-    &:hover,
+    &:hover {
+      border-bottom-color: color-mix(in srgb, var(--accent) 45%, transparent);
+      color: var(--accent-deep);
+    }
+
     &.is-active {
-      border-bottom-color: var(--marker);
+      border-bottom-color: var(--accent);
+      color: var(--accent-deep);
     }
   }
 }

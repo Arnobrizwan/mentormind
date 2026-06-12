@@ -293,7 +293,7 @@ interface ContinueHero {
       margin-top: 1.8rem;
       padding: 1.7rem 1.9rem;
       border-radius: 18px;
-      /* accent gradient border over a soft teal-tinted card */
+      /* accent gradient border over a soft pink card */
       border: 2px solid transparent;
       background:
         linear-gradient(

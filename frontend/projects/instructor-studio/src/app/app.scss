@@ -36,7 +36,7 @@
 }
 
 .brand__mark {
-  color: var(--amber);
+  color: var(--accent);
   font-size: 1.4rem;
 }
 
@@ -68,13 +68,13 @@
     transition: color 160ms ease, border-bottom-color 160ms ease;
 
     &:hover {
-      color: var(--amber);
-      border-bottom-color: var(--line-strong);
+      color: var(--accent-deep);
+      border-bottom-color: color-mix(in srgb, var(--accent) 40%, var(--line));
     }
 
     &.is-active {
-      color: var(--amber);
-      border-bottom-color: var(--amber);
+      color: var(--accent-deep);
+      border-bottom-color: var(--accent);
     }
   }
 }
@@ -106,9 +106,9 @@
   width: 2.4rem;
   height: 2.4rem;
   padding: 0;
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  background: var(--paper);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--panel);
   cursor: pointer;
 
   span {
@@ -134,13 +134,20 @@
   a {
     text-decoration: none;
     padding: 0.55rem 0.75rem;
-    border: 1px solid var(--line);
-    border-radius: 6px;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
     color: var(--ink);
+    transition: border-color var(--speed) var(--ease), color var(--speed) var(--ease), transform var(--speed) var(--ease);
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+      transform: translateX(2px);
+    }
 
     &.is-active {
-      border-color: var(--amber);
-      color: var(--amber);
+      border-color: var(--accent);
+      color: var(--accent-deep);
+      background: color-mix(in srgb, var(--accent) 8%, var(--panel));
     }
   }
 }

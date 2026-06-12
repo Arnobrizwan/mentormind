@@ -182,7 +182,7 @@ export function parseTimeLimit(raw: string): number | null | undefined {
       margin-top: 0.55rem;
       max-width: 420px;
       border-radius: 99px;
-      background: rgba(154, 100, 2, 0.15);
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
       overflow: hidden;
     }
 
@@ -190,7 +190,7 @@ export function parseTimeLimit(raw: string): number | null | undefined {
       height: 100%;
       width: 35%;
       border-radius: 99px;
-      background: linear-gradient(90deg, rgba(154, 100, 2, 0.25), var(--amber), rgba(154, 100, 2, 0.25));
+      background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 25%, transparent), var(--accent), color-mix(in srgb, var(--accent) 25%, transparent));
       animation: ai-sweep 1.3s ease-in-out infinite;
     }
 

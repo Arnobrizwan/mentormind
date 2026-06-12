@@ -1,44 +1,63 @@
 /* ============================================================
-   MentorMind Instructor Studio — "Drafting Desk" design system
-   Light paper drafting table: faint blueprint-grid watermark,
-   deep amber pencil accent, technical mono annotations.
+   MentorMind Instructor Studio — poster brand (light pink desk)
+   Magenta primary, purple secondary. Legacy --amber/--teal aliases
+   map to accent tokens so existing components adopt the new look.
    ============================================================ */
 
 :root {
-  --desk: #f7f5f0;
+  --paper: #fff5fa;
+  --desk: var(--paper);
   --panel: #ffffff;
-  --panel-raised: #f9f7f2;
-  --ink: #1f1c16;
-  --ink-dim: #5f594c;
-  --grid-line: rgba(70, 100, 150, 0.055);
-  --line: rgba(31, 28, 22, 0.12);
-  --line-strong: rgba(31, 28, 22, 0.26);
-  --amber: #9a6402;
-  --amber-deep: #7c5002;
-  --teal: #0e7d68;
-  --red: #b23a2c;
+  --panel-raised: #fff8fc;
+  --ink: #140f1a;
+  --ink-dim: #3a2f42;
+  --line: rgba(20, 15, 26, 0.09);
+  --line-strong: rgba(20, 15, 26, 0.14);
 
-  --shadow-sm: 0 1px 2px rgba(31, 28, 22, 0.05), 0 2px 8px rgba(31, 28, 22, 0.05);
-  --shadow-md: 0 2px 4px rgba(31, 28, 22, 0.06), 0 10px 24px rgba(31, 28, 22, 0.09);
+  --accent: #ff5ca3;
+  --accent-deep: #e84e92;
+  --accent-2: #7c3aed;
+  --success: var(--accent-2);
+  --success-deep: #6d28d9;
+  --warn: #ffd23f;
+  --red: #d93a52;
 
-  --font-display: 'Bricolage Grotesque', 'Arial Narrow', sans-serif;
-  --font-body: 'Albert Sans', 'Helvetica Neue', sans-serif;
-  --font-mono: 'JetBrains Mono', 'SFMono-Regular', monospace;
+  /* legacy aliases */
+  --amber: var(--accent);
+  --amber-deep: var(--accent-deep);
+  --teal: var(--accent-2);
+
+  --grad-btn: linear-gradient(120deg, #ff5ca3 0%, #e84e92 100%);
+  --shadow-sm: 0 1px 2px rgba(20, 15, 26, 0.04), 0 8px 20px -12px rgba(255, 92, 163, 0.16);
+  --shadow-md: 0 2px 4px rgba(20, 15, 26, 0.05), 0 16px 32px -16px rgba(255, 92, 163, 0.22);
+  --glow: 0 6px 18px -6px rgba(255, 92, 163, 0.32);
+
+  --font-display: 'Unbounded', 'Arial Black', sans-serif;
+  --font-body: 'Plus Jakarta Sans', 'Avenir Next', sans-serif;
+  --font-mono: 'Spline Sans Mono', 'SFMono-Regular', monospace;
+
+  --speed: 180ms;
+  --ease: cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   min-height: 100dvh;
-  background-color: var(--desk);
-  /* blueprint grid, faded to a paper watermark */
+  background-color: var(--paper);
   background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 28px 28px;
+    radial-gradient(rgba(255, 92, 163, 0.12) 1.5px, transparent 2px),
+    radial-gradient(70% 38% at 8% -4%, rgba(255, 92, 163, 0.1) 0%, transparent 60%),
+    radial-gradient(60% 34% at 96% 2%, rgba(124, 58, 237, 0.07) 0%, transparent 60%);
+  background-size: 22px 22px, auto, auto;
+  background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 15.5px;
@@ -48,8 +67,8 @@ body {
 
 h1, h2, h3 {
   font-family: var(--font-display);
-  font-weight: 640;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   line-height: 1.08;
   margin: 0;
 }
@@ -59,12 +78,27 @@ a { color: inherit; }
 button { font-family: inherit; }
 
 ::selection {
-  background: var(--amber);
-  color: var(--desk);
+  background: var(--warn);
+  color: var(--ink);
+}
+
+a,
+button,
+input,
+select,
+textarea,
+[role='button'] {
+  transition:
+    background-color var(--speed) var(--ease),
+    color var(--speed) var(--ease),
+    border-color var(--speed) var(--ease),
+    box-shadow var(--speed) var(--ease),
+    transform var(--speed) var(--ease),
+    opacity var(--speed) var(--ease);
 }
 
 :focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -82,14 +116,15 @@ button { font-family: inherit; }
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 14px;
   padding: 1.4rem;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow 160ms ease, transform 160ms ease, border-color 160ms ease;
+  transition: box-shadow var(--speed) var(--ease), transform var(--speed) var(--ease), border-color var(--speed) var(--ease);
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
   }
 }
 
@@ -97,33 +132,31 @@ button { font-family: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.6rem 1.2rem;
-  border: 1px solid var(--amber);
-  border-radius: 6px;
-  background: var(--amber);
-  color: #fffdf7;
+  padding: 0.62rem 1.25rem;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  background: var(--grad-btn);
+  color: #fff;
   font-family: var(--font-body);
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
   text-decoration: none;
-  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease,
-    box-shadow 160ms ease, color 160ms ease;
+  transition: transform var(--speed) var(--ease), box-shadow var(--speed) var(--ease), filter var(--speed) var(--ease);
 
   &:hover:not(:disabled) {
-    background: var(--amber-deep);
-    border-color: var(--amber-deep);
-    transform: translateY(-1px);
-    box-shadow: 0 3px 10px rgba(154, 100, 2, 0.25);
+    filter: brightness(1.05);
+    transform: translateY(-2px);
+    box-shadow: var(--glow);
   }
 
   &:active:not(:disabled) {
-    transform: translateY(0) scale(0.97);
+    transform: translateY(0) scale(0.98);
     box-shadow: none;
   }
 
   &:focus-visible {
-    outline: 2px solid var(--amber);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
@@ -135,11 +168,12 @@ button { font-family: inherit; }
 
 .btn--line {
   background: transparent;
-  color: var(--amber);
+  color: var(--accent-deep);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
 
   &:hover:not(:disabled) {
-    background: rgba(154, 100, 2, 0.08);
-    color: var(--amber-deep);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    color: var(--accent-deep);
     box-shadow: none;
   }
 }
@@ -150,14 +184,14 @@ button { font-family: inherit; }
   color: var(--red);
 
   &:hover:not(:disabled) {
-    background: rgba(178, 58, 44, 0.07);
+    background: color-mix(in srgb, var(--red) 8%, transparent);
     border-color: var(--red);
     box-shadow: none;
   }
 }
 
 .btn--sm {
-  padding: 0.32rem 0.75rem;
+  padding: 0.35rem 0.85rem;
   font-size: 0.76rem;
 }
 
@@ -167,24 +201,24 @@ button { font-family: inherit; }
   gap: 0.35rem;
 
   input, textarea, select {
-    padding: 0.65rem 0.8rem;
-    border: 1px solid var(--line-strong);
-    border-radius: 6px;
-    background: var(--desk);
+    padding: 0.65rem 0.85rem;
+    border: 1.5px solid var(--line-strong);
+    border-radius: 12px;
+    background: var(--panel);
     color: var(--ink);
     font-family: var(--font-body);
     font-size: 0.92rem;
-    transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    transition: border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease), background var(--speed) var(--ease);
 
     &:hover:not(:disabled) {
-      border-color: var(--amber);
+      border-color: color-mix(in srgb, var(--accent) 40%, var(--line-strong));
     }
 
     &:focus {
       outline: none;
-      border-color: var(--amber);
+      border-color: var(--accent);
       background: var(--panel);
-      box-shadow: 0 0 0 3px rgba(154, 100, 2, 0.15);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
     }
   }
 
@@ -198,12 +232,12 @@ button { font-family: inherit; }
 }
 
 .error-note {
-  padding: 0.6rem 0.85rem;
+  padding: 0.65rem 0.9rem;
   border-left: 3px solid var(--red);
-  background: rgba(178, 58, 44, 0.07);
+  background: color-mix(in srgb, var(--red) 7%, transparent);
   color: var(--red);
   font-size: 0.86rem;
-  border-radius: 0 5px 5px 0;
+  border-radius: 0 10px 10px 0;
 }
 
 .status-dot {
@@ -212,18 +246,18 @@ button { font-family: inherit; }
   height: 8px;
   border-radius: 50%;
   background: var(--ink-dim);
-  transition: background 160ms ease, box-shadow 160ms ease;
+  transition: background var(--speed) var(--ease), box-shadow var(--speed) var(--ease);
 
   &.is-live {
-    background: var(--teal);
-    box-shadow: 0 0 0 3px rgba(14, 125, 104, 0.16);
+    background: var(--accent-2);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 22%, transparent);
     animation: live-pulse 2.4s ease-in-out infinite;
   }
 }
 
 @keyframes live-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(14, 125, 104, 0.16); }
-  50% { box-shadow: 0 0 0 6px rgba(14, 125, 104, 0.08); }
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 22%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent-2) 10%, transparent); }
 }
 
 @keyframes sheet-in {
@@ -232,18 +266,26 @@ button { font-family: inherit; }
 }
 
 .sheet-in {
-  animation: sheet-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: sheet-in 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* ---- skeleton loaders ----------------------------------------- */
+.stagger-rise > * {
+  animation: sheet-in 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.stagger-rise > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-rise > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-rise > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-rise > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-rise > *:nth-child(5) { animation-delay: 200ms; }
 
 .skeleton {
-  border-radius: 6px;
+  border-radius: 10px;
   background: linear-gradient(
     90deg,
-    rgba(31, 28, 22, 0.06) 25%,
-    rgba(31, 28, 22, 0.13) 45%,
-    rgba(31, 28, 22, 0.06) 65%
+    color-mix(in srgb, var(--accent) 5%, var(--panel)) 25%,
+    color-mix(in srgb, var(--accent) 12%, var(--panel)) 45%,
+    color-mix(in srgb, var(--accent) 5%, var(--panel)) 65%
   );
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
@@ -260,18 +302,20 @@ button { font-family: inherit; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 
-  /* New motion layers: shimmer/sweep loops stop entirely, staggered
-     entrances and count-ups collapse to their final state instantly. */
   .skeleton {
     animation: none !important;
-    background: rgba(31, 28, 22, 0.08);
+    background: color-mix(in srgb, var(--accent) 8%, var(--panel));
   }
+
   .ai__bar-sweep { animation: none !important; width: 100% !important; }
-  .sheet-in, .tab-pane { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .sheet-in, .tab-pane, .stagger-rise > * { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .panel:hover { transform: none; }
 }
