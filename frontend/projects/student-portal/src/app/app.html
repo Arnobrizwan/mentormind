@@ -4,6 +4,12 @@
       <span aria-hidden="true">📡</span> You're offline — cached courses and your AI tutor still work.
     </div>
   }
+  @if (slowApi.waking()) {
+    <div class="waking-banner" role="status">
+      <span class="waking-banner__dot" aria-hidden="true"></span>
+      Waking the demo server (free tier) — this first load can take up to a minute. Thanks for waiting!
+    </div>
+  }
   <header class="masthead">
     <p class="masthead__ticker mono-label">
       {{ config.siteName() }} · Student Portal · {{ config.tagline() }}

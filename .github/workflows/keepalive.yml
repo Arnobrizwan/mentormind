@@ -1,0 +1,19 @@
+# Keeps the free-tier demo API warm — Render spins it down after ~15 min
+# idle, which makes the first visit hang ~a minute. A ping every 10 minutes
+# sidesteps that for most visitors (the in-app "waking the server" banner
+# covers the rest).
+name: Demo keep-alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping demo API health endpoint
+        run: |
+          curl -sS -m 90 -o /dev/null -w "demo api: %{http_code} in %{time_total}s\n" \
+            https://mentormind-api.onrender.com/api/v1/health/ || true
