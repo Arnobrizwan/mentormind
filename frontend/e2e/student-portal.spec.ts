@@ -66,7 +66,10 @@ test.describe('Student portal smoke', () => {
     // the shift and silently miss, leaving a question unanswered (which keeps
     // "Hand in paper" disabled). Answer by index and confirm each selection
     // registered (re-clicking if needed) so the flow is deterministic.
+    // Quiz questions load asynchronously after navigation — wait for the
+    // first one to render before counting (count() does not auto-wait).
     const groups = page.getByRole('radiogroup');
+    await expect(groups.first()).toBeVisible();
     const questionCount = await groups.count();
     expect(questionCount).toBeGreaterThan(0);
     for (let i = 0; i < questionCount; i++) {
