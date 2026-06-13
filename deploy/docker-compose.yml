@@ -127,12 +127,20 @@ services:
     environment:
       INSTANCE_NAME: ml-sg
       ML_API_KEY: ${ML_API_KEY:?set ML_API_KEY}
-      # --- Real in-process tutor model (no external AI API) ---
-      LOCAL_LLM: "1"
-      LOCAL_LLM_BASE: Qwen/Qwen2.5-0.5B-Instruct
+      # --- Tutor model for off-corpus answers ---
+      # Default: in-process local model (no external API). Set CUSTOM_LLM_URL
+      # in .env (e.g. Groq) to use a hosted model instead — then set
+      # LOCAL_LLM=0 so the box skips loading a local model entirely.
+      LOCAL_LLM: ${LOCAL_LLM:-1}
+      LOCAL_LLM_BASE: ${LOCAL_LLM_BASE:-Qwen/Qwen2.5-0.5B-Instruct}
       LOCAL_LLM_MAX_TOKENS: "512"
+      # Hosted OpenAI-compatible model (Groq / OpenRouter / Ollama). Empty by
+      # default; when set, weak/no corpus matches are answered by it.
+      CUSTOM_LLM_URL: ${CUSTOM_LLM_URL:-}
+      CUSTOM_LLM_MODEL: ${CUSTOM_LLM_MODEL:-}
+      CUSTOM_LLM_API_KEY: ${CUSTOM_LLM_API_KEY:-}
       # CRITICAL: keep at 1. Each uvicorn worker loads its OWN copy of the
-      # model — >1 worker would multiply RAM and OOM the box.
+      # local model — >1 worker would multiply RAM and OOM the box.
       UVICORN_WORKERS: "1"
       # Corpus DB lives on a volume (255 MB, not in the git image).
       PASTPAPERS_DB_URL: sqlite+aiosqlite:////data/pastpapers.db
