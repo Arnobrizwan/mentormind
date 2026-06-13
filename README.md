@@ -28,6 +28,12 @@ Demo logins below — the demo resets itself periodically, and **the AI tutor is
 - **Conversational Memory:** AI Tutor session history is now passed through to the model pipeline.
 - **GitHub Actions Scheduled Sweeps:** Risk scans and study planner rebuilds run regularly via repository cron actions, bypassing paid Celery beat requirements.
 - **Self-Service Password Reset:** Secure password reset workflow configured across all 3 web portals.
+- **Predicted Grades:** Exam readiness now maps onto Cambridge bands (A*–U) on the student dashboard, studio roster, and gradebook export.
+- **Item Analysis:** Per-question difficulty, upper-lower discrimination, and distractor counts in the studio insights tab — flags miskeyed or dead questions.
+- **Gradebook CSV Export:** One-click whole-class export (best quiz scores, short-answer marks, readiness + predicted grade).
+- **Parent/Guardian Progress Links:** Students mint a revocable, read-only share link — weekly points, streak, predicted grades. No account needed, PII-light.
+- **Handwritten Answer OCR:** Photograph a written answer in practice; OCR fills the answer box for review before rubric grading.
+- **KaTeX Math Rendering:** Tutor answers, lessons, past papers, and mock exams render real TeX maths.
 
 
 </div>
