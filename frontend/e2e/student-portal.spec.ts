@@ -58,16 +58,30 @@ test.describe('Student portal smoke', () => {
     await expect(takeQuizBtn).toBeVisible();
     await takeQuizBtn.click();
 
-    // 6. Answer quiz questions
+    // 6. Answer quiz questions.
     await expect(page).toHaveURL(/.*quiz.*/);
-    const radioGroups = await page.getByRole('radiogroup').all();
-    for (const group of radioGroups) {
-      const radio = group.getByRole('radio').first();
+    // When the proctoring flag is on, the quiz injects an async camera-status
+    // panel above the questions; in headless CI getUserMedia rejects and the
+    // panel appears mid-test, shifting layout — a click can then land during
+    // the shift and silently miss, leaving a question unanswered (which keeps
+    // "Hand in paper" disabled). Answer by index and confirm each selection
+    // registered (re-clicking if needed) so the flow is deterministic.
+    const groups = page.getByRole('radiogroup');
+    const questionCount = await groups.count();
+    expect(questionCount).toBeGreaterThan(0);
+    for (let i = 0; i < questionCount; i++) {
+      const radio = groups.nth(i).getByRole('radio').first();
       await expect(radio).toBeVisible();
-      await radio.click();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await radio.scrollIntoViewIfNeeded();
+        await radio.click();
+        if ((await radio.getAttribute('aria-checked')) === 'true') break;
+        await page.waitForTimeout(200);
+      }
+      await expect(radio).toHaveAttribute('aria-checked', 'true');
     }
 
-    // Hand in paper
+    // Hand in paper — all questions are now confirmed answered.
     const submitBtn = page.getByRole('button', { name: /Hand in paper/i });
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
