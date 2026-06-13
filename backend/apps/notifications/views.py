@@ -87,9 +87,20 @@ class PushSubscribeView(APIView):
         return Response({"subscribed": True}, status=status.HTTP_201_CREATED)
 
     def delete(self, request):
-        endpoint = request.data.get("endpoint", "")
+        # Require the specific endpoint: an empty value must never fan out to
+        # "delete all of this user's subscriptions" — that would silently kill
+        # reminders on their other devices. Dead rows that no client can name
+        # are pruned on the next send (404/410). Pass ?all=true to opt into a
+        # full wipe (e.g. account-level "disable everywhere").
+        endpoint = str(request.data.get("endpoint", "")).strip()
+        wipe_all = str(request.data.get("all", "")).lower() in ("1", "true")
         qs = PushSubscription.objects.filter(user=request.user)
         if endpoint:
             qs = qs.filter(endpoint=endpoint)
+        elif not wipe_all:
+            return Response(
+                {"detail": "endpoint is required (or pass all=true to remove every device)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         qs.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

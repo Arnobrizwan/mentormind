@@ -174,6 +174,21 @@ class RevisionApiTests(TestCase):
         self.assertIn("course::rev-c", body)
         self.assertNotIn("draft", body)
 
+    def test_export_csv_neutralizes_formula_injection(self):
+        Flashcard.objects.create(
+            course=self.course,
+            front="=HYPERLINK(\"http://evil\",\"x\")",
+            back="+1+2",
+            is_published=True,
+        )
+        body = self.as_student.get("/api/v1/revision/export.csv").content.decode()
+        # Formula-leading cells are prefixed with an apostrophe so a spreadsheet
+        # treats them as text, never executes them.
+        self.assertIn("'=HYPERLINK", body)
+        self.assertIn("'+1+2", body)
+        # The raw, un-neutralized formula must not appear at a cell boundary.
+        self.assertNotIn(",=HYPERLINK", body)
+
 
 class ReviewFixTests(TestCase):
     """Regression: reviewing a not-yet-due card must not farm points."""

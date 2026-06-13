@@ -62,11 +62,10 @@ DEFAULT_DAILY_GOAL = 30
 
 def daily_goal_points():
     configured = get_setting("daily-goal-points")
-    return (
-        configured
-        if isinstance(configured, int) and configured > 0
-        else DEFAULT_DAILY_GOAL
-    )
+    # Exclude bool: isinstance(True, int) is True, which would make the goal 1.
+    if isinstance(configured, bool):
+        return DEFAULT_DAILY_GOAL
+    return configured if isinstance(configured, int) and configured > 0 else DEFAULT_DAILY_GOAL
 
 
 def points_today(user):

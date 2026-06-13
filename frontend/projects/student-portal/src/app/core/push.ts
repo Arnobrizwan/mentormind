@@ -92,11 +92,17 @@ export class PushApi {
     const sub = await this.currentSubscription();
     const endpoint = sub?.endpoint;
     if (sub) await sub.unsubscribe();
-    await firstValueFrom(
-      this.http.request('delete', '/api/v1/notifications/push/subscribe/', {
-        body: { endpoint },
-      }),
-    ).catch(() => undefined);
+    // Only tell the backend to remove THIS device's row. If the live
+    // subscription is already gone we have no endpoint to name — skip the
+    // call (the server prunes dead rows on the next send) rather than risk a
+    // body without an endpoint, which the API now rejects anyway.
+    if (endpoint) {
+      await firstValueFrom(
+        this.http.request('delete', '/api/v1/notifications/push/subscribe/', {
+          body: { endpoint },
+        }),
+      ).catch(() => undefined);
+    }
     this.subscribed.set(false);
   }
 }

@@ -126,6 +126,23 @@ class RevisionQueueView(APIView):
         )
 
 
+# Leading characters a spreadsheet (Excel / Sheets / LibreOffice) treats as the
+# start of a formula. Card text is instructor- or AI-authored, i.e. untrusted
+# for this purpose, so neutralise it before it lands in a downloadable CSV.
+_CSV_FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value):
+    """Prefix a leading apostrophe to any cell that a spreadsheet would parse
+    as a formula — the OWASP CSV-injection mitigation. Anki imports the field
+    as plain text, so the only visible effect is on cards that begin with a
+    formula character (rare)."""
+    text = "" if value is None else str(value)
+    if text and text[0] in _CSV_FORMULA_LEAD:
+        return "'" + text
+    return text
+
+
 class RevisionExportView(APIView):
     """Export the student's whole deck as a CSV that Anki imports directly.
 
@@ -168,7 +185,7 @@ class RevisionExportView(APIView):
                 )
                 if part
             )
-            writer.writerow([card.front, card.back, tags])
+            writer.writerow([_csv_safe(card.front), _csv_safe(card.back), tags])
         return response
 
 

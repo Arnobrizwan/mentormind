@@ -33,8 +33,15 @@ class TutorFeedbackReviewSerializer(serializers.ModelSerializer):
         )
 
     def get_question(self, obj):
+        # The view batches the lookup and passes {answer_id: question} in
+        # context (one query for the whole page). Fall back to a per-row query
+        # only when used without that context.
+        questions = self.context.get("questions")
+        if questions is not None:
+            return questions.get(obj.id, "")
         prior = (
-            TutorMessage.objects.filter(
+            TutorMessage.objects.using("default")
+            .filter(
                 session=obj.session,
                 role=TutorMessage.Role.USER,
                 created_at__lte=obj.created_at,

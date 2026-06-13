@@ -153,7 +153,9 @@ class TutorSessionViewSet(viewsets.ModelViewSet):
         free-text note when flagging a bad answer (feeds the review surface)."""
         session = self.get_object()
         value = request.data.get("value")
-        if value not in (1, -1):
+        # `isinstance(True, int)` is True and `True == 1`, so a JSON boolean
+        # would otherwise pass `value in (1, -1)` and be stored as a vote.
+        if isinstance(value, bool) or value not in (1, -1):
             return Response(
                 {"error": "value must be 1 or -1."}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -186,24 +188,57 @@ class TutorFeedbackReviewView(APIView):
     def get(self, request):
         from django.db.models import Count, Q
 
-        agg = TutorMessage.objects.filter(
+        # Force the primary DB: a flag written moments ago must be visible here
+        # (the read-replica router would otherwise serve stale data).
+        assistant = TutorMessage.objects.using("default").filter(
             role=TutorMessage.Role.ASSISTANT
-        ).aggregate(
+        )
+        agg = assistant.aggregate(
             up=Count("id", filter=Q(feedback=1)),
             down=Count("id", filter=Q(feedback=-1)),
             flagged=Count("id", filter=Q(feedback_note__gt="")),
         )
 
-        flagged = (
-            TutorMessage.objects.filter(
-                role=TutorMessage.Role.ASSISTANT, feedback=-1
-            )
+        flagged = list(
+            assistant.filter(feedback=-1)
             .select_related("session", "session__user")
             .order_by("-created_at")[:100]
         )
+
+        # Resolve each flagged answer's prompting question in ONE query instead
+        # of one-per-row: pull the candidate user messages for the involved
+        # sessions, then pick the latest at-or-before each answer in Python.
+        question_map = self._questions_for(flagged)
         return Response(
             {
                 "summary": agg,
-                "items": TutorFeedbackReviewSerializer(flagged, many=True).data,
+                "items": TutorFeedbackReviewSerializer(
+                    flagged, many=True, context={"questions": question_map}
+                ).data,
             }
         )
+
+    @staticmethod
+    def _questions_for(answers):
+        """{answer_id: prompting_question_text} for a batch of answers."""
+        session_ids = {a.session_id for a in answers}
+        if not session_ids:
+            return {}
+        user_msgs = list(
+            TutorMessage.objects.using("default")
+            .filter(session_id__in=session_ids, role=TutorMessage.Role.USER)
+            .order_by("created_at")
+            .values("session_id", "content", "created_at")
+        )
+        by_session = {}
+        for msg in user_msgs:
+            by_session.setdefault(msg["session_id"], []).append(msg)
+        mapping = {}
+        for answer in answers:
+            prior = [
+                m
+                for m in by_session.get(answer.session_id, [])
+                if m["created_at"] <= answer.created_at
+            ]
+            mapping[answer.id] = prior[-1]["content"] if prior else ""
+        return mapping
