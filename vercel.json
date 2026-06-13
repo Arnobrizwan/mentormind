@@ -1,0 +1,10 @@
+{
+  "experimentalServices": {
+    "mentormind-api": {
+      "type": "web",
+      "root": "backend",
+      "routePrefix": "/",
+      "buildCommand": "pip install -r requirements.txt"
+    }
+  }
+}

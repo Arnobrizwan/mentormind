@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { CountUp, staggerDelay } from '../core/animations';
 import { StudioApi } from '../core/api';
+import { saveBlob } from '../core/download';
 import { apiErrorMessage } from '../core/errors';
 import { Course, Enrollment, Lesson, Quiz, ReadinessRow } from '../core/models';
 import { FlashcardsTab } from './flashcards-tab';
@@ -665,12 +666,7 @@ export class WorkbenchPage {
     this.exportError.set(null);
     try {
       const csv = await this.api.gradebookCsv(course.slug);
-      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `gradebook-${course.slug}.csv`;
-      anchor.click();
-      URL.revokeObjectURL(url);
+      saveBlob(csv, `gradebook-${course.slug}.csv`);
     } catch (err) {
       this.exportError.set(apiErrorMessage(err, 'Could not export the gradebook.'));
     } finally {

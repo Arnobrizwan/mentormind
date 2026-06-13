@@ -55,6 +55,39 @@ def total_points(user):
     return PointsEvent.objects.filter(user=user).aggregate(t=Sum("points"))["t"] or 0
 
 
+# Duolingo-style daily goal. Operators retune it live with a SiteSetting
+# row named 'daily-goal-points'.
+DEFAULT_DAILY_GOAL = 30
+
+
+def daily_goal_points():
+    configured = get_setting("daily-goal-points")
+    # Exclude bool: isinstance(True, int) is True, which would make the goal 1.
+    if isinstance(configured, bool):
+        return DEFAULT_DAILY_GOAL
+    return configured if isinstance(configured, int) and configured > 0 else DEFAULT_DAILY_GOAL
+
+
+def points_today(user):
+    return (
+        PointsEvent.objects.filter(user=user, created_at__date=timezone.localdate())
+        .aggregate(t=Sum("points"))["t"]
+        or 0
+    )
+
+
+def daily_goal(user):
+    """Today's progress toward the daily points goal."""
+    goal = daily_goal_points()
+    earned = points_today(user)
+    return {
+        "goal": goal,
+        "earned": earned,
+        "met": earned >= goal,
+        "pct": min(100, round(100 * earned / goal)) if goal else 100,
+    }
+
+
 def current_streak(user):
     """Consecutive active days ending today or yesterday."""
     dates = set(

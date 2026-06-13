@@ -47,6 +47,13 @@ ML_SERVICE_URL = env("ML_SERVICE_URL", default="")
 # Shared secret sent as X-API-Key on every ml-service call (empty = no auth)
 ML_API_KEY = env("ML_API_KEY", default="")
 
+# --- Web Push (PWA reminders) ---------------------------------------------
+# Optional and OFF by default — set all three to enable push. Generate a
+# VAPID keypair with: python manage.py generate_vapid_keys
+VAPID_PUBLIC_KEY = env("VAPID_PUBLIC_KEY", default="")
+VAPID_PRIVATE_KEY = env("VAPID_PRIVATE_KEY", default="")
+VAPID_SUBJECT = env("VAPID_SUBJECT", default="mailto:admin@mentormind.dev")
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -200,6 +207,15 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(
             day_of_week=env("PLANNER_DAY", default="mon"),
             hour=env.int("PLANNER_HOUR", default=5),
+            minute=0,
+        ),
+    },
+    # Daily web-push nudge: due flashcards + keep-your-streak. No-op unless
+    # VAPID keys are configured, so it's safe to leave scheduled everywhere.
+    "daily-revision-reminder": {
+        "task": "apps.notifications.tasks.send_revision_reminders",
+        "schedule": crontab(
+            hour=env.int("REMINDER_HOUR", default=18),
             minute=0,
         ),
     },

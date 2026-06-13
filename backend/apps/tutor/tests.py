@@ -118,6 +118,57 @@ class TutorTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()["feedback"], 1)
 
+    def test_thumbs_down_note_feeds_instructor_review(self):
+        from django.contrib.auth.models import Group
+
+        session_id = self._make_session()
+        res = self.client_student.post(
+            f"/api/v1/tutor/sessions/{session_id}/messages/",
+            {"content": "explain entropy"},
+            format="json",
+        )
+        message_id = res.json()["assistant_message"]["id"]
+        # Student flags the answer with a reason.
+        flag = self.client_student.post(
+            f"/api/v1/tutor/sessions/{session_id}/messages/{message_id}/feedback/",
+            {"value": -1, "note": "this is wrong"},
+            format="json",
+        )
+        self.assertEqual(flag.json()["feedback_note"], "this is wrong")
+
+        # A student cannot read the review surface.
+        self.assertEqual(
+            self.client_student.get("/api/v1/tutor/feedback/").status_code, 403
+        )
+
+        # An instructor sees the flagged answer paired with its question.
+        instructor = User.objects.create_user(
+            email="tutor-rev-i@mentormind.dev", password="pass-123456"
+        )
+        instructor.groups.add(Group.objects.get_or_create(name="Instructors")[0])
+        as_instructor = APIClient()
+        as_instructor.force_authenticate(user=instructor)
+        review = as_instructor.get("/api/v1/tutor/feedback/")
+        self.assertEqual(review.status_code, 200)
+        body = review.json()
+        self.assertEqual(body["summary"]["down"], 1)
+        self.assertEqual(body["summary"]["flagged"], 1)
+        self.assertEqual(body["items"][0]["question"], "explain entropy")
+        self.assertEqual(body["items"][0]["feedback_note"], "this is wrong")
+
+    def test_thumbs_up_clears_flag_note(self):
+        session_id = self._make_session()
+        res = self.client_student.post(
+            f"/api/v1/tutor/sessions/{session_id}/messages/",
+            {"content": "hi"},
+            format="json",
+        )
+        message_id = res.json()["assistant_message"]["id"]
+        base = f"/api/v1/tutor/sessions/{session_id}/messages/{message_id}/feedback/"
+        self.client_student.post(base, {"value": -1, "note": "bad"}, format="json")
+        up = self.client_student.post(base, {"value": 1}, format="json")
+        self.assertEqual(up.json()["feedback_note"], "")
+
     def test_sessions_are_private(self):
         outsider = User.objects.create_user(
             email="tutor-out@mentormind.dev", password="pass-123456"

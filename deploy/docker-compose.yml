@@ -1,0 +1,180 @@
+# MentorMind — single-box production deploy (Contabo SG 8 GB or any VPS).
+#
+#   Backend (Django ASGI) + Celery worker + ml-service (in-process LLM) +
+#   Postgres + Redis, all behind Caddy with automatic HTTPS.
+#
+# The frontend (3 Angular apps) stays on Vercel — only the API is hosted here.
+# The ml-service is INTERNAL ONLY (no published port); the backend reaches it
+# on the compose network at http://ml-service:9000.
+#
+#   cp .env.example .env   # then fill in the values
+#   docker compose up -d --build
+#
+# Health:  https://<API_DOMAIN>/api/v1/health/  ->  {"database":"ok","cache":"ok"}
+
+name: mentormind
+
+# Shared Django env — every backend/worker container inherits this.
+x-backend-env: &backend-env
+  SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+  DEBUG: "False"
+  ALLOWED_HOSTS: ${API_DOMAIN:?set API_DOMAIN in .env}
+  DATABASE_URL: postgres://mentormind:${DB_PASSWORD:?set DB_PASSWORD}@postgres:5432/mentormind
+  REDIS_URL: redis://redis:6379/0
+  ML_SERVICE_URL: http://ml-service:9000
+  TUTOR_MODEL_URL: http://ml-service:9000/v1/tutor/answer
+  ML_API_KEY: ${ML_API_KEY:?set ML_API_KEY}
+  TUTOR_MODEL_TIMEOUT_SECONDS: "60"
+  # Vercel frontend origins (comma-separated). The browser talks to these.
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+  # Caddy terminates TLS and forwards X-Forwarded-Proto: https, which Django
+  # trusts (SECURE_PROXY_SSL_HEADER). Keep the redirect ON — it's safe here.
+  SECURE_SSL_REDIRECT: "True"
+  # Tune to the box: ~2 ASGI workers fit comfortably alongside the LLM on 8 GB.
+  WEB_CONCURRENCY: "2"
+  # Optional PWA web-push (empty = feature stays off). The worker sends the
+  # daily reminders, so both backend and worker inherit these.
+  VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+  VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+  VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@mentormind.dev}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mentormind
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      POSTGRES_DB: mentormind
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mentormind -d mentormind"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # AOF persistence so the Celery backlog + cache survive restarts.
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-shot: apply DB migrations, then exit. backend/worker wait for success.
+  migrate:
+    build: ../backend
+    command: python manage.py migrate --noinput
+    environment: *backend-env
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    # Default CMD = gunicorn ASGI (uvicorn worker) on :8000 — serves HTTP and
+    # the Channels websocket chat on one port. Don't override it.
+    environment:
+      <<: *backend-env
+      INSTANCE_NAME: contabo-sg
+    volumes:
+      # Persist user uploads (OCR images, proctor frames). Set R2_* in .env to
+      # move these to object storage instead.
+      - media_data:/app/media
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      ml-service:
+        condition: service_started
+    expose:
+      - "8000"
+
+  worker:
+    build: ../backend
+    restart: unless-stopped
+    # -B embeds Celery beat (scheduled dropout scans, digests, planner rebuilds)
+    # in the worker process — fine for a single node.
+    command: celery -A config worker -B --loglevel=info
+    environment:
+      <<: *backend-env
+      INSTANCE_NAME: worker
+    volumes:
+      - media_data:/app/media
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  ml-service:
+    build: ../ml-service
+    restart: unless-stopped
+    # Runs as root so it can write the downloaded corpus + HF model cache into
+    # the named volumes below (the image's appuser can't write fresh volumes).
+    # Safe: this service is never published to the internet — internal network
+    # only, gated by ML_API_KEY.
+    user: root
+    environment:
+      INSTANCE_NAME: ml-sg
+      ML_API_KEY: ${ML_API_KEY:?set ML_API_KEY}
+      # --- Real in-process tutor model (no external AI API) ---
+      LOCAL_LLM: "1"
+      LOCAL_LLM_BASE: Qwen/Qwen2.5-0.5B-Instruct
+      LOCAL_LLM_MAX_TOKENS: "512"
+      # CRITICAL: keep at 1. Each uvicorn worker loads its OWN copy of the
+      # model — >1 worker would multiply RAM and OOM the box.
+      UVICORN_WORKERS: "1"
+      # Corpus DB lives on a volume (255 MB, not in the git image).
+      PASTPAPERS_DB_URL: sqlite+aiosqlite:////data/pastpapers.db
+      # On first boot, download the corpus from your private HF dataset.
+      # Leave both blank if you scp pastpapers.db into the ml_corpus volume.
+      DATASET_REPO: ${DATASET_REPO:-}
+      HF_TOKEN: ${HF_TOKEN:-}
+      # Cache the base model between restarts (don't re-download ~1 GB).
+      HF_HOME: /models/hf-cache
+      # Read live feature flags from the backend (fail-open if unreachable).
+      FLAGS_URL: http://backend:8000/api/v1/flags/
+    volumes:
+      - ml_corpus:/data
+      - hf_cache:/models/hf-cache
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/healthz', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      # Generous: first boot downloads the base model + corpus.
+      start_period: 180s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  pg_data:
+  redis_data:
+  media_data:
+  ml_corpus:
+  hf_cache:
+  caddy_data:
+  caddy_config:

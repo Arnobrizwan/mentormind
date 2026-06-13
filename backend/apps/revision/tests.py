@@ -163,6 +163,32 @@ class RevisionApiTests(TestCase):
             ).exists()
         )
 
+    def test_export_csv_includes_published_cards_only(self):
+        res = self.as_student.get("/api/v1/revision/export.csv")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("text/csv", res["Content-Type"])
+        body = res.content.decode()
+        # Anki import directives + the published card; never the draft.
+        self.assertIn("#separator:Comma", body)
+        self.assertIn("What is X?", body)
+        self.assertIn("course::rev-c", body)
+        self.assertNotIn("draft", body)
+
+    def test_export_csv_neutralizes_formula_injection(self):
+        Flashcard.objects.create(
+            course=self.course,
+            front="=HYPERLINK(\"http://evil\",\"x\")",
+            back="+1+2",
+            is_published=True,
+        )
+        body = self.as_student.get("/api/v1/revision/export.csv").content.decode()
+        # Formula-leading cells are prefixed with an apostrophe so a spreadsheet
+        # treats them as text, never executes them.
+        self.assertIn("'=HYPERLINK", body)
+        self.assertIn("'+1+2", body)
+        # The raw, un-neutralized formula must not appear at a cell boundary.
+        self.assertNotIn(",=HYPERLINK", body)
+
 
 class ReviewFixTests(TestCase):
     """Regression: reviewing a not-yet-due card must not farm points."""

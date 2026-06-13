@@ -3,13 +3,16 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from apps.core.permissions import IsInstructor
 from apps.engagement.services import award_points
 from apps.flags.services import flag_enabled
 
 from . import services
 from .models import TutorMessage, TutorSession
 from .serializers import (
+    TutorFeedbackReviewSerializer,
     TutorMessageSerializer,
     TutorSessionListSerializer,
     TutorSessionSerializer,
@@ -146,10 +149,13 @@ class TutorSessionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="messages/(?P<message_id>[0-9]+)/feedback")
     def feedback(self, request, pk=None, message_id=None):
-        """Thumbs up (+1) / down (-1) on an assistant reply."""
+        """Thumbs up (+1) / down (-1) on an assistant reply, with an optional
+        free-text note when flagging a bad answer (feeds the review surface)."""
         session = self.get_object()
         value = request.data.get("value")
-        if value not in (1, -1):
+        # `isinstance(True, int)` is True and `True == 1`, so a JSON boolean
+        # would otherwise pass `value in (1, -1)` and be stored as a vote.
+        if isinstance(value, bool) or value not in (1, -1):
             return Response(
                 {"error": "value must be 1 or -1."}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -160,5 +166,79 @@ class TutorSessionViewSet(viewsets.ModelViewSet):
         except TutorMessage.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
         message.feedback = value
-        message.save(update_fields=["feedback"])
+        note = str(request.data.get("note", "")).strip()[:500]
+        # A note only makes sense on a thumbs-down; a thumbs-up clears any
+        # stale flag note left from a previous rating.
+        message.feedback_note = note if value == -1 else ""
+        message.save(update_fields=["feedback", "feedback_note"])
         return Response(TutorMessageSerializer(message).data)
+
+
+class TutorFeedbackReviewView(APIView):
+    """Instructor/admin review surface for thumbs-down + flagged tutor
+    answers — the human-in-the-loop end of the model-improvement flywheel.
+
+    Each row pairs the flagged answer with the question that prompted it and
+    a rating summary, so weak or wrong answers can be triaged into better
+    training data for the next fine-tune.
+    """
+
+    permission_classes = [IsInstructor]
+
+    def get(self, request):
+        from django.db.models import Count, Q
+
+        # Force the primary DB: a flag written moments ago must be visible here
+        # (the read-replica router would otherwise serve stale data).
+        assistant = TutorMessage.objects.using("default").filter(
+            role=TutorMessage.Role.ASSISTANT
+        )
+        agg = assistant.aggregate(
+            up=Count("id", filter=Q(feedback=1)),
+            down=Count("id", filter=Q(feedback=-1)),
+            flagged=Count("id", filter=Q(feedback_note__gt="")),
+        )
+
+        flagged = list(
+            assistant.filter(feedback=-1)
+            .select_related("session", "session__user")
+            .order_by("-created_at")[:100]
+        )
+
+        # Resolve each flagged answer's prompting question in ONE query instead
+        # of one-per-row: pull the candidate user messages for the involved
+        # sessions, then pick the latest at-or-before each answer in Python.
+        question_map = self._questions_for(flagged)
+        return Response(
+            {
+                "summary": agg,
+                "items": TutorFeedbackReviewSerializer(
+                    flagged, many=True, context={"questions": question_map}
+                ).data,
+            }
+        )
+
+    @staticmethod
+    def _questions_for(answers):
+        """{answer_id: prompting_question_text} for a batch of answers."""
+        session_ids = {a.session_id for a in answers}
+        if not session_ids:
+            return {}
+        user_msgs = list(
+            TutorMessage.objects.using("default")
+            .filter(session_id__in=session_ids, role=TutorMessage.Role.USER)
+            .order_by("created_at")
+            .values("session_id", "content", "created_at")
+        )
+        by_session = {}
+        for msg in user_msgs:
+            by_session.setdefault(msg["session_id"], []).append(msg)
+        mapping = {}
+        for answer in answers:
+            prior = [
+                m
+                for m in by_session.get(answer.session_id, [])
+                if m["created_at"] <= answer.created_at
+            ]
+            mapping[answer.id] = prior[-1]["content"] if prior else ""
+        return mapping

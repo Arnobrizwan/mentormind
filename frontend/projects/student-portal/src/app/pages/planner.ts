@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { saveBlob } from '../core/download';
 import { apiErrorMessage } from '../core/errors';
 import { LocaleService } from '../core/locale';
 import { PlanItem, PlanItemKind, PlannerApi, WeekPlan } from '../core/planner';
@@ -40,6 +41,14 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
               [disabled]="busy()"
             >
               {{ busy() ? locale.t('planner.rebuilding') : locale.t('planner.refresh') }}
+            </button>
+            <button
+              type="button"
+              class="btn btn--ghost plan__refresh"
+              (click)="exportCalendar()"
+              [disabled]="exporting()"
+            >
+              {{ locale.t('planner.exportCal') }}
             </button>
           </div>
         } @else if (loading()) {
@@ -206,11 +215,26 @@ export class PlannerPage {
   protected readonly plan = signal<WeekPlan | null>(null);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
+  protected readonly exporting = signal(false);
   protected readonly togglingId = signal<number | null>(null);
   protected readonly error = signal<string | null>(null);
 
   constructor() {
     void this.load();
+  }
+
+  protected async exportCalendar(): Promise<void> {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    this.error.set(null);
+    try {
+      const blob = await this.api.exportIcs();
+      saveBlob(blob, 'mentormind-study-plan.ics');
+    } catch (err) {
+      this.error.set(apiErrorMessage(err, this.locale.t('planner.exportCal.error')));
+    } finally {
+      this.exporting.set(false);
+    }
   }
 
   protected reload(): void {

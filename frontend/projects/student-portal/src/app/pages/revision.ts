@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { ConfettiBurst } from '../core/confetti';
+import { saveBlob } from '../core/download';
 import { apiErrorMessage } from '../core/errors';
 import { LocaleService } from '../core/locale';
 import { RevisionApi, RevisionCard } from '../core/revision';
@@ -28,6 +29,14 @@ const GRADES = [
             {{ dueCount() }} {{ dueCount() === 1 ? locale.t('rev.card') : locale.t('rev.cards') }} {{ locale.t('rev.dueAnd') }}
             {{ queue().length }} {{ locale.t('rev.inSession') }}
           </p>
+          <button
+            type="button"
+            class="btn btn--ghost rev__export"
+            (click)="exportDeck()"
+            [disabled]="exporting()"
+          >
+            {{ locale.t('revision.export') }}
+          </button>
         }
       </header>
 
@@ -326,10 +335,25 @@ export class RevisionPage {
   protected readonly entering = signal(true);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
+  protected readonly exporting = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly loadError = signal<string | null>(null);
 
   protected readonly current = computed<RevisionCard | null>(() => this.queue()[0] ?? null);
+
+  protected async exportDeck(): Promise<void> {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    this.error.set(null);
+    try {
+      const blob = await this.api.exportCsv();
+      saveBlob(blob, 'mentormind-flashcards.csv');
+    } catch (err) {
+      this.error.set(apiErrorMessage(err, this.locale.t('revision.export.error')));
+    } finally {
+      this.exporting.set(false);
+    }
+  }
 
   /** One confirmation refetch when the local queue empties, to be sure. */
   private confirmedEmpty = false;

@@ -30,3 +30,4 @@ ml-service/data/
 
 models/tutor-lora/
 ml-service/models/tutor-lora/
+.vercel

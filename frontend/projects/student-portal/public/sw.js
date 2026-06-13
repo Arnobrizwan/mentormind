@@ -72,3 +72,42 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+/* --- Web Push: study reminders ------------------------------------------ */
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: 'MentorMind', body: event.data ? event.data.text() : '' };
+  }
+  const title = data.title || 'MentorMind';
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || '',
+      icon: '/favicon.ico',
+      badge: '/favicon.ico',
+      tag: data.tag || 'mentormind',
+      data: { url: data.url || '/' },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Focus an existing tab and route it, else open a new one.
+      for (const client of clients) {
+        if ('focus' in client) {
+          client.focus();
+          if ('navigate' in client) client.navigate(target).catch(() => undefined);
+          return undefined;
+        }
+      }
+      return self.clients.openWindow(target);
+    }),
+  );
+});

@@ -34,6 +34,11 @@ Demo logins below — the demo resets itself periodically, and **the AI tutor is
 - **Parent/Guardian Progress Links:** Students mint a revocable, read-only share link — weekly points, streak, predicted grades. No account needed, PII-light.
 - **Handwritten Answer OCR:** Photograph a written answer in practice; OCR fills the answer box for review before rubric grading.
 - **KaTeX Math Rendering:** Tutor answers, lessons, past papers, and mock exams render real TeX maths.
+- **Tutor Feedback Flywheel:** Students rate every tutor answer 👍/👎 and can flag a wrong one with a note; instructors triage the flagged answers in a Studio review surface — raw material for the next fine-tune.
+- **Daily Goal:** A Duolingo-style daily points goal with a progress ring on the dashboard, tunable live from the admin console.
+- **Study-Planner Calendar Export:** One-click `.ics` download of the weekly plan — subscribe in Google / Apple / Outlook calendar.
+- **Revision → Anki Export:** Export the whole spaced-repetition deck as an Anki-importable CSV (tags carry course + topic); also opens in Excel / Sheets.
+- **PWA Web-Push Reminders:** Opt-in daily "cards due / keep your streak" push notifications — VAPID-signed and fully self-hosted (no FCM/APNs paid service), inert until keys are set.
 
 
 </div>
@@ -268,9 +273,26 @@ cd infra && docker compose up --build
 curl -i http://localhost:8080/api/v1/health/   # repeat: X-Served-By alternates api-1/api-2
 ```
 
+## Self-hosted on your own VPS (always-warm, no cold starts)
+
+The free Render demo sleeps and cold-starts (~90 s) when idle. For a
+persistent, always-on install, [`deploy/`](deploy/) ships a single-box
+`docker compose` stack — Django + Celery worker + the in-process tutor
+(`ml-service`) + Postgres + Redis — behind **Caddy** with automatic HTTPS.
+The three Angular frontends stay free on Vercel; only the API lives on the box.
+
+```bash
+git clone https://github.com/Arnobrizwan/mentormind && cd mentormind/deploy
+cp .env.example .env      # set API_DOMAIN, secrets, CORS origins, HF token
+docker compose up -d --build
+```
+
+Runs comfortably on an 8 GB VPS (~$5–12/mo). Full walkthrough — DNS, secrets,
+seeding, backups, memory budget — in [`deploy/README.md`](deploy/README.md).
+
 ## Quality: measured, not promised
 
-- **181 automated tests + a real E2E journey** — 110 backend (Django) and
+- **200 automated tests + a real E2E journey** — 129 backend (Django) and
   71 ml-service (pytest, hermetic: the suite never loads the real model),
   plus Playwright specs that run the full login → enroll → quiz → tutor
   journey against a seeded backend — all on every push, alongside ruff and

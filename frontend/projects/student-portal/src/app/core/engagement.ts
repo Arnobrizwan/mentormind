@@ -18,8 +18,16 @@ export interface EngagementMe {
   streak: number;
   daily_login_claimed: boolean;
   daily_login_points: number;
+  daily_goal?: DailyGoal;
   badges: BadgeEntry[];
   recent_events: { action: string; points: number; at: string }[];
+}
+
+export interface DailyGoal {
+  goal: number;
+  earned: number;
+  met: boolean;
+  pct: number;
 }
 
 export interface LeaderboardRow {

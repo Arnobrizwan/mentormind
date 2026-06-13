@@ -21,6 +21,12 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/student-success').then((m) => m.StudentSuccessPage),
   },
   {
+    path: 'tutor-feedback',
+    title: 'Tutor Feedback · MentorMinds Studio',
+    canActivate: [instructorGuard],
+    loadComponent: () => import('./pages/tutor-feedback').then((m) => m.TutorFeedbackPage),
+  },
+  {
     path: 'courses/:slug',
     title: 'Course Workbench · MentorMinds Studio',
     canActivate: [instructorGuard],

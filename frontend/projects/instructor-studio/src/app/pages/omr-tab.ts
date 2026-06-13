@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 
 import { StudioApi, OmrGradeResult } from '../core/api';
+import { saveBlob } from '../core/download';
 import { apiErrorMessage } from '../core/errors';
 import { SiteConfig } from '../core/site-config';
 
@@ -650,12 +651,6 @@ export class OmrTab {
       const label = '"' + sheet.label.replaceAll('"', '""') + '"';
       lines.push([label, score.correct, this.key().length, score.percent, ...answers].join(','));
     }
-    const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'omr-grades.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    saveBlob(lines.join('\n') + '\n', 'omr-grades.csv');
   }
 }

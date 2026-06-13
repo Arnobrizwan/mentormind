@@ -28,3 +28,26 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.user.email}: {self.title}"
+
+
+class PushSubscription(models.Model):
+    """A browser Web Push subscription for PWA reminders. One user can have
+    several (laptop, phone, …). Dead endpoints are pruned on send when the
+    push service replies 404/410."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="push_subscriptions"
+    )
+    # The push service endpoint URL — unique per browser subscription.
+    endpoint = models.URLField(max_length=500, unique=True)
+    # Keys from PushSubscription.toJSON().keys (browser-supplied).
+    p256dh = models.CharField(max_length=255)
+    auth = models.CharField(max_length=255)
+    user_agent = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user"])]
+
+    def __str__(self):
+        return f"push:{self.user.email}:{self.endpoint[-12:]}"

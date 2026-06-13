@@ -29,6 +29,7 @@ class MyEngagementView(APIView):
                 "streak": services.current_streak(user),
                 "daily_login_claimed": services.daily_login_claimed(user),
                 "daily_login_points": services.point_value("daily_login"),
+                "daily_goal": services.daily_goal(user),
                 "badges": services.badge_progress(user),
                 "recent_events": recent,
             }

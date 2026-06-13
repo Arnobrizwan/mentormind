@@ -1,3 +1,6 @@
+import csv
+
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -121,6 +124,69 @@ class RevisionQueueView(APIView):
                 "cards": QueueCardSerializer(due[:QUEUE_SIZE], many=True).data,
             }
         )
+
+
+# Leading characters a spreadsheet (Excel / Sheets / LibreOffice) treats as the
+# start of a formula. Card text is instructor- or AI-authored, i.e. untrusted
+# for this purpose, so neutralise it before it lands in a downloadable CSV.
+_CSV_FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value):
+    """Prefix a leading apostrophe to any cell that a spreadsheet would parse
+    as a formula — the OWASP CSV-injection mitigation. Anki imports the field
+    as plain text, so the only visible effect is on cards that begin with a
+    formula character (rare)."""
+    text = "" if value is None else str(value)
+    if text and text[0] in _CSV_FORMULA_LEAD:
+        return "'" + text
+    return text
+
+
+class RevisionExportView(APIView):
+    """Export the student's whole deck as a CSV that Anki imports directly.
+
+    Anki reads the leading `#` directives, maps the first two columns to the
+    Front/Back of a Basic note, and applies column 3 as tags — so a student
+    can take their MentorMind cards offline into Anki with one click. (Plain
+    CSV, so Excel / Google Sheets open it too.)
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        course_ids = list(
+            Enrollment.objects.using("default")
+            .filter(student=user)
+            .values_list("course_id", flat=True)
+        )
+        cards = (
+            Flashcard.objects.using("default")
+            .filter(course_id__in=course_ids, is_published=True)
+            .select_related("course")
+            .order_by("course_id", "id")
+        )
+
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = (
+            'attachment; filename="mentormind-flashcards.csv"'
+        )
+        # Anki import directives (ignored by spreadsheets).
+        response.write("#separator:Comma\n#html:false\n#tags column:3\n")
+
+        writer = csv.writer(response)
+        for card in cards:
+            tags = " ".join(
+                part
+                for part in (
+                    f"course::{card.course.slug}" if card.course.slug else "",
+                    f"topic::{card.topic.replace(' ', '_')}" if card.topic else "",
+                )
+                if part
+            )
+            writer.writerow([_csv_safe(card.front), _csv_safe(card.back), tags])
+        return response
 
 
 class ReviewView(APIView):
