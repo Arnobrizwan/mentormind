@@ -77,4 +77,12 @@ export class ShortAnswerApi {
         .pipe(retry(GET_RETRY)),
     );
   }
+
+  /** OCR a photographed handwritten answer — returns the extracted text
+   * for the student to review and correct before submitting. */
+  ocr(image: File): Promise<{ text: string }> {
+    const form = new FormData();
+    form.append('image', image, image.name || 'answer.jpg');
+    return firstValueFrom(this.http.post<{ text: string }>('/api/v1/practice/ocr/', form));
+  }
 }

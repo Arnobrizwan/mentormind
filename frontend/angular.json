@@ -29,7 +29,10 @@
                 "input": "projects/student-portal/public"
               }
             ],
-            "styles": ["projects/student-portal/src/styles.scss"]
+            "styles": [
+              "node_modules/katex/dist/katex.min.css",
+              "projects/student-portal/src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {
@@ -98,7 +101,9 @@
                 "input": "projects/instructor-studio/public"
               }
             ],
-            "styles": ["projects/instructor-studio/src/styles.scss"]
+            "styles": [
+              "projects/instructor-studio/src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {
@@ -168,7 +173,9 @@
                 "input": "projects/admin-console/public"
               }
             ],
-            "styles": ["projects/admin-console/src/styles.scss"]
+            "styles": [
+              "projects/admin-console/src/styles.scss"
+            ]
           },
           "configurations": {
             "production": {

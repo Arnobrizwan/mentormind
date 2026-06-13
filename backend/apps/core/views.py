@@ -1106,6 +1106,51 @@ class StudentReadinessView(APIView):
         return Response(readiness_module.student_readiness(request.user))
 
 
+class PracticeOcrView(APIView):
+    """OCR a photographed handwritten answer so students can practise on
+    paper — the way they'll sit the real exam — and still get instant
+    rubric grading. Returns extracted text only; the student reviews and
+    corrects it in the answer box before submitting, so OCR mistakes never
+    silently cost marks. The image is never stored."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from apps.flags.services import flag_enabled
+
+        if not flag_enabled("handwriting_ocr", default=True):
+            return Response(
+                {"detail": "Handwriting OCR is currently disabled."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        image = request.FILES.get("image")
+        if image is None or not (image.content_type or "").startswith("image/"):
+            return Response(
+                {"error": "An image file is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        raw = image.read()
+        if len(raw) > MAX_PROCTOR_IMAGE_BYTES:
+            return Response(
+                {"error": "Image too large (8 MB max)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            result = ml_client.post_image(
+                "/v1/ocr/extract",
+                raw,
+                filename=image.name or "answer.jpg",
+                content_type=image.content_type,
+                timeout=30,
+            )
+        except ml_client.MLServiceError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response({"text": str(result.get("text", "")).strip()})
+
+
 class SearchView(APIView):
     """Title/description search across published courses and lessons."""
 

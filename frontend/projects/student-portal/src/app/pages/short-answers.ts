@@ -6,7 +6,10 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LearningApi } from '../core/api';
 import { apiErrorMessage } from '../core/errors';
 import { Course } from '../core/models';
+import { pickQuestionPhoto } from '../core/native-camera';
 import { ShortAnswerApi, ShortAnswerQuestion, ShortAnswerSubmission } from '../core/short-answers';
+
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 
 @Component({
   selector: 'mm-short-answers',
@@ -114,6 +117,23 @@ import { ShortAnswerApi, ShortAnswerQuestion, ShortAnswerSubmission } from '../c
                     <p class="error-note" role="alert">{{ message }}</p>
                   }
                   <div class="work__actions">
+                    <input
+                      #answerPhoto
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      hidden
+                      (change)="onAnswerPhoto($event)"
+                    />
+                    <button
+                      type="button"
+                      class="btn btn--ghost"
+                      (click)="snapAnswer(answerPhoto)"
+                      [disabled]="busy() || ocrBusy() || !canAttempt()"
+                      title="Photograph your handwritten answer — we'll read it into the box for you to check"
+                    >
+                      {{ ocrBusy() ? 'Reading your handwriting…' : '📷 Snap written answer' }}
+                    </button>
                     @if (!canAttempt()) {
                       <span class="quiet">
                         You've used all your attempts — review your feedback below.
@@ -122,7 +142,7 @@ import { ShortAnswerApi, ShortAnswerQuestion, ShortAnswerSubmission } from '../c
                     <button
                       class="btn btn--accent"
                       type="submit"
-                      [disabled]="busy() || !answer().trim() || !canAttempt()"
+                      [disabled]="busy() || ocrBusy() || !answer().trim() || !canAttempt()"
                     >
                       {{ busy() ? 'Grading…' : 'Submit for grading' }}
                     </button>
@@ -385,6 +405,7 @@ export class ShortAnswersPage {
   protected readonly history = signal<ShortAnswerSubmission[]>([]);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
+  protected readonly ocrBusy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly loadError = signal<string | null>(null);
 
@@ -487,6 +508,47 @@ export class ShortAnswersPage {
     this.result.set(null);
     this.answer.set('');
     this.error.set(null);
+  }
+
+  /** Native camera first; falls back to the hidden file input on web. */
+  protected async snapAnswer(fileInput: HTMLInputElement): Promise<void> {
+    const native = await pickQuestionPhoto();
+    if (native) {
+      await this.readPhoto(native);
+      return;
+    }
+    fileInput.click();
+  }
+
+  protected onAnswerPhoto(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (file) void this.readPhoto(file);
+  }
+
+  private async readPhoto(file: File): Promise<void> {
+    if (this.ocrBusy()) return;
+    if (file.size > MAX_PHOTO_BYTES) {
+      this.error.set('That photo is too large — the limit is 8 MB.');
+      return;
+    }
+    this.ocrBusy.set(true);
+    this.error.set(null);
+    try {
+      const { text } = await this.shortAnswers.ocr(file);
+      if (!text) {
+        this.error.set("Couldn't read any writing in that photo — try a clearer shot.");
+        return;
+      }
+      // Append rather than replace: the student may have typed part of the
+      // answer already. They review and correct before submitting.
+      this.answer.update((current) => (current.trim() ? `${current.trim()}\n${text}` : text));
+    } catch (err) {
+      this.error.set(apiErrorMessage(err, 'Could not read that photo — try again.'));
+    } finally {
+      this.ocrBusy.set(false);
+    }
   }
 
   protected pad(n: number): string {

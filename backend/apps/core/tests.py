@@ -1348,3 +1348,60 @@ class GradebookExportTests(TestCase):
         as_rival.force_authenticate(user=rival)
         res = as_rival.get(f"/api/v1/courses/{self.course.slug}/gradebook/")
         self.assertEqual(res.status_code, 403)
+
+
+class PracticeOcrTests(TestCase):
+    """Photographed handwritten answers → text the student can review."""
+
+    def setUp(self):
+        cache.clear()
+        self.student = User.objects.create_user(
+            email="ocr-student@mentormind.dev", password="password123"
+        )
+        self.client_student = APIClient()
+        self.client_student.force_authenticate(user=self.student)
+
+    def _photo(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        return SimpleUploadedFile("answer.jpg", b"fake-jpeg-bytes", "image/jpeg")
+
+    def test_extracts_text_for_review_without_storing_anything(self):
+        from unittest.mock import patch
+
+        with patch(
+            "apps.core.ml_client.post_image",
+            return_value={"text": " Energy is conserved. "},
+        ) as mocked:
+            res = self.client_student.post(
+                "/api/v1/practice/ocr/", {"image": self._photo()}, format="multipart"
+            )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["text"], "Energy is conserved.")
+        mocked.assert_called_once()
+
+    def test_requires_an_image_and_auth(self):
+        res = self.client_student.post("/api/v1/practice/ocr/", {}, format="multipart")
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(APIClient().post("/api/v1/practice/ocr/").status_code, 401)
+
+    def test_flag_off_disables_the_endpoint(self):
+        FeatureFlag.objects.create(key="handwriting_ocr", enabled=False)
+        res = self.client_student.post(
+            "/api/v1/practice/ocr/", {"image": self._photo()}, format="multipart"
+        )
+        self.assertEqual(res.status_code, 403)
+
+    def test_dead_ml_service_returns_502(self):
+        from unittest.mock import patch
+
+        from apps.core import ml_client
+
+        with patch(
+            "apps.core.ml_client.post_image",
+            side_effect=ml_client.MLServiceError("down"),
+        ):
+            res = self.client_student.post(
+                "/api/v1/practice/ocr/", {"image": self._photo()}, format="multipart"
+            )
+        self.assertEqual(res.status_code, 502)
