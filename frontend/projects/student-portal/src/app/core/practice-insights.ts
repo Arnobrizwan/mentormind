@@ -45,6 +45,8 @@ export interface CourseReadiness {
   course_slug: string;
   course_title: string;
   readiness: number;
+  /** Cambridge band (A*–U) projected from the readiness blend. */
+  predicted_grade: string;
   components: ReadinessComponents;
 }
 

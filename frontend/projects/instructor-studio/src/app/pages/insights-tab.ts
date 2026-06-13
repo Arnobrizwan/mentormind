@@ -3,7 +3,7 @@ import { Component, OnInit, computed, inject, input, signal } from '@angular/cor
 import { CourseInsights, StudioApi } from '../core/api';
 import { staggerDelay } from '../core/animations';
 import { apiErrorMessage } from '../core/errors';
-import { Course } from '../core/models';
+import { Course, ItemAnalysis } from '../core/models';
 
 /**
  * Class-wide topic insights: quiz accuracy and short-answer scores per topic,
@@ -47,6 +47,78 @@ import { Course } from '../core/models';
               </li>
             }
           </ul>
+        }
+      </section>
+
+      <section class="panel block sheet-in" style="animation-delay: 90ms">
+        <p class="tag">Item analysis · per-question difficulty &amp; discrimination</p>
+        @if (course().quizzes.length === 0) {
+          <p class="tag empty">No quizzes yet — create one to analyse its questions.</p>
+        } @else {
+          <div class="quiz-pick">
+            @for (quiz of course().quizzes; track quiz.id) {
+              <button
+                type="button"
+                class="btn btn--line btn--sm"
+                [class.is-active]="analysis()?.quiz === quiz.id"
+                (click)="analyse(quiz.id)"
+                [disabled]="analysing()"
+              >
+                {{ quiz.title }}
+              </button>
+            }
+          </div>
+
+          @if (analysisError(); as message) {
+            <p class="error-note" role="alert">{{ message }}</p>
+          } @else if (analysing()) {
+            <p class="tag empty">Crunching the responses…</p>
+          } @else if (analysis(); as items) {
+            @if (items.attempts === 0) {
+              <p class="tag empty">No attempts on this quiz yet — analysis appears once students answer.</p>
+            } @else {
+              <p class="tag">
+                {{ items.attempts }} attempt(s).
+                @if (items.attempts < items.min_attempts_for_discrimination) {
+                  Discrimination needs at least {{ items.min_attempts_for_discrimination }} attempts.
+                }
+              </p>
+              <ul class="items">
+                @for (item of items.questions; track item.id) {
+                  <li class="item">
+                    <div class="item__head">
+                      <span class="item__text">{{ item.text }}</span>
+                      @for (flag of item.flags; track flag) {
+                        <span class="tag flag" [class.flag--warn]="flag === 'review'">
+                          {{ flagLabel(flag) }}
+                        </span>
+                      }
+                    </div>
+                    <div class="item__stats">
+                      <span class="tag">
+                        difficulty
+                        <strong>{{ item.difficulty === null ? '—' : pct(item.difficulty) }}</strong>
+                      </span>
+                      <span class="tag" [title]="'Upper-lower 27% index — negative means strong students miss it more than weak ones'">
+                        discrimination
+                        <strong [class.neg]="(item.discrimination ?? 0) < 0">
+                          {{ item.discrimination === null ? '—' : item.discrimination }}
+                        </strong>
+                      </span>
+                      <span class="tag">{{ item.responses }} response(s)</span>
+                    </div>
+                    <ul class="distractors">
+                      @for (d of item.distractors; track $index) {
+                        <li class="tag" [class.distractor--correct]="d.is_correct">
+                          {{ d.is_correct ? '✓' : '·' }} {{ d.option }} — {{ d.picks }}
+                        </li>
+                      }
+                    </ul>
+                  </li>
+                }
+              </ul>
+            }
+          }
         }
       </section>
 
@@ -151,6 +223,61 @@ import { Course } from '../core/models';
       to { transform: scaleX(1); }
     }
 
+    .quiz-pick {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin: 0.8rem 0;
+
+      .is-active { border-color: var(--amber); color: var(--amber); }
+    }
+
+    .items {
+      list-style: none;
+      margin: 0.8rem 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .item__head {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .item__text { font-weight: 600; }
+
+    .flag {
+      padding: 0.1rem 0.5rem;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+    }
+
+    .flag--warn { border-color: var(--red, #b23a2c); color: var(--red, #b23a2c); }
+
+    .item__stats {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin: 0.35rem 0;
+
+      .neg { color: var(--red, #b23a2c); }
+    }
+
+    .distractors {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    .distractor--correct { color: var(--teal); font-weight: 600; }
+
     @media (prefers-reduced-motion: reduce) {
       .ibar__fill { animation: none; }
     }
@@ -187,5 +314,35 @@ export class InsightsTab implements OnInit {
 
   protected stagger(index: number): number {
     return staggerDelay(index);
+  }
+
+  protected readonly analysis = signal<ItemAnalysis | null>(null);
+  protected readonly analysing = signal(false);
+  protected readonly analysisError = signal<string | null>(null);
+
+  protected async analyse(quizId: number): Promise<void> {
+    if (this.analysing()) return;
+    this.analysing.set(true);
+    this.analysisError.set(null);
+    try {
+      this.analysis.set(await this.api.itemAnalysis(quizId));
+    } catch (err) {
+      this.analysis.set(null);
+      this.analysisError.set(apiErrorMessage(err, 'Could not analyse that quiz.'));
+    } finally {
+      this.analysing.set(false);
+    }
+  }
+
+  protected pct(p: number): string {
+    return `${Math.round(p * 100)}%`;
+  }
+
+  protected flagLabel(flag: string): string {
+    return flag === 'too_easy'
+      ? 'too easy'
+      : flag === 'too_hard'
+        ? 'too hard'
+        : 'review — possible miskey';
   }
 }

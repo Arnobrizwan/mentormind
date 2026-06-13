@@ -1164,3 +1164,187 @@ class QuizDraftGenerationTests(TestCase):
             "/api/v1/quizzes/generate-draft/", {"lesson": self.lesson.id}, format="json"
         )
         self.assertEqual(res.status_code, 403)
+
+
+class PredictedGradeTests(TestCase):
+    """Readiness → Cambridge grade band mapping, exposed on both surfaces."""
+
+    def test_band_boundaries(self):
+        from .readiness import predicted_grade
+
+        self.assertEqual(predicted_grade(95), "A*")
+        self.assertEqual(predicted_grade(87), "A*")
+        self.assertEqual(predicted_grade(86.9), "A")
+        self.assertEqual(predicted_grade(67), "B")
+        self.assertEqual(predicted_grade(57), "C")
+        self.assertEqual(predicted_grade(47), "D")
+        self.assertEqual(predicted_grade(37), "E")
+        self.assertEqual(predicted_grade(36.9), "U")
+        self.assertEqual(predicted_grade(0), "U")
+
+    def test_grade_included_in_readiness_payloads(self):
+        cache.clear()
+        group, _ = Group.objects.get_or_create(name="Instructors")
+        instructor = User.objects.create_user(
+            email="pg-instructor@mentormind.dev", password="password123"
+        )
+        instructor.groups.add(group)
+        student = User.objects.create_user(
+            email="pg-student@mentormind.dev", password="password123"
+        )
+        course = Course.objects.create(
+            title="Forces", slug="pg-forces", description="d",
+            instructor=instructor, is_published=True,
+        )
+        Enrollment.objects.create(student=student, course=course)
+
+        as_student = APIClient()
+        as_student.force_authenticate(user=student)
+        body = as_student.get("/api/v1/practice/readiness/").json()
+        self.assertEqual(body[0]["predicted_grade"], "U")
+
+        as_instructor = APIClient()
+        as_instructor.force_authenticate(user=instructor)
+        body = as_instructor.get(f"/api/v1/courses/{course.slug}/readiness/").json()
+        self.assertIn("predicted_grade", body[0])
+
+
+class ItemAnalysisTests(TestCase):
+    """Per-question difficulty/discrimination for the instructor studio."""
+
+    def setUp(self):
+        cache.clear()
+        group, _ = Group.objects.get_or_create(name="Instructors")
+        self.instructor = User.objects.create_user(
+            email="ia-instructor@mentormind.dev", password="password123"
+        )
+        self.instructor.groups.add(group)
+        self.course = Course.objects.create(
+            title="Energy", slug="ia-energy", description="d",
+            instructor=self.instructor, is_published=True,
+        )
+        self.quiz = Quiz.objects.create(course=self.course, title="E1")
+        self.q1 = QuizQuestion.objects.create(
+            quiz=self.quiz, text="Unit of energy?", options=["J", "N", "W"],
+            correct_option_index=0, order=1,
+        )
+        self.q2 = QuizQuestion.objects.create(
+            quiz=self.quiz, text="KE formula?", options=["mv", "½mv²", "mgh"],
+            correct_option_index=1, order=2,
+        )
+        self.as_instructor = APIClient()
+        self.as_instructor.force_authenticate(user=self.instructor)
+
+        # Four students: strong pair aces both; weak pair misses q2 — q1 is
+        # easy for everyone, q2 should discriminate positively.
+        for index, (q1_ok, q2_ok) in enumerate(
+            [(True, True), (True, True), (True, False), (False, False)]
+        ):
+            student = User.objects.create_user(
+                email=f"ia-student{index}@mentormind.dev", password="password123"
+            )
+            enrollment = Enrollment.objects.create(student=student, course=self.course)
+            correct = int(q1_ok) + int(q2_ok)
+            QuizAttempt.objects.create(
+                enrollment=enrollment, quiz=self.quiz,
+                score=50.0 * correct, total_questions=2, correct_answers=correct,
+                answers={
+                    str(self.q1.id): {"selected": 0 if q1_ok else 1, "correct": q1_ok, "topic": ""},
+                    str(self.q2.id): {"selected": 1 if q2_ok else 0, "correct": q2_ok, "topic": ""},
+                },
+            )
+
+    def test_difficulty_discrimination_and_distractors(self):
+        res = self.as_instructor.get(f"/api/v1/quizzes/{self.quiz.id}/item-analysis/")
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body["attempts"], 4)
+        rows = {row["id"]: row for row in body["questions"]}
+
+        easy = rows[self.q1.id]
+        self.assertEqual(easy["difficulty"], 0.75)
+        hard = rows[self.q2.id]
+        self.assertEqual(hard["difficulty"], 0.5)
+        # Upper pair (100%) both right, lower pair (one 50%, one 0%) both wrong.
+        self.assertEqual(hard["discrimination"], 1.0)
+        self.assertEqual(hard["distractors"][1]["picks"], 2)
+        self.assertTrue(hard["distractors"][1]["is_correct"])
+
+    def test_flags_mark_problem_questions(self):
+        from .item_analysis import quiz_item_analysis
+
+        # Flip q2 so the strong pair misses it and the weak pair gets it:
+        # negative discrimination → "review" flag.
+        for attempt in QuizAttempt.objects.filter(quiz=self.quiz):
+            detail = attempt.answers[str(self.q2.id)]
+            detail["correct"] = not detail["correct"]
+            attempt.save()
+        rows = {row["id"]: row for row in quiz_item_analysis(self.quiz)["questions"]}
+        self.assertIn("review", rows[self.q2.id]["flags"])
+
+    def test_instructor_only(self):
+        student = User.objects.create_user(
+            email="ia-outsider@mentormind.dev", password="password123"
+        )
+        as_student = APIClient()
+        as_student.force_authenticate(user=student)
+        res = as_student.get(f"/api/v1/quizzes/{self.quiz.id}/item-analysis/")
+        self.assertEqual(res.status_code, 403)
+
+
+class GradebookExportTests(TestCase):
+    """Whole-class CSV export from the instructor studio."""
+
+    def setUp(self):
+        cache.clear()
+        group, _ = Group.objects.get_or_create(name="Instructors")
+        self.instructor = User.objects.create_user(
+            email="gb-instructor@mentormind.dev", password="password123"
+        )
+        self.instructor.groups.add(group)
+        self.student = User.objects.create_user(
+            email="gb-student@mentormind.dev", password="password123"
+        )
+        self.course = Course.objects.create(
+            title="Atoms", slug="gb-atoms", description="d",
+            instructor=self.instructor, is_published=True,
+        )
+        self.enrollment = Enrollment.objects.create(
+            student=self.student, course=self.course
+        )
+        self.quiz = Quiz.objects.create(course=self.course, title="A1")
+        # Two attempts — the gradebook keeps the best.
+        for score in (40.0, 80.0):
+            QuizAttempt.objects.create(
+                enrollment=self.enrollment, quiz=self.quiz, score=score,
+                total_questions=1, correct_answers=int(score > 50),
+            )
+        self.as_instructor = APIClient()
+        self.as_instructor.force_authenticate(user=self.instructor)
+
+    def test_csv_has_best_scores_and_predicted_grade(self):
+        res = self.as_instructor.get(f"/api/v1/courses/{self.course.slug}/gradebook/")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("text/csv", res["Content-Type"])
+        self.assertIn("gradebook-gb-atoms.csv", res["Content-Disposition"])
+        lines = res.content.decode().strip().splitlines()
+        self.assertIn("Quiz: A1 (best %)", lines[0])
+        self.assertIn("Predicted grade", lines[0])
+        self.assertIn("gb-student@mentormind.dev", lines[1])
+        self.assertIn("80.0", lines[1])
+
+    def test_students_and_other_instructors_blocked(self):
+        as_student = APIClient()
+        as_student.force_authenticate(user=self.student)
+        res = as_student.get(f"/api/v1/courses/{self.course.slug}/gradebook/")
+        self.assertEqual(res.status_code, 403)
+
+        group = Group.objects.get(name="Instructors")
+        rival = User.objects.create_user(
+            email="gb-rival@mentormind.dev", password="password123"
+        )
+        rival.groups.add(group)
+        as_rival = APIClient()
+        as_rival.force_authenticate(user=rival)
+        res = as_rival.get(f"/api/v1/courses/{self.course.slug}/gradebook/")
+        self.assertEqual(res.status_code, 403)

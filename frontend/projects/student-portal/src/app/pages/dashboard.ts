@@ -246,6 +246,13 @@ interface ContinueHero {
                     Exam readiness:
                     <strong class="ready__num"><span [mmCountUp]="ready.readiness"></span>%</strong>
                   </span>
+                  <span
+                    class="ready__grade mono-label"
+                    [class.ready__grade--strong]="ready.readiness >= 70"
+                    [class.ready__grade--weak]="ready.readiness < 40"
+                  >
+                    {{ locale.t('dash.predicted') }} {{ ready.predicted_grade }}
+                  </span>
                 </div>
               }
               @if (slugFor(enrollment.course); as slug) {
@@ -633,6 +640,18 @@ interface ContinueHero {
     }
 
     .ready__num { font-weight: 700; }
+
+    .ready__grade {
+      margin-left: auto;
+      padding: 0.1rem 0.55rem;
+      border: 1.5px solid var(--marker);
+      border-radius: 999px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .ready__grade--strong { border-color: var(--sage); color: var(--sage-deep, var(--sage)); }
+    .ready__grade--weak { border-color: var(--danger); color: var(--danger); }
 
     .desk h1 {
       font-size: clamp(2.2rem, 5vw, 3.6rem);

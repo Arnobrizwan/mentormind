@@ -8,6 +8,7 @@ import {
   Enrollment,
   Flashcard,
   GenerationQueued,
+  ItemAnalysis,
   Lesson,
   Paginated,
   ProctorSession,
@@ -69,6 +70,20 @@ export class StudioApi {
 
   readiness(slug: string): Promise<ReadinessRow[]> {
     return firstValueFrom(this.http.get<ReadinessRow[]>(`/api/v1/courses/${slug}/readiness/`));
+  }
+
+  /** Classical item analysis — difficulty, discrimination, distractors. */
+  itemAnalysis(quizId: number): Promise<ItemAnalysis> {
+    return firstValueFrom(
+      this.http.get<ItemAnalysis>(`/api/v1/quizzes/${quizId}/item-analysis/`),
+    );
+  }
+
+  /** Whole-class gradebook as CSV text, ready to save as a file. */
+  gradebookCsv(slug: string): Promise<string> {
+    return firstValueFrom(
+      this.http.get(`/api/v1/courses/${slug}/gradebook/`, { responseType: 'text' }),
+    );
   }
 
   createLesson(data: Partial<Lesson>): Promise<Lesson> {

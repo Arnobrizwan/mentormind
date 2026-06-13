@@ -17,6 +17,27 @@ from .models import Lesson, QuizAttempt, ShortAnswerSubmission
 # Practice volume saturates here — more reps than this stop adding score.
 FULL_PRACTICE_VOLUME = 20
 
+# Cambridge-style bands over the blended readiness score, highest first.
+# Readiness is a leading indicator, not a mark — the bands are deliberately
+# conservative at the top so an A* prediction means consistent excellence
+# across all four signals, not one lucky quiz.
+GRADE_BANDS = (
+    (87, "A*"),
+    (77, "A"),
+    (67, "B"),
+    (57, "C"),
+    (47, "D"),
+    (37, "E"),
+)
+
+
+def predicted_grade(score):
+    """Map a 0-100 readiness score onto a Cambridge grade band."""
+    for threshold, grade in GRADE_BANDS:
+        if score >= threshold:
+            return grade
+    return "U"
+
 DEFAULT_WEIGHTS = {
     "progress": 40,
     "quiz": 30,
@@ -104,6 +125,7 @@ def enrollment_readiness(enrollment, total_lessons=None):
 
     return {
         "readiness": round(readiness, 1),
+        "predicted_grade": predicted_grade(readiness),
         "components": {
             "progress_pct": round(progress, 1),
             "quiz_avg": round(quiz_avg, 1),

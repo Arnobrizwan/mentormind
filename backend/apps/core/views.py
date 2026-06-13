@@ -289,6 +289,103 @@ class CourseViewSet(viewsets.ModelViewSet):
         )
         return Response(serializer.data)
 
+    @action(detail=True, methods=["get"], permission_classes=[IsInstructor])
+    def gradebook(self, request, slug=None):
+        """The whole class as one CSV — progress, best score per quiz,
+        short-answer marks, readiness and predicted grade per student.
+        Built for import into Excel/Sheets or an institution's MIS."""
+        course = self.get_object()
+        if course.instructor != request.user and not request.user.is_staff:
+            return Response(
+                {"detail": "Only this course's instructor can export the gradebook."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        import csv
+
+        from django.http import HttpResponse
+
+        from . import readiness as readiness_module
+
+        quizzes = list(
+            Quiz.objects.using("default").filter(course=course).order_by("id")
+        )
+        sa_questions = list(
+            ShortAnswerQuestion.objects.using("default")
+            .filter(course=course)
+            .order_by("order", "id")
+        )
+        total_lessons = (
+            Lesson.objects.using("default")
+            .filter(course=course, is_published=True)
+            .count()
+        )
+        enrollments = (
+            Enrollment.objects.using("default")
+            .filter(course=course)
+            .select_related("student")
+            .order_by("student__email")
+        )
+
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = (
+            f'attachment; filename="gradebook-{course.slug}.csv"'
+        )
+        writer = csv.writer(response)
+        writer.writerow(
+            ["Student", "Email", "Progress %"]
+            + [f"Quiz: {quiz.title} (best %)" for quiz in quizzes]
+            + ["Short answers (best marks)", "Short answers (max)"]
+            + ["Readiness", "Predicted grade"]
+        )
+
+        for enrollment in enrollments:
+            completed = (
+                enrollment.completed_lessons.using("default")
+                .filter(is_published=True)
+                .count()
+            )
+            progress = (
+                round(100.0 * completed / total_lessons, 1) if total_lessons else 0.0
+            )
+
+            best_by_quiz = {}
+            for attempt in QuizAttempt.objects.using("default").filter(
+                enrollment=enrollment
+            ):
+                best = best_by_quiz.get(attempt.quiz_id)
+                if best is None or attempt.score > best:
+                    best_by_quiz[attempt.quiz_id] = attempt.score
+
+            best_by_question = {}
+            for submission in ShortAnswerSubmission.objects.using("default").filter(
+                enrollment=enrollment
+            ):
+                best = best_by_question.get(submission.question_id)
+                if best is None or submission.score > best:
+                    best_by_question[submission.question_id] = submission.score
+            sa_earned = sum(
+                best_by_question.get(question.id, 0) for question in sa_questions
+            )
+            sa_max = sum(question.max_score for question in sa_questions)
+
+            scored = readiness_module.enrollment_readiness(
+                enrollment, total_lessons=total_lessons
+            )
+            quiz_cells = [
+                ""
+                if quiz.id not in best_by_quiz
+                else round(best_by_quiz[quiz.id], 1)
+                for quiz in quizzes
+            ]
+            writer.writerow(
+                [enrollment.student.display_name, enrollment.student.email, progress]
+                + quiz_cells
+                + [sa_earned, sa_max, scored["readiness"], scored["predicted_grade"]]
+            )
+
+        return response
+
 
 class LessonViewSet(viewsets.ModelViewSet):
     """ViewSet to manage individual lessons under a course."""
@@ -660,6 +757,26 @@ class QuizViewSet(viewsets.ModelViewSet):
             if log.is_violation:
                 entry["violations"] += 1
         return Response(list(sessions.values()))
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="item-analysis",
+        permission_classes=[IsInstructor],
+    )
+    def item_analysis(self, request, pk=None):
+        """Classical item analysis — per-question difficulty, upper-lower
+        discrimination, and distractor counts. Flags miskeyed or dead
+        questions so the instructor can fix the bank, not just reteach."""
+        quiz = self.get_object()
+        if quiz.course.instructor != request.user and not request.user.is_staff:
+            return Response(
+                {"detail": "Only this course's instructor can view item analysis."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        from . import item_analysis as item_analysis_module
+
+        return Response(item_analysis_module.quiz_item_analysis(quiz))
 
 
 class ShortAnswerQuestionViewSet(viewsets.ModelViewSet):

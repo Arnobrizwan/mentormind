@@ -209,5 +209,34 @@ export interface ReadinessRow {
   student_email: string;
   student_name: string;
   readiness: number;
+  /** Cambridge band (A*–U) projected from the readiness blend. */
+  predicted_grade: string;
   components: ReadinessComponents;
+}
+
+export interface ItemDistractor {
+  option: string;
+  picks: number;
+  is_correct: boolean;
+}
+
+export interface ItemRow {
+  id: number;
+  text: string;
+  topic: string;
+  responses: number;
+  /** Proportion correct (p-value) — high means easy. Null with no data. */
+  difficulty: number | null;
+  /** Upper-lower 27% index — negative flags a miskeyed/ambiguous item. */
+  discrimination: number | null;
+  distractors: ItemDistractor[];
+  flags: string[];
+}
+
+export interface ItemAnalysis {
+  quiz: number;
+  title: string;
+  attempts: number;
+  min_attempts_for_discrimination: number;
+  questions: ItemRow[];
 }

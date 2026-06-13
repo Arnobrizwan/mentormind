@@ -254,6 +254,19 @@ type Tab =
           @if (roster().length === 0) {
             <p class="tag" style="padding: 1.2rem 0">No students enrolled yet.</p>
           } @else {
+            <div class="roster-actions">
+              <button
+                type="button"
+                class="btn btn--line btn--sm"
+                (click)="exportGradebook()"
+                [disabled]="exporting()"
+              >
+                {{ exporting() ? 'Preparing…' : '⤓ Export gradebook (CSV)' }}
+              </button>
+              @if (exportError(); as message) {
+                <span class="error-note" role="alert">{{ message }}</span>
+              }
+            </div>
             <table class="roster">
               <thead>
                 <tr>
@@ -262,6 +275,7 @@ type Tab =
                   <th class="tag">Progress</th>
                   <th class="tag">Quiz attempts</th>
                   <th class="tag">Exam readiness</th>
+                  <th class="tag">Predicted</th>
                 </tr>
               </thead>
               <tbody>
@@ -292,6 +306,18 @@ type Tab =
                           [title]="readinessTitle(r)"
                           [stCountUp]="r.readiness"
                         ></span>
+                      } @else {
+                        <span class="tag">—</span>
+                      }
+                    </td>
+                    <td>
+                      @if (readinessFor(enrollment.id); as r) {
+                        <span
+                          class="tag grade"
+                          [class.ready--ok]="r.readiness >= 70"
+                          [class.ready--mid]="r.readiness >= 40 && r.readiness < 70"
+                          [class.ready--low]="r.readiness < 40"
+                        >{{ r.predicted_grade }}</span>
                       } @else {
                         <span class="tag">—</span>
                       }
@@ -488,6 +514,16 @@ type Tab =
       td { padding: 0.7rem 0.6rem; border-bottom: 1px dashed var(--line); font-size: 0.92rem; }
     }
 
+    .roster-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.9rem;
+    }
+
+    .grade { font-weight: 700; }
+
     .bar {
       width: 130px;
       height: 7px;
@@ -555,6 +591,8 @@ export class WorkbenchPage {
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly exporting = signal(false);
+  protected readonly exportError = signal<string | null>(null);
 
   protected readonly title = signal('');
   protected readonly description = signal('');
@@ -617,6 +655,27 @@ export class WorkbenchPage {
       `Progress ${c.progress_pct}% · Quiz avg ${c.quiz_avg} · ` +
       `Practice volume ${c.practice_volume} · Accuracy ${c.accuracy}`
     );
+  }
+
+  /** Download the whole-class gradebook as a CSV file. */
+  protected async exportGradebook(): Promise<void> {
+    const course = this.course();
+    if (!course || this.exporting()) return;
+    this.exporting.set(true);
+    this.exportError.set(null);
+    try {
+      const csv = await this.api.gradebookCsv(course.slug);
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `gradebook-${course.slug}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      this.exportError.set(apiErrorMessage(err, 'Could not export the gradebook.'));
+    } finally {
+      this.exporting.set(false);
+    }
   }
 
   private async run(action: () => Promise<unknown>, failure: string): Promise<void> {
