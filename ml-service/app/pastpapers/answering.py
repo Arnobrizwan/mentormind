@@ -87,6 +87,23 @@ def _allowed_llm_url(url: str) -> bool:
     return parsed.scheme in ("http", "https") and bool(parsed.hostname) and "@" not in parsed.netloc
 
 
+def _chat_completions_endpoint(url: str) -> str:
+    """Resolve the OpenAI-compatible chat-completions URL from CUSTOM_LLM_URL,
+    accommodating the different base shapes used by gateways:
+
+      http://localhost:8000                         -> .../v1/chat/completions
+      https://api.groq.com/openai/v1                -> .../chat/completions
+      https://generativelanguage.googleapis.com/v1beta/openai -> .../chat/completions
+      http://host/v1/chat/completions               -> used as-is
+    """
+    base = url.rstrip("/")
+    if base.endswith("/chat/completions"):
+        return base
+    if base.endswith("/v1") or base.endswith("/openai"):
+        return base + "/chat/completions"
+    return base + "/v1/chat/completions"
+
+
 def _tokens(text: str) -> set[str]:
     return {t for t in TOKEN_RE.findall(text.lower()) if t not in STOPWORDS}
 
@@ -276,10 +293,28 @@ async def _ranked_matches(
 
 
 def _system_prompt(subject: str, level: str, context: str) -> str:
+    """Context-aware tutor prompt.
+
+    With retrieved mark-scheme material, stay grounded in it (mark-scheme
+    style). With no match in the corpus, fall back to answering as a
+    knowledgeable general tutor so the student still gets help on any relevant
+    question — while being explicit about uncertainty instead of inventing
+    facts. The model is supplied by LOCAL_LLM (e.g. Gemma) or CUSTOM_LLM_URL.
+    """
+    who = f"Cambridge {level or 'O/A Level'} {subject or ''}".strip()
+    if context.strip():
+        return (
+            f"You are a {who} tutor. Answer with full step-by-step working in "
+            "mark-scheme style. Ground your answer in this reference "
+            "material:\n\n" + context
+        )
     return (
-        f"You are a Cambridge {level or 'O/A Level'} {subject or ''} tutor. "
-        "Answer with full step-by-step working in mark-scheme style. "
-        "Ground your answer in this reference material:\n\n" + context
+        f"You are a knowledgeable {who} tutor. The student's question has no "
+        "matching past-paper mark scheme, so answer it directly and clearly "
+        "from your own knowledge, with step-by-step working where it helps. "
+        "Stay relevant to studying and the subject; if the question falls "
+        "outside it, still help as a general study tutor. If you are not sure "
+        "of a fact, say so rather than inventing it."
     )
 
 
@@ -290,16 +325,25 @@ async def _generate_answer(
     context: str,
     history: list[dict] | None = None,
 ) -> str | None:
-    """Generate from the fine-tuned model. Tries fully-offline in-process
-    inference first (LOCAL_LLM=1), then an OpenAI-compatible server
-    (CUSTOM_LLM_URL). Returns None if neither is available."""
+    """Generate an answer from the configured model. Tries fully-offline
+    in-process inference first (LOCAL_LLM=1, e.g. Gemma/Qwen), then an
+    OpenAI-compatible server (CUSTOM_LLM_URL — local Ollama/vLLM or a free
+    hosted endpoint). Returns None if neither is available.
+
+    The prompt is context-aware: grounded in mark-scheme material when the
+    corpus matched, general-tutor otherwise — so any relevant question can be
+    answered, not only corpus hits."""
+    # The system prompt already embeds the context (when any), so pass an
+    # empty context to local_llm to avoid appending it twice.
+    system = _system_prompt(subject, level, context)
+
     # In-process inference is CPU/GPU-bound and takes seconds — run it in a
     # worker thread so it can't stall the event loop.
     local = await asyncio.to_thread(
         local_llm.generate,
         question,
-        _system_prompt(subject, level, ""),
-        context,
+        system,
+        "",
         history,
     )
     if local:
@@ -310,7 +354,7 @@ async def _generate_answer(
         return None
 
     messages = [
-        {"role": "system", "content": _system_prompt(subject, level, context)},
+        {"role": "system", "content": system},
     ]
     if history:
         for msg in history:
@@ -322,11 +366,17 @@ async def _generate_answer(
         "messages": messages,
         "temperature": 0.2,
     }
+    # Free hosted gateways (Groq, OpenRouter, Google AI Studio) require a
+    # bearer token; local Ollama/vLLM don't (leave CUSTOM_LLM_API_KEY unset).
+    headers = {}
+    api_key = os.getenv("CUSTOM_LLM_API_KEY", "")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
     try:
         # async client — a slow LLM server must not block the event loop
         async with httpx.AsyncClient(timeout=CUSTOM_LLM_TIMEOUT) as client:
             response = await client.post(
-                url.rstrip("/") + "/v1/chat/completions", json=payload
+                _chat_completions_endpoint(url), json=payload, headers=headers
             )
             response.raise_for_status()
             body = response.json()

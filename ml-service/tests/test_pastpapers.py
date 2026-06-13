@@ -298,3 +298,55 @@ class TestOfflineInference:
             assert res.status_code == 200
             assert res.json()["matched"] is True
             assert "$x = 4$" in res.json()["answer"]
+
+    def test_system_prompt_is_context_aware(self):
+        from app.pastpapers import answering
+
+        grounded = answering._system_prompt("Physics", "A-Level", "Q: ...\nMS: ...")
+        general = answering._system_prompt("Physics", "A-Level", "")
+        # Grounded mode keeps the mark-scheme instruction + embeds material.
+        assert "mark-scheme" in grounded
+        assert "reference material" in grounded.lower()
+        # General mode answers from the model's own knowledge, no phantom
+        # "reference material" with nothing after it.
+        assert "from your own knowledge" in general
+        assert "reference material" not in general.lower()
+
+    def test_chat_completions_endpoint_resolution(self):
+        from app.pastpapers import answering
+
+        f = answering._chat_completions_endpoint
+        assert f("http://localhost:8000") == "http://localhost:8000/v1/chat/completions"
+        assert f("http://localhost:11434/v1") == "http://localhost:11434/v1/chat/completions"
+        assert f("https://api.groq.com/openai/v1") == "https://api.groq.com/openai/v1/chat/completions"
+        assert (
+            f("https://generativelanguage.googleapis.com/v1beta/openai")
+            == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        )
+        # An explicit endpoint is left untouched.
+        assert f("http://h/v1/chat/completions/") == "http://h/v1/chat/completions"
+
+    def test_unknown_question_uses_model_when_available(self, pipeline_env, monkeypatch):
+        """With a model configured (e.g. Gemma via LOCAL_LLM), a question with
+        no corpus match is answered by the model instead of admitting a gap."""
+        from app.pastpapers import answering
+
+        captured = {}
+
+        async def fake_generate(question, subject, level, context, history=None):
+            captured["context"] = context
+            return "A general tutor answer."
+
+        monkeypatch.setattr(answering, "_generate_answer", fake_generate)
+
+        with TestClient(app) as client:
+            client.post("/api/pipeline/discover", json={"folder": str(pipeline_env)})
+            client.post("/api/pipeline/process-next")
+            res = client.post("/v1/tutor/answer", json={
+                "question": "Who painted the Mona Lisa?",
+            })
+            body = res.json()
+            assert body["matched"] is False
+            assert body["answer"] == "A general tutor answer."
+            # No corpus match -> the model was asked with empty grounding.
+            assert captured["context"] == ""
