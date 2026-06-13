@@ -23,6 +23,7 @@ export interface TutorMessage {
   role: 'user' | 'assistant';
   content: string;
   feedback: number | null;
+  feedback_note?: string;
   created_at: string;
 }
 
@@ -96,11 +97,16 @@ export class TutorApi {
     );
   }
 
-  feedback(sessionId: number, messageId: number, value: 1 | -1): Promise<TutorMessage> {
+  feedback(
+    sessionId: number,
+    messageId: number,
+    value: 1 | -1,
+    note = '',
+  ): Promise<TutorMessage> {
     return firstValueFrom(
       this.http.post<TutorMessage>(
         `/api/v1/tutor/sessions/${sessionId}/messages/${messageId}/feedback/`,
-        { value },
+        { value, note },
       ),
     );
   }

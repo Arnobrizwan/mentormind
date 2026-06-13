@@ -935,8 +935,14 @@ export class TutorPage {
   protected async rate(message: TutorMessage, value: 1 | -1): Promise<void> {
     const active = this.session();
     if (!active) return;
+    // A thumbs-down optionally captures *why* — that note feeds the
+    // instructor feedback-review surface (the model-improvement flywheel).
+    let note = '';
+    if (value === -1) {
+      note = (window.prompt(this.locale.t('tutor.feedback.flagPrompt')) || '').trim();
+    }
     try {
-      const updated = await this.api.feedback(active.id, message.id, value);
+      const updated = await this.api.feedback(active.id, message.id, value, note);
       this.messages.update((all) => all.map((m) => (m.id === updated.id ? updated : m)));
     } catch (err) {
       this.error.set(apiErrorMessage(err, this.locale.t('tutor.error.feedback')));

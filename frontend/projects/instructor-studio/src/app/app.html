@@ -21,6 +21,7 @@
               Courses
             </a>
             <a routerLink="/student-success" routerLinkActive="is-active" class="tag">Student Success</a>
+            <a routerLink="/tutor-feedback" routerLinkActive="is-active" class="tag">Tutor Feedback</a>
           </nav>
         }
         <span class="tag tag--user">{{ user.display_name || user.email }}</span>
@@ -46,6 +47,7 @@
       <nav class="mobile-nav" aria-label="Mobile studio">
         <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">Courses</a>
         <a routerLink="/student-success" routerLinkActive="is-active">Student Success</a>
+        <a routerLink="/tutor-feedback" routerLinkActive="is-active">Tutor Feedback</a>
       </nav>
     }
   </header>

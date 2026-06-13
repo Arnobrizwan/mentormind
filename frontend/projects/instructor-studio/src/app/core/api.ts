@@ -216,6 +216,30 @@ export class StudioApi {
     form.append('num_options', String(numOptions));
     return firstValueFrom(this.http.post<OmrGradeResult>('/api/v1/omr/grade/', form));
   }
+
+  /** Thumbs-down + flagged AI-tutor answers for human review. */
+  tutorFeedback(): Promise<TutorFeedbackReview> {
+    return firstValueFrom(
+      this.http.get<TutorFeedbackReview>('/api/v1/tutor/feedback/'),
+    );
+  }
+}
+
+export interface TutorFeedbackItem {
+  id: number;
+  question: string;
+  content: string;
+  feedback: number;
+  feedback_note: string;
+  subject: string;
+  level: string;
+  student: string;
+  created_at: string;
+}
+
+export interface TutorFeedbackReview {
+  summary: { up: number; down: number; flagged: number };
+  items: TutorFeedbackItem[];
 }
 
 export interface CourseInsights {

@@ -51,4 +51,11 @@ export class RevisionApi {
       this.http.post<ReviewResult>('/api/v1/revision/review/', { card: cardId, grade }),
     );
   }
+
+  /** The student's whole deck as an Anki-importable CSV blob. */
+  exportCsv(): Promise<Blob> {
+    return firstValueFrom(
+      this.http.get('/api/v1/revision/export.csv', { responseType: 'blob' }),
+    );
+  }
 }

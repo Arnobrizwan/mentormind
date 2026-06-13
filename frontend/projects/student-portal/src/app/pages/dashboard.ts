@@ -40,6 +40,19 @@ interface ContinueHero {
         <div class="spark-row">
           <span class="mono-label">🔥 <span [mmCountUp]="eng.streak"></span>-{{ locale.t('dash.streak') }}</span>
           <span class="mono-label">★ <span [mmCountUp]="eng.points_total"></span> {{ locale.t('dash.pts') }}</span>
+          @if (eng.daily_goal; as goal) {
+            <span
+              class="mono-label daily-goal"
+              [class.daily-goal--met]="goal.met"
+              [style.--goal-pct.%]="goal.pct"
+              [attr.title]="goal.earned + ' / ' + goal.goal"
+              role="img"
+              [attr.aria-label]="locale.t('dash.dailyGoal') + ': ' + goal.earned + '/' + goal.goal"
+            >
+              <span class="daily-goal__ring" aria-hidden="true"></span>
+              {{ goal.met ? locale.t('dash.dailyGoal.met') : goal.earned + '/' + goal.goal + ' ' + locale.t('dash.dailyGoal.points') }}
+            </span>
+          }
           @if (!eng.daily_login_claimed) {
             <button class="btn btn--accent claim-btn" (click)="claimDaily()" [disabled]="claiming()">
               {{ locale.t('dash.claim') }} +{{ eng.daily_login_points }} {{ locale.t('dash.pts') }}
@@ -360,6 +373,30 @@ interface ContinueHero {
     .claim-btn {
       padding: 0.45rem 1.05rem;
       font-size: 0.82rem;
+    }
+
+    .daily-goal {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Conic ring fills clockwise to --goal-pct; the inner punch-out makes it
+       a thin progress arc rather than a filled pie. */
+    .daily-goal__ring {
+      width: 1.1rem;
+      height: 1.1rem;
+      border-radius: 50%;
+      background:
+        conic-gradient(currentColor calc(var(--goal-pct, 0) * 1%), transparent 0);
+      -webkit-mask: radial-gradient(circle 3.5px at center, transparent 98%, #000 100%);
+              mask: radial-gradient(circle 3.5px at center, transparent 98%, #000 100%);
+      opacity: 0.75;
+    }
+
+    .daily-goal--met {
+      color: var(--accent, #2bb673);
+      font-weight: 600;
     }
 
     .badges {

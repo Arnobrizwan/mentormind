@@ -48,4 +48,11 @@ export class PlannerApi {
   toggle(itemId: number): Promise<WeekPlan> {
     return firstValueFrom(this.http.post<WeekPlan>(`/api/v1/planner/items/${itemId}/toggle/`, {}));
   }
+
+  /** This week's plan as an iCalendar blob (import into Google/Apple/Outlook). */
+  exportIcs(): Promise<Blob> {
+    return firstValueFrom(
+      this.http.get('/api/v1/planner/week.ics', { responseType: 'blob' }),
+    );
+  }
 }

@@ -6,6 +6,7 @@ import { GuardianApi, GuardianLink } from '../core/guardian';
 import { LocaleId, LocaleService } from '../core/locale';
 import { apiErrorMessage } from '../core/errors';
 import { User } from '../core/models';
+import { PushApi } from '../core/push';
 import {
   AVATAR_MAX_BYTES,
   ActivityCalendar,
@@ -180,6 +181,40 @@ function isoLocal(date: Date): string {
           </button>
         </div>
       </section>
+
+      @if (push.available()) {
+        <section class="card-block rise" style="animation-delay: 150ms" aria-label="Study reminders">
+          <h2>{{ locale.t('push.title') }}</h2>
+          <p class="plan-note">{{ locale.t('push.hint') }}</p>
+          @if (push.blocked) {
+            <p class="plan-note" role="note">{{ locale.t('push.blocked') }}</p>
+          } @else if (push.subscribed()) {
+            <div class="lang-row">
+              <span class="stamp">{{ locale.t('push.enabled') }}</span>
+              <button
+                type="button"
+                class="btn btn--ghost btn--small"
+                (click)="togglePush(false)"
+                [disabled]="pushBusy()"
+              >
+                {{ locale.t('push.disable') }}
+              </button>
+            </div>
+          } @else {
+            <button
+              type="button"
+              class="btn btn--accent btn--small"
+              (click)="togglePush(true)"
+              [disabled]="pushBusy()"
+            >
+              {{ locale.t('push.enable') }}
+            </button>
+          }
+          @if (pushError(); as msg) {
+            <p class="error-note" role="alert">{{ msg }}</p>
+          }
+        </section>
+      }
 
       <section
         class="card-block rise"
@@ -514,7 +549,11 @@ export class ProfilePage {
   private readonly api = inject(ProfileApi);
   private readonly auth = inject(AuthService);
   private readonly guardian = inject(GuardianApi);
+  protected readonly push = inject(PushApi);
   protected readonly locale = inject(LocaleService);
+
+  protected readonly pushBusy = signal(false);
+  protected readonly pushError = signal<string | null>(null);
 
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
@@ -611,6 +650,25 @@ export class ProfilePage {
     void this.loadActivity();
     void this.loadMore();
     void this.loadGuardianLink();
+    void this.push.refresh();
+  }
+
+  protected async togglePush(enable: boolean): Promise<void> {
+    if (this.pushBusy()) return;
+    this.pushBusy.set(true);
+    this.pushError.set(null);
+    try {
+      if (enable) {
+        await this.push.enable();
+      } else {
+        await this.push.disable();
+      }
+    } catch (err) {
+      const key = (err as Error)?.message === 'permission-denied' ? 'push.blocked' : 'push.error';
+      this.pushError.set(this.locale.t(key));
+    } finally {
+      this.pushBusy.set(false);
+    }
   }
 
   private async loadGuardianLink(): Promise<void> {
