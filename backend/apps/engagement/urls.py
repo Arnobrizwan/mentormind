@@ -5,6 +5,8 @@ from .views import (
     ActivityCalendarView,
     BadgeViewSet,
     DailyLoginView,
+    GuardianLinkView,
+    GuardianSummaryView,
     MyEngagementView,
     PointsHistoryView,
     RemediationTicketViewSet,
@@ -21,5 +23,11 @@ urlpatterns = [
     path("leaderboard/", WeeklyLeaderboardView.as_view(), name="engagement-leaderboard"),
     path("history/", PointsHistoryView.as_view(), name="engagement-history"),
     path("activity/", ActivityCalendarView.as_view(), name="engagement-activity"),
+    path("guardian/link/", GuardianLinkView.as_view(), name="guardian-link"),
+    path(
+        "guardian/summary/<str:token>/",
+        GuardianSummaryView.as_view(),
+        name="guardian-summary",
+    ),
     path("", include(router.urls)),
 ]

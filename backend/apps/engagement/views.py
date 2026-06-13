@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from apps.core.permissions import IsInstructor, IsCronOrInstructor
 
 from . import services
-from .models import Badge, PointsEvent, RemediationTicket
+from .models import Badge, GuardianLink, PointsEvent, RemediationTicket
 from .serializers import BadgeSerializer, RemediationTicketSerializer
 
 
@@ -179,3 +179,111 @@ class RemediationTicketViewSet(viewsets.ModelViewSet):
         except Exception as e:
             cache.delete("engagement:dropout-scan-lock")
             raise e
+
+
+class GuardianLinkView(APIView):
+    """The student's own guardian share-link: GET to inspect, POST to
+    create (idempotent), DELETE to revoke. Revoking deletes the row, so
+    the public summary URL dies immediately."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _payload(self, link):
+        return {
+            "token": link.token,
+            "created_at": link.created_at,
+            "path": f"/guardian/{link.token}",
+        }
+
+    def get(self, request):
+        link = GuardianLink.objects.using("default").filter(student=request.user).first()
+        return Response({"link": self._payload(link) if link else None})
+
+    def post(self, request):
+        link, created = GuardianLink.objects.using("default").get_or_create(
+            student=request.user
+        )
+        return Response(
+            {"link": self._payload(link)},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    def delete(self, request):
+        GuardianLink.objects.using("default").filter(student=request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class GuardianSummaryView(APIView):
+    """The parent-facing weekly digest, readable with only the share token —
+    no account, no login. Deliberately PII-light: display name, progress and
+    readiness, never the student's email or anything another student wrote."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        from datetime import timedelta
+
+        from django.db.models import Sum
+        from django.utils import timezone
+
+        from apps.core.adaptive import weak_topics
+        from apps.core.models import QuizAttempt
+        from apps.core.readiness import student_readiness
+
+        link = (
+            GuardianLink.objects.using("default")
+            .filter(token=token)
+            .select_related("student")
+            .first()
+        )
+        if link is None:
+            return Response(
+                {"detail": "This link is no longer active."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        student = link.student
+        since = timezone.now() - timedelta(days=7)
+
+        points_week = (
+            PointsEvent.objects.using("default")
+            .filter(user=student, created_at__gte=since)
+            .aggregate(total=Sum("points"))["total"]
+            or 0
+        )
+
+        recent_quizzes = [
+            {
+                "quiz": attempt.quiz.title,
+                "course": attempt.quiz.course.title,
+                "score": attempt.score,
+                "completed_at": attempt.completed_at,
+            }
+            for attempt in (
+                QuizAttempt.objects.using("default")
+                .filter(enrollment__student=student)
+                .select_related("quiz__course")
+                .order_by("-completed_at")[:5]
+            )
+        ]
+
+        courses = [
+            {
+                "course_title": entry["course_title"],
+                "readiness": entry["readiness"],
+                "predicted_grade": entry["predicted_grade"],
+                "components": entry["components"],
+            }
+            for entry in student_readiness(student)
+        ]
+
+        return Response(
+            {
+                "student_name": student.display_name or "Student",
+                "generated_at": timezone.now(),
+                "points_week": points_week,
+                "streak": services.current_streak(student),
+                "weak_topics": weak_topics(student)[:3],
+                "courses": courses,
+                "recent_quizzes": recent_quizzes,
+            }
+        )

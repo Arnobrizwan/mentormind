@@ -1,7 +1,14 @@
+import secrets
+
 from django.contrib.auth import get_user_model
 from django.db import models
 
 User = get_user_model()
+
+
+def _guardian_token():
+    # 32 url-safe chars — unguessable, short enough to share by hand.
+    return secrets.token_urlsafe(24)
 
 
 class PointsEvent(models.Model):
@@ -68,6 +75,25 @@ class AwardedBadge(models.Model):
 
     class Meta:
         unique_together = ("user", "badge")
+
+
+class GuardianLink(models.Model):
+    """A student-controlled, tokenized read-only window for a parent or
+    guardian: weekly points, streak, readiness and predicted grades —
+    no account needed, no email or login exposed. The student creates,
+    shares and revokes it from their profile; revoking deletes the row,
+    killing the URL instantly."""
+
+    student = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="guardian_link"
+    )
+    token = models.CharField(
+        max_length=64, unique=True, default=_guardian_token, editable=False
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Guardian link for {self.student.email}"
 
 
 class RemediationTicket(models.Model):

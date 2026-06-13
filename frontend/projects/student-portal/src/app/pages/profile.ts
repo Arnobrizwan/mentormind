@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../core/auth';
+import { GuardianApi, GuardianLink } from '../core/guardian';
 import { LocaleId, LocaleService } from '../core/locale';
 import { apiErrorMessage } from '../core/errors';
 import { User } from '../core/models';
@@ -117,6 +118,42 @@ function isoLocal(date: Date): string {
           }
         </form>
         @if (nameError(); as msg) {
+          <p class="error-note" role="alert">{{ msg }}</p>
+        }
+      </section>
+
+      <section class="card-block rise" style="animation-delay: 135ms" aria-label="Guardian access">
+        <h2>{{ locale.t('guardian.title') }}</h2>
+        <p class="plan-note">{{ locale.t('guardian.hint') }}</p>
+        @if (guardianLink(); as link) {
+          <div class="guardian-row">
+            <code class="guardian-url">{{ guardianUrl(link) }}</code>
+            <button type="button" class="btn btn--ghost btn--small" (click)="copyGuardianLink(link)">
+              {{ guardianCopied() ? locale.t('guardian.copied') : locale.t('guardian.copy') }}
+            </button>
+            <button
+              type="button"
+              class="btn btn--ghost btn--small guardian-revoke"
+              (click)="revokeGuardianLink()"
+              [disabled]="guardianBusy()"
+            >
+              {{ locale.t('guardian.revoke') }}
+            </button>
+          </div>
+          <p class="plan-note">
+            {{ locale.t('guardian.active') }} {{ link.created_at.slice(0, 10) }}
+          </p>
+        } @else {
+          <button
+            type="button"
+            class="btn btn--accent btn--small"
+            (click)="createGuardianLink()"
+            [disabled]="guardianBusy()"
+          >
+            {{ guardianBusy() ? locale.t('profile.loadingBtn') : locale.t('guardian.create') }}
+          </button>
+        }
+        @if (guardianError(); as msg) {
           <p class="error-note" role="alert">{{ msg }}</p>
         }
       </section>
@@ -369,6 +406,25 @@ function isoLocal(date: Date): string {
       }
     }
 
+    .guardian-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+
+    .guardian-url {
+      padding: 0.35rem 0.65rem;
+      background: color-mix(in srgb, var(--ink) 6%, transparent);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      word-break: break-all;
+    }
+
+    .guardian-revoke { color: var(--danger); }
+
     .heatmap {
       display: grid;
       grid-template-rows: repeat(7, 12px);
@@ -457,6 +513,7 @@ function isoLocal(date: Date): string {
 export class ProfilePage {
   private readonly api = inject(ProfileApi);
   private readonly auth = inject(AuthService);
+  private readonly guardian = inject(GuardianApi);
   protected readonly locale = inject(LocaleService);
 
   protected readonly loading = signal(true);
@@ -474,6 +531,11 @@ export class ProfilePage {
 
   protected readonly activity = signal<ActivityCalendar | null>(null);
   protected readonly activityError = signal<string | null>(null);
+
+  protected readonly guardianLink = signal<GuardianLink | null>(null);
+  protected readonly guardianBusy = signal(false);
+  protected readonly guardianCopied = signal(false);
+  protected readonly guardianError = signal<string | null>(null);
 
   /**
    * 17 columns × 7 rows, column-major so `grid-auto-flow: column` lays weeks
@@ -548,6 +610,57 @@ export class ProfilePage {
     void this.load();
     void this.loadActivity();
     void this.loadMore();
+    void this.loadGuardianLink();
+  }
+
+  private async loadGuardianLink(): Promise<void> {
+    try {
+      this.guardianLink.set((await this.guardian.link()).link);
+    } catch {
+      // The section quietly offers "create" — no link is a valid state.
+    }
+  }
+
+  protected guardianUrl(link: GuardianLink): string {
+    return `${location.origin}${link.path}`;
+  }
+
+  protected async createGuardianLink(): Promise<void> {
+    if (this.guardianBusy()) return;
+    this.guardianBusy.set(true);
+    this.guardianError.set(null);
+    try {
+      this.guardianLink.set((await this.guardian.create()).link);
+    } catch (err) {
+      this.guardianError.set(apiErrorMessage(err, this.locale.t('guardian.error.create')));
+    } finally {
+      this.guardianBusy.set(false);
+    }
+  }
+
+  protected async revokeGuardianLink(): Promise<void> {
+    if (this.guardianBusy()) return;
+    this.guardianBusy.set(true);
+    this.guardianError.set(null);
+    try {
+      await this.guardian.revoke();
+      this.guardianLink.set(null);
+      this.guardianCopied.set(false);
+    } catch (err) {
+      this.guardianError.set(apiErrorMessage(err, this.locale.t('guardian.error.revoke')));
+    } finally {
+      this.guardianBusy.set(false);
+    }
+  }
+
+  protected async copyGuardianLink(link: GuardianLink): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(this.guardianUrl(link));
+      this.guardianCopied.set(true);
+      setTimeout(() => this.guardianCopied.set(false), 2500);
+    } catch {
+      // Clipboard blocked — the URL is visible to copy by hand.
+    }
   }
 
   protected setLanguage(id: LocaleId): void {

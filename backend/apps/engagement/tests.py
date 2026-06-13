@@ -341,3 +341,82 @@ class ActivityCalendarTests(TestCase):
         self.assertEqual(len(body["days"]), 1)
         self.assertEqual(body["streak"], 1)
         self.assertIn("since", body)
+
+
+class GuardianLinkTests(TestCase):
+    """Parent/guardian share link — student-controlled, tokenized, PII-light."""
+
+    def setUp(self):
+        cache.clear()
+        self.student = User.objects.create_user(
+            email="gl-student@mentormind.dev", password="password123"
+        )
+        self.student.display_name = "Aisyah"
+        self.student.save()
+        self.instructor = User.objects.create_user(
+            email="gl-instructor@mentormind.dev", password="password123"
+        )
+        self.course = Course.objects.create(
+            title="Maths 0580", slug="gl-maths", description="d",
+            instructor=self.instructor, is_published=True,
+        )
+        self.enrollment = Enrollment.objects.create(
+            student=self.student, course=self.course
+        )
+        self.client_student = APIClient()
+        self.client_student.force_authenticate(user=self.student)
+
+    def _create_link(self):
+        return self.client_student.post("/api/v1/engagement/guardian/link/").json()[
+            "link"
+        ]
+
+    def test_create_is_idempotent_and_revoke_kills_the_url(self):
+        first = self._create_link()
+        again = self._create_link()
+        self.assertEqual(first["token"], again["token"])
+        self.assertEqual(first["path"], f"/guardian/{first['token']}")
+
+        public = APIClient()
+        res = public.get(f"/api/v1/engagement/guardian/summary/{first['token']}/")
+        self.assertEqual(res.status_code, 200)
+
+        self.assertEqual(
+            self.client_student.delete("/api/v1/engagement/guardian/link/").status_code,
+            204,
+        )
+        res = public.get(f"/api/v1/engagement/guardian/summary/{first['token']}/")
+        self.assertEqual(res.status_code, 404)
+
+    def test_summary_shape_and_no_pii(self):
+        quiz = Quiz.objects.create(course=self.course, title="Algebra check")
+        QuizAttempt.objects.create(
+            enrollment=self.enrollment, quiz=quiz, score=75.0,
+            total_questions=4, correct_answers=3,
+        )
+        PointsEvent.objects.create(user=self.student, action="quiz", points=10)
+        # The attempt itself may have earned signal-driven points too — the
+        # digest must agree with the ledger, whatever fired.
+        from django.db.models import Sum
+
+        ledger_total = (
+            PointsEvent.objects.filter(user=self.student).aggregate(t=Sum("points"))["t"]
+        )
+
+        token = self._create_link()["token"]
+        body = APIClient().get(f"/api/v1/engagement/guardian/summary/{token}/").json()
+
+        self.assertEqual(body["student_name"], "Aisyah")
+        self.assertEqual(body["points_week"], ledger_total)
+        self.assertEqual(body["recent_quizzes"][0]["score"], 75.0)
+        self.assertEqual(body["courses"][0]["course_title"], "Maths 0580")
+        self.assertIn("predicted_grade", body["courses"][0])
+        # The student's email must never reach a guardian page.
+        self.assertNotIn("gl-student@mentormind.dev", str(body))
+
+    def test_bogus_token_404s_and_link_requires_auth(self):
+        self.assertEqual(
+            APIClient().get("/api/v1/engagement/guardian/summary/not-a-token/").status_code,
+            404,
+        )
+        self.assertEqual(APIClient().post("/api/v1/engagement/guardian/link/").status_code, 401)

@@ -96,5 +96,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./pages/course-chat').then((m) => m.CourseChatPage),
   },
+  {
+    // Public by design: parents open this with only the share token —
+    // the backend treats the token as the credential.
+    path: 'guardian/:token',
+    title: 'Progress Report · MentorMinds',
+    loadComponent: () => import('./pages/guardian').then((m) => m.GuardianPage),
+  },
   { path: '**', redirectTo: '' },
 ];
