@@ -1,3 +1,6 @@
+import csv
+
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -121,6 +124,52 @@ class RevisionQueueView(APIView):
                 "cards": QueueCardSerializer(due[:QUEUE_SIZE], many=True).data,
             }
         )
+
+
+class RevisionExportView(APIView):
+    """Export the student's whole deck as a CSV that Anki imports directly.
+
+    Anki reads the leading `#` directives, maps the first two columns to the
+    Front/Back of a Basic note, and applies column 3 as tags — so a student
+    can take their MentorMind cards offline into Anki with one click. (Plain
+    CSV, so Excel / Google Sheets open it too.)
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        course_ids = list(
+            Enrollment.objects.using("default")
+            .filter(student=user)
+            .values_list("course_id", flat=True)
+        )
+        cards = (
+            Flashcard.objects.using("default")
+            .filter(course_id__in=course_ids, is_published=True)
+            .select_related("course")
+            .order_by("course_id", "id")
+        )
+
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = (
+            'attachment; filename="mentormind-flashcards.csv"'
+        )
+        # Anki import directives (ignored by spreadsheets).
+        response.write("#separator:Comma\n#html:false\n#tags column:3\n")
+
+        writer = csv.writer(response)
+        for card in cards:
+            tags = " ".join(
+                part
+                for part in (
+                    f"course::{card.course.slug}" if card.course.slug else "",
+                    f"topic::{card.topic.replace(' ', '_')}" if card.topic else "",
+                )
+                if part
+            )
+            writer.writerow([card.front, card.back, tags])
+        return response
 
 
 class ReviewView(APIView):

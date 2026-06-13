@@ -73,6 +73,21 @@ class PlannerTests(TestCase):
         built_again, _ = build_weekly_plans()
         self.assertEqual(built_again, 0)
 
+    def test_ics_export_returns_calendar(self):
+        res = self.as_student.get("/api/v1/planner/week.ics")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("text/calendar", res["Content-Type"])
+        self.assertIn("attachment", res["Content-Disposition"])
+        body = res.content.decode()
+        self.assertTrue(body.startswith("BEGIN:VCALENDAR"))
+        self.assertIn("BEGIN:VEVENT", body)
+        self.assertIn("END:VCALENDAR", body)
+        # CRLF line endings are required by RFC 5545.
+        self.assertIn("\r\n", body)
+
+    def test_ics_export_requires_auth(self):
+        self.assertEqual(APIClient().get("/api/v1/planner/week.ics").status_code, 401)
+
     def test_two_slipping_weeks_escalate_to_a_ticket(self):
         from apps.engagement.models import RemediationTicket
 

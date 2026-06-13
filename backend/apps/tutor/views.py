@@ -3,13 +3,16 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from apps.core.permissions import IsInstructor
 from apps.engagement.services import award_points
 from apps.flags.services import flag_enabled
 
 from . import services
 from .models import TutorMessage, TutorSession
 from .serializers import (
+    TutorFeedbackReviewSerializer,
     TutorMessageSerializer,
     TutorSessionListSerializer,
     TutorSessionSerializer,
@@ -146,7 +149,8 @@ class TutorSessionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="messages/(?P<message_id>[0-9]+)/feedback")
     def feedback(self, request, pk=None, message_id=None):
-        """Thumbs up (+1) / down (-1) on an assistant reply."""
+        """Thumbs up (+1) / down (-1) on an assistant reply, with an optional
+        free-text note when flagging a bad answer (feeds the review surface)."""
         session = self.get_object()
         value = request.data.get("value")
         if value not in (1, -1):
@@ -160,5 +164,46 @@ class TutorSessionViewSet(viewsets.ModelViewSet):
         except TutorMessage.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
         message.feedback = value
-        message.save(update_fields=["feedback"])
+        note = str(request.data.get("note", "")).strip()[:500]
+        # A note only makes sense on a thumbs-down; a thumbs-up clears any
+        # stale flag note left from a previous rating.
+        message.feedback_note = note if value == -1 else ""
+        message.save(update_fields=["feedback", "feedback_note"])
         return Response(TutorMessageSerializer(message).data)
+
+
+class TutorFeedbackReviewView(APIView):
+    """Instructor/admin review surface for thumbs-down + flagged tutor
+    answers — the human-in-the-loop end of the model-improvement flywheel.
+
+    Each row pairs the flagged answer with the question that prompted it and
+    a rating summary, so weak or wrong answers can be triaged into better
+    training data for the next fine-tune.
+    """
+
+    permission_classes = [IsInstructor]
+
+    def get(self, request):
+        from django.db.models import Count, Q
+
+        agg = TutorMessage.objects.filter(
+            role=TutorMessage.Role.ASSISTANT
+        ).aggregate(
+            up=Count("id", filter=Q(feedback=1)),
+            down=Count("id", filter=Q(feedback=-1)),
+            flagged=Count("id", filter=Q(feedback_note__gt="")),
+        )
+
+        flagged = (
+            TutorMessage.objects.filter(
+                role=TutorMessage.Role.ASSISTANT, feedback=-1
+            )
+            .select_related("session", "session__user")
+            .order_by("-created_at")[:100]
+        )
+        return Response(
+            {
+                "summary": agg,
+                "items": TutorFeedbackReviewSerializer(flagged, many=True).data,
+            }
+        )

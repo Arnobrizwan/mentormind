@@ -21,3 +21,5 @@ django-storages[s3]
 Pillow
 uvicorn[standard]
 uvicorn-worker
+# PWA web-push reminders (optional feature; inert unless VAPID keys are set)
+pywebpush

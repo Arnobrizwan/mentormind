@@ -31,8 +31,15 @@ class TutorMessage(models.Model):
     content = models.TextField()
     # +1 thumbs up, -1 thumbs down, null = no feedback yet
     feedback = models.SmallIntegerField(null=True, blank=True)
+    # Optional free-text reason when a student flags a wrong/unhelpful answer —
+    # the raw material for the model-improvement (training-data) flywheel.
+    feedback_note = models.CharField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["created_at"]
-        indexes = [models.Index(fields=["session", "created_at"])]
+        indexes = [
+            models.Index(fields=["session", "created_at"]),
+            # Powers the instructor feedback-review surface (negative + flagged).
+            models.Index(fields=["feedback", "created_at"]),
+        ]

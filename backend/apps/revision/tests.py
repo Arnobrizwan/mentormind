@@ -163,6 +163,17 @@ class RevisionApiTests(TestCase):
             ).exists()
         )
 
+    def test_export_csv_includes_published_cards_only(self):
+        res = self.as_student.get("/api/v1/revision/export.csv")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("text/csv", res["Content-Type"])
+        body = res.content.decode()
+        # Anki import directives + the published card; never the draft.
+        self.assertIn("#separator:Comma", body)
+        self.assertIn("What is X?", body)
+        self.assertIn("course::rev-c", body)
+        self.assertNotIn("draft", body)
+
 
 class ReviewFixTests(TestCase):
     """Regression: reviewing a not-yet-due card must not farm points."""

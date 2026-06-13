@@ -1,10 +1,14 @@
 from django.db import transaction
+from django.http import HttpResponse
+from django.utils import timezone
+from django.utils.text import slugify
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from . import builder
+from .ics import build_calendar
 from .models import StudyPlan
 
 
@@ -65,6 +69,29 @@ class ToggleItemView(APIView):
             {"error": "No such item in this week's plan."},
             status=status.HTTP_404_NOT_FOUND,
         )
+
+
+class WeekPlanIcsView(APIView):
+    """This week's plan as an iCalendar (.ics) download.
+
+    Students import it into Google / Apple / Outlook calendar. Authenticated
+    (the SPA fetches it with the JWT and saves the blob) — no public token,
+    so a student's plan is never exposed by URL alone.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        plan = builder.ensure_plan(request.user)
+        body = build_calendar(
+            plan,
+            dtstamp=timezone.now(),
+            student_label=getattr(request.user, "display_name", ""),
+        )
+        filename = f"mentormind-plan-{slugify(str(plan.week_start)) or 'week'}.ics"
+        response = HttpResponse(body, content_type="text/calendar; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
 
 class GlobalPlannerRebuildView(APIView):
