@@ -18,30 +18,44 @@ spaced repetition, adaptive practice, exam proctoring and dropout prediction —
 
 **$0 stack:** Vercel + Render + Hugging Face Spaces — no paid AI APIs. See [docs/FREE-DEMO-STACK.md](docs/FREE-DEMO-STACK.md).
 
-Demo logins below — the demo resets itself periodically, and **the AI tutor is live**
+<samp>
+<a href="#-try-it-in-2-minutes">Quick start</a> ·
+<a href="#ai-learning-features">Features</a> ·
+<a href="#how-it-compares">Why MentorMind</a> ·
+<a href="#architecture">Architecture</a> ·
+<a href="#self-hosted-on-your-own-vps-always-warm-no-cold-starts">Self-host</a> ·
+<a href="#faq">FAQ</a>
+</samp>
+
+The demo resets itself periodically, and **the AI tutor is live**
 (real attributed Cambridge mark-scheme answers, served from a private 68k-question corpus).
 
-### 🚀 DIGITEX v2 Updates
-- **Full Student Portal i18n:** Complete English (EN) and Bahasa Malaysia (ms) support on all student pages (My Desk, Catalog, AI Tutor, Revision, Planner, and Profile).
-- **PWA Installation Support:** Installs directly to home screens at booth displays via standard PWA manifest configurations.
-- **Smart Vector RAG Tutor:** Aligned past-paper retrieval uses semantic Vector RAG (MiniLM embeddings via `sentence-transformers`) with clean cosine similarity matching and fallback to token overlap search.
-- **Conversational Memory:** AI Tutor session history is now passed through to the model pipeline.
-- **GitHub Actions Scheduled Sweeps:** Risk scans and study planner rebuilds run regularly via repository cron actions, bypassing paid Celery beat requirements.
-- **Self-Service Password Reset:** Secure password reset workflow configured across all 3 web portals.
-- **Predicted Grades:** Exam readiness now maps onto Cambridge bands (A*–U) on the student dashboard, studio roster, and gradebook export.
-- **Item Analysis:** Per-question difficulty, upper-lower discrimination, and distractor counts in the studio insights tab — flags miskeyed or dead questions.
-- **Gradebook CSV Export:** One-click whole-class export (best quiz scores, short-answer marks, readiness + predicted grade).
-- **Parent/Guardian Progress Links:** Students mint a revocable, read-only share link — weekly points, streak, predicted grades. No account needed, PII-light.
-- **Handwritten Answer OCR:** Photograph a written answer in practice; OCR fills the answer box for review before rubric grading.
-- **KaTeX Math Rendering:** Tutor answers, lessons, past papers, and mock exams render real TeX maths.
-- **Tutor Feedback Flywheel:** Students rate every tutor answer 👍/👎 and can flag a wrong one with a note; instructors triage the flagged answers in a Studio review surface — raw material for the next fine-tune.
-- **Daily Goal:** A Duolingo-style daily points goal with a progress ring on the dashboard, tunable live from the admin console.
-- **Study-Planner Calendar Export:** One-click `.ics` download of the weekly plan — subscribe in Google / Apple / Outlook calendar.
-- **Revision → Anki Export:** Export the whole spaced-repetition deck as an Anki-importable CSV (tags carry course + topic); also opens in Excel / Sheets.
-- **PWA Web-Push Reminders:** Opt-in daily "cards due / keep your streak" push notifications — VAPID-signed and fully self-hosted (no FCM/APNs paid service), inert until keys are set.
-
-
 </div>
+
+<details>
+<summary><b>🚀 What's new in DIGITEX v2</b> — 17 updates (click to expand)</summary>
+
+| | Update |
+|---|---|
+| 🌐 | **Full student-portal i18n** — English + Bahasa Malaysia across every student page |
+| 📲 | **PWA install** — adds to the home screen at booth displays |
+| 🔎 | **Smart Vector RAG tutor** — MiniLM embeddings + cosine match, token-overlap fallback |
+| 💬 | **Conversational memory** — tutor session history flows into the model pipeline |
+| ⏰ | **Scheduled sweeps** — risk scans + planner rebuilds via GitHub Actions cron (no paid beat) |
+| 🔑 | **Self-service password reset** across all 3 portals |
+| 🎯 | **Predicted grades** — Cambridge A*–U bands on dashboard, roster, and gradebook |
+| 📊 | **Item analysis** — per-question difficulty, discrimination, distractor counts |
+| 📤 | **Gradebook CSV export** — whole-class scores, marks, readiness + predicted grade |
+| 👨‍👩‍👧 | **Guardian progress links** — revocable, read-only, PII-light, no account |
+| ✍️ | **Handwritten-answer OCR** in practice — snap a written answer, OCR fills the box |
+| ➗ | **KaTeX math** in tutor answers, lessons, past papers, and mock exams |
+| 👍 | **Tutor feedback flywheel** — rate/flag answers; instructors triage in a Studio surface |
+| 🔥 | **Daily goal** — Duolingo-style points goal + progress ring, tunable live |
+| 📅 | **Planner `.ics` export** — subscribe to your weekly plan in Google/Apple/Outlook |
+| 🃏 | **Revision → Anki/CSV export** — take your spaced-repetition deck offline |
+| 🔔 | **PWA web-push reminders** — opt-in "cards due / keep your streak", self-hosted VAPID |
+
+</details>
 
 ## ✨ See it
 
@@ -333,35 +347,62 @@ seeding, backups, memory budget — in [`deploy/README.md`](deploy/README.md).
 
 ## FAQ
 
-**Can I use my own past papers / other subjects?**
+<details>
+<summary><b>Can I use my own past papers / other subjects?</b></summary>
+
 Yes — drop PDFs into the pipeline (`POST /api/pipeline/discover` →
 `process-next`); it OCRs, aligns question papers with mark schemes, and the
 corpus grows. The fine-tune script trains on whatever the pipeline produced.
+</details>
 
-**Do I need a GPU?**
+<details>
+<summary><b>Do I need a GPU?</b></summary>
+
 No. The 0.5B model runs on CPU; Apple-Silicon (MPS) and CUDA are used when
 available. Or point `CUSTOM_LLM_URL` at any OpenAI-compatible server
 (vLLM, llama.cpp, Ollama) and host whatever model you like.
+</details>
 
-**What happens if the model gives a bad answer?**
+<details>
+<summary><b>Can the tutor answer questions outside the past papers?</b></summary>
+
+Yes — on a strong corpus match it returns the official mark scheme; otherwise
+it falls back to your configured model and answers as a general study tutor.
+Plug in **Gemma** locally (`LOCAL_LLM_BASE=google/gemma-2-2b-it`) or a free
+hosted gateway (Groq / OpenRouter / Google AI Studio) via `CUSTOM_LLM_URL`.
+With no model set, it stays corpus-only. See
+[Answering any question](#answering-any-question-free-models).
+</details>
+
+<details>
+<summary><b>What happens if the model gives a bad answer?</b></summary>
+
 Strong matches never touch the model — students get the official mark scheme,
 attributed. Generated answers are grounded with retrieved mark schemes, carry
-thumbs feedback, and AI-drafted content (quizzes, flashcards) requires
-instructor approval before students ever see it.
+thumbs feedback (flagged answers land in an instructor review surface), and
+AI-drafted content (quizzes, flashcards) requires instructor approval before
+students ever see it.
+</details>
 
-**Is the proctoring storing video of students?**
+<details>
+<summary><b>Is the proctoring storing video of students?</b></summary>
+
 No. Frames are analyzed in memory and discarded; only face-count verdicts
 (`ok` / `no_face` / `multiple_faces`) with timestamps are stored.
+</details>
 
-**What does it cost to run?**
+<details>
+<summary><b>What does it cost to run?</b></summary>
+
 The reference deployment runs on free tiers + one small VM. There are no
 per-token costs anywhere.
+</details>
 
 ## Tests & CI
 
 ```bash
-cd backend && DEBUG=1 .venv/bin/python manage.py test    # 110 tests
-cd ml-service && .venv/bin/pytest                        # 71 tests (hermetic — no model load)
+cd backend && DEBUG=1 .venv/bin/python manage.py test    # 133 tests
+cd ml-service && .venv/bin/pytest                        # 75 tests (hermetic — no model load)
 cd frontend && npx ng build student-portal && npx ng build instructor-studio && npx ng build shared
 ```
 
