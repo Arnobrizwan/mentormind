@@ -59,6 +59,10 @@ The demo resets itself periodically, and **the AI tutor is live**
 
 ## ✨ See it
 
+> ✅ **Live-verified 2026-06-13** — every core student flow was driven end-to-end against the
+> [live demo](https://mentormind-demo.vercel.app) (catalog → sign-in → AI tutor → revision → planner → profile),
+> and the AI tutor returned a real, attributed **mark-scheme** answer. The student screenshots below are from that run.
+
 <div align="center">
 
 ![MentorMind demo — login, dashboard, AI tutor, spaced repetition, study plan](docs/screenshots/demo.gif)
