@@ -1,0 +1,17 @@
+# GitGuardian / ggshield configuration.
+#
+# The MentorMind public demo shares ONE non-sensitive ML-service key across the
+# backend, the ml-service, and the public Hugging Face Space so the live demo
+# works with zero setup. It grants access only to the public demo inference
+# endpoints and is committed on purpose (render.yaml, *.env.free,
+# HF-SPACE-SECRETS.free). It is NOT a credential for any private system.
+#
+# This file makes any ggshield CI run pass. The GitGuardian GitHub App (the
+# "GitGuardian Security Checks" status) is dashboard-driven, so the matching
+# incident must ALSO be marked "ignored / false positive" in the GitGuardian
+# dashboard to clear that check.
+version: 2
+secret:
+  ignored-matches:
+    - name: MentorMind public demo ML_API_KEY (non-sensitive, intentional)
+      match: mentormind-public-demo-ml-key
