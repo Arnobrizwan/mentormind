@@ -237,6 +237,26 @@ Point Django at it with `ML_SERVICE_URL=http://localhost:9000`,
 `TUTOR_MODEL_URL=http://localhost:9000/v1/tutor/answer` and a shared `ML_API_KEY`.
 Swagger UI for the backend lives at `http://127.0.0.1:8000/api/docs/`.
 
+### Answering any question (free models)
+
+A strong corpus match always returns the real mark scheme. When a question has
+**no** match, the tutor falls back to the configured model and answers it as a
+general study tutor — so students can ask anything relevant, not just
+corpus-covered questions. Off-corpus answers need a model; pick one (all free):
+
+- **Local Gemma (still fully offline, no API):** `LOCAL_LLM=1` +
+  `LOCAL_LLM_BASE=google/gemma-2-2b-it` (≈5 GB RAM). Bigger and far better at
+  general questions than the tiny Qwen-0.5B default.
+- **Local Ollama:** `ollama run gemma2` → `CUSTOM_LLM_URL=http://localhost:11434/v1`,
+  `CUSTOM_LLM_MODEL=gemma2`.
+- **Free hosted gateway** (opt-in — data leaves your server): set
+  `CUSTOM_LLM_URL` + `CUSTOM_LLM_API_KEY` for Groq (`gemma2-9b-it`), OpenRouter
+  (`google/gemma-2-9b-it:free`), or Google AI Studio. See `ml-service/.env.example`.
+
+With no model configured the tutor stays corpus-only — it just answers fewer
+off-syllabus questions. Strong matches are always mark-scheme-grounded
+regardless of model.
+
 ## Mobile app (Capacitor)
 
 The student portal ships as a native iOS/Android app — same code, every feature,
