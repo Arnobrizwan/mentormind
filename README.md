@@ -17,7 +17,7 @@ spaced repetition, adaptive practice, exam proctoring and dropout prediction —
 [⚙️ Admin console](https://mentorminds.duckdns.org/console) ·
 [📱 Android APK](https://github.com/Arnobrizwan/mentormind/releases/latest)**
 
-All three portals run **always-warm on a single self-hosted VPS** (one domain, no cold starts). Login `student@mentormind.dev` / `mentormind123` (also `instructor@…`, `admin@…`).
+All three portals run **always-warm on a single self-hosted VPS** (one domain, no cold starts). Login `student@mentormind.dev` / `12345678` (also `instructor@…`, `admin@…`).
 
 <samp>
 <a href="#-try-it-in-2-minutes">Quick start</a> ·
@@ -98,9 +98,9 @@ cd ../frontend && npm ci && npx ng serve student-portal   # http://localhost:420
 
 | Account | Email | Password |
 |---|---|---|
-| 🎓 Student | `student@mentormind.dev` | `mentormind123` |
-| 🧑‍🏫 Instructor | `instructor@mentormind.dev` (use `ng serve instructor-studio`, :4201) | `mentormind123` |
-| ⚙️ Admin | `admin@mentormind.dev` (`ng serve admin-console`, :4202) | `mentormind123` |
+| 🎓 Student | `student@mentormind.dev` | `12345678` |
+| 🧑‍🏫 Instructor | `instructor@mentormind.dev` (use `ng serve instructor-studio`, :4201) | `12345678` |
+| ⚙️ Admin | `admin@mentormind.dev` (`ng serve admin-console`, :4202) | `12345678` |
 
 The tutor works out of the box (retrieval + a deterministic stub). For real
 mark-scheme answers, start the ml-service too — the hosted demo runs it on a
