@@ -83,6 +83,10 @@
 
   a {
     text-decoration: none;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    font-size: 0.8rem;
     padding-bottom: 0.15rem;
     border-bottom: 2px solid transparent;
     transition: color 160ms ease, border-bottom-color 160ms ease;
