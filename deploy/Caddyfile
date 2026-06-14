@@ -11,6 +11,18 @@
 		max_size 12MB
 	}
 
+	# Secondary SPAs under sub-paths (prefix stripped before nginx).
+	# /studio = instructor studio, /console = admin console.
+	handle_path /studio/* {
+		reverse_proxy frontend-studio:80
+	}
+	handle_path /console/* {
+		reverse_proxy frontend-admin:80
+	}
+	# Redirect the bare sub-paths to their trailing-slash base href.
+	redir /studio /studio/
+	redir /console /console/
+
 	# Backend handles the API, Django admin/static/media, metrics and the
 	# Channels websocket; everything else is the student-portal SPA.
 	@backend path /api/* /admin/* /static/* /media/* /metrics /ws/*

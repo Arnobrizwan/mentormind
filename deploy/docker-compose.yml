@@ -173,6 +173,30 @@ services:
     expose:
       - "80"
 
+  # Instructor studio served at /studio/ (Caddy strips the prefix).
+  frontend-studio:
+    build:
+      context: ../frontend
+      dockerfile: ../deploy/frontend-app.Dockerfile
+      args:
+        PROJECT: instructor-studio
+        BASE_HREF: /studio/
+    restart: unless-stopped
+    expose:
+      - "80"
+
+  # Admin console served at /console/ (/admin is the Django admin).
+  frontend-admin:
+    build:
+      context: ../frontend
+      dockerfile: ../deploy/frontend-app.Dockerfile
+      args:
+        PROJECT: admin-console
+        BASE_HREF: /console/
+    restart: unless-stopped
+    expose:
+      - "80"
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -188,6 +212,8 @@ services:
     depends_on:
       - backend
       - frontend
+      - frontend-studio
+      - frontend-admin
 
 volumes:
   pg_data:
