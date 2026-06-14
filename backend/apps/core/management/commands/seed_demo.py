@@ -6,7 +6,7 @@ Two layers:
 1. `seed_courses` — the REAL course library (course_content/: full lessons,
    topic-tagged quizzes, mark-scheme short answers, flashcards). Nothing
    demo about it; production installs run it alone.
-2. Demo accounts + explorable activity (password: mentormind123) so the
+2. Demo accounts + explorable activity (password: 12345678) so the
    hosted demo's dashboards, analytics and AI features have something to
    show. All activity is derived from the real content — no hardcoded
    course/question data lives in this file.
@@ -37,7 +37,7 @@ from apps.tutor.models import TutorMessage, TutorSession
 
 User = get_user_model()
 
-PASSWORD = "mentormind123"
+PASSWORD = "12345678"
 
 STUDENTS = [
     ("student@mentormind.dev", "Aisha Rahman"),
@@ -312,4 +312,11 @@ class Command(BaseCommand):
             user = User.objects.create_user(
                 email=email, password=PASSWORD, display_name=display_name, **flags
             )
+        else:
+            # keep the demo password + flags in sync on re-seed
+            user.set_password(PASSWORD)
+            user.display_name = display_name
+            for key, value in flags.items():
+                setattr(user, key, value)
+            user.save()
         return user
