@@ -25,16 +25,16 @@ import { apiErrorMessage } from '../core/errors';
     @if (review(); as r) {
       <div class="stats">
         <div class="panel stat">
-          <span class="stat__num">👍 {{ r.summary.up }}</span>
-          <span class="tag">helpful</span>
+          <span class="stat__num"><span class="stat__emoji" aria-hidden="true">👍</span> {{ r.summary.up }}</span>
+          <span class="stat__label">helpful</span>
         </div>
-        <div class="panel stat">
-          <span class="stat__num">👎 {{ r.summary.down }}</span>
-          <span class="tag">not helpful</span>
+        <div class="panel stat stat--bad">
+          <span class="stat__num"><span class="stat__emoji" aria-hidden="true">👎</span> {{ r.summary.down }}</span>
+          <span class="stat__label">not helpful</span>
         </div>
-        <div class="panel stat">
-          <span class="stat__num">🚩 {{ r.summary.flagged }}</span>
-          <span class="tag">with a note</span>
+        <div class="panel stat stat--flag">
+          <span class="stat__num"><span class="stat__emoji" aria-hidden="true">🚩</span> {{ r.summary.flagged }}</span>
+          <span class="stat__label">with a note</span>
         </div>
       </div>
     }
@@ -70,20 +70,37 @@ import { apiErrorMessage } from '../core/errors';
   `,
   styles: `
     .stats {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.9rem;
       margin-bottom: 1.4rem;
     }
+    @media (max-width: 560px) { .stats { grid-template-columns: 1fr; } }
     .stat {
       display: flex;
       flex-direction: column;
-      gap: 0.3rem;
-      padding: 0.9rem 1.2rem;
+      gap: 0.35rem;
+      padding: 1.1rem 1.3rem;
+      border-top: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
     }
+    .stat--bad { border-top-color: color-mix(in srgb, var(--amber, #d97706) 60%, transparent); }
+    .stat--flag { border-top-color: color-mix(in srgb, var(--danger, #e5484d) 60%, transparent); }
     .stat__num {
-      font-size: 1.4rem;
-      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-display, inherit);
+      font-size: 1.9rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .stat__emoji { font-size: 1.4rem; }
+    .stat__label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-soft, var(--text-dim));
     }
     .list {
       display: flex;
