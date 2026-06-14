@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>MentorMinds — DIGITEX 2026 Rubric Deck</title>
+<title>MentorMinds — Pitch Deck</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Spline+Sans+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <style>
   :root{
-    --ink:#0e0e12; --paper:#ffffff; --soft:#56525e;
+    --ink:#0e0e12; --paper:#fff5fa; --soft:#56525e;
     --accent:#ff4d9d; --accent-deep:#e23b86; --accent2:#8b5cf6; --dark:#141418;
     --grad:linear-gradient(120deg,#ff5ca3,#ff4d9d 55%,#8b5cf6);
-    --line:rgba(14,14,18,.12); --excellent:#16a34a;
+    --line:rgba(14,14,18,.12);
   }
   *{box-sizing:border-box;margin:0}
   html,body{background:#e9e9ee;font-family:'Plus Jakarta Sans',sans-serif;color:var(--ink)}
@@ -20,63 +20,75 @@
     width:1280px;height:720px;background:var(--paper);position:relative;overflow:hidden;
     padding:48px 60px;display:flex;flex-direction:column;
     box-shadow:0 18px 50px -20px rgba(14,14,18,.4);
-    background-image:url("data:image/svg+xml,%3Csvg width='28' height='49' viewBox='0 0 28 49' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l11 6.35 11-6.35V17.9l-11-6.35L3 17.9z' fill='%230e0e12' fill-opacity='0.04'/%3E%3C/svg%3E");
+    background-image:
+      radial-gradient(60% 34% at 6% -6%, rgba(255,92,163,.12) 0%, transparent 60%),
+      radial-gradient(54% 30% at 98% 4%, rgba(124,58,237,.09) 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg width='28' height='49' viewBox='0 0 28 49' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l11 6.35 11-6.35V17.9l-11-6.35L3 17.9z' fill='%230e0e12' fill-opacity='0.045'/%3E%3C/svg%3E");
   }
-  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-  .brand{font-family:'Anton';font-size:26px;letter-spacing:.5px}
+  .top{display:flex;justify-content:space-between;align-items:center}
+  .brand{font-family:'Anton';font-size:27px;letter-spacing:.5px}
   .brand em{color:var(--accent);font-style:normal}
-  .pill{background:var(--grad);color:#fff;padding:6px 14px;border-radius:999px;font-weight:800;font-size:12px;letter-spacing:.08em}
-  .pill--ghost{background:#141418}
-  .eyebrow{font-family:'Spline Sans Mono';font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-deep)}
-  h1{font-family:'Anton';font-size:88px;line-height:.9;text-transform:uppercase;margin:14px 0 0}
+  .pill{background:var(--grad);color:#fff;padding:7px 16px;border-radius:999px;font-family:'Spline Sans Mono';font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+  .pill--soft{background:#ffe1ee;color:var(--accent-deep)}
+  .eyebrow{font-family:'Spline Sans Mono';font-size:14px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-deep)}
+  h1{font-family:'Anton';font-size:92px;line-height:.88;text-transform:uppercase;margin:14px 0 0}
   h1 .hl{color:var(--accent)}
-  h2{font-family:'Anton';font-size:46px;line-height:.95;text-transform:uppercase;margin:6px 0 0}
+  .head2{font-family:'Anton';font-size:66px;line-height:.9;text-transform:uppercase;margin:10px 0 0;max-width:18ch}
+  .head2 .hl{color:var(--accent)}
   .sub{font-size:20px;color:var(--soft);max-width:60ch;margin-top:16px;line-height:1.45}
 
-  /* criterion header */
-  .crit{display:flex;align-items:center;gap:18px;margin-top:6px}
-  .crit .num{font-family:'Anton';font-size:54px;color:#fff;background:var(--grad);width:84px;height:84px;border-radius:20px;display:flex;align-items:center;justify-content:center;flex:0 0 84px}
-  .crit .marks{font-family:'Spline Sans Mono';font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--accent-deep);text-transform:uppercase}
-  .score{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:'Spline Sans Mono';font-size:13px;font-weight:700;color:var(--excellent);border:1.5px solid var(--excellent);border-radius:999px;padding:7px 14px;text-transform:uppercase;letter-spacing:.06em}
-  .score .dot{width:9px;height:9px;border-radius:50%;background:var(--excellent)}
-
-  .body{display:grid;grid-template-columns:1.05fr .95fr;gap:34px;flex:1;align-items:center;margin-top:18px}
+  .body{display:grid;grid-template-columns:1.05fr .95fr;gap:36px;flex:1;align-items:center;margin-top:22px}
   .body--wide{grid-template-columns:1fr}
-  .points{display:flex;flex-direction:column;gap:15px}
+  .points{display:flex;flex-direction:column;gap:16px}
   .pt{display:flex;gap:14px;align-items:flex-start}
-  .pt .ic{width:36px;height:36px;border-radius:11px;background:var(--grad);flex:0 0 36px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
-  .pt b{font-size:17px;font-weight:800;display:block}
-  .pt span{font-size:14px;color:var(--soft);line-height:1.4}
+  .pt .ic{width:40px;height:40px;border-radius:12px;background:var(--grad);flex:0 0 40px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px}
+  .pt b{font-size:18px;font-weight:800;display:block}
+  .pt span{font-size:14.5px;color:var(--soft);line-height:1.4}
 
-  .shot{border-radius:18px;border:1px solid var(--line);overflow:hidden;box-shadow:0 14px 36px -18px rgba(14,14,18,.5);background:#fff}
+  .shot{border-radius:20px;border:1.5px solid var(--line);overflow:hidden;box-shadow:0 16px 40px -18px rgba(14,14,18,.5);background:#fff}
   .shot img{width:100%;display:block}
+  .cap{font-family:'Spline Sans Mono';font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);padding:9px 13px;border-top:1px solid var(--line)}
   .gallery{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .gallery .shot img{height:215px;object-fit:cover;object-position:top}
-  .cap{font-family:'Spline Sans Mono';font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);padding:8px 12px;border-top:1px solid var(--line)}
+  .gallery .shot img{height:212px;object-fit:cover;object-position:top}
 
-  .panel{background:var(--dark);color:#fff;border-radius:24px;padding:28px;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:16px}
-  .panel h3{font-family:'Anton';font-size:20px;text-transform:uppercase;color:#fff;letter-spacing:.5px}
-  .stats{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .stat .n{font-family:'Anton';font-size:40px;line-height:1;color:#fff}
+  .panel{background:var(--dark);color:#fff;border-radius:26px;padding:30px;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:18px}
+  .panel h3{font-family:'Anton';font-size:21px;text-transform:uppercase;color:#fff;letter-spacing:.5px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .stat .n{font-family:'Anton';font-size:42px;line-height:1;color:#fff}
   .stat .n em{color:var(--accent);font-style:normal}
-  .stat .l{font-family:'Spline Sans Mono';font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6);margin-top:4px}
+  .stat .l{font-family:'Spline Sans Mono';font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:rgba(255,255,255,.62);margin-top:4px}
 
-  .foot{display:flex;justify-content:space-between;align-items:center;font-family:'Spline Sans Mono';font-size:12.5px;letter-spacing:.05em;color:var(--soft);border-top:1px solid var(--line);padding-top:12px;margin-top:14px}
+  .foot{display:flex;justify-content:space-between;align-items:center;font-family:'Spline Sans Mono';font-size:13px;letter-spacing:.05em;color:var(--soft);border-top:1.5px solid var(--line);padding-top:14px;margin-top:16px}
   .foot b{color:var(--ink)}
 
-  /* architecture diagram */
+  /* architecture */
   .arch{display:flex;flex-direction:column;gap:14px;width:100%}
   .arch-row{display:flex;gap:14px;justify-content:center}
-  .node{border:1.5px solid var(--line);border-radius:14px;padding:12px 16px;background:#fff;min-width:150px;text-align:center}
-  .node b{display:block;font-size:14px;font-weight:800}
+  .node{border:1.5px solid var(--line);border-radius:16px;padding:13px 18px;background:#fff;min-width:155px;text-align:center;box-shadow:0 6px 18px -12px rgba(14,14,18,.3)}
+  .node b{display:block;font-size:14.5px;font-weight:800}
   .node span{font-family:'Spline Sans Mono';font-size:10.5px;letter-spacing:.04em;color:var(--soft);text-transform:uppercase}
   .node--edge{background:var(--dark);color:#fff;border-color:var(--dark)}
   .node--edge span{color:rgba(255,255,255,.6)}
   .node--ml{background:linear-gradient(120deg,#fff0f7,#f3ecff);border-color:var(--accent)}
   .arrow{font-family:'Spline Sans Mono';font-size:11px;color:var(--accent-deep);text-align:center;letter-spacing:.1em}
-  .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
-  .tag{font-family:'Spline Sans Mono';font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--soft)}
+  .tags{display:flex;flex-wrap:wrap;gap:9px;margin-top:6px}
+  .tag{font-family:'Spline Sans Mono';font-size:11.5px;border:1.5px solid var(--line);border-radius:999px;padding:6px 13px;color:var(--soft);background:#fff}
   .tag b{color:var(--ink)}
+
+  /* Business Model Canvas */
+  .bmc{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:1fr 1fr 0.74fr;gap:9px;flex:1;margin-top:18px}
+  .bmc-cell{border:1.4px solid var(--line);border-radius:13px;padding:11px 13px;background:#fff;display:flex;flex-direction:column;gap:5px;overflow:hidden}
+  .bmc-cell h4{font-family:'Spline Sans Mono';font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent-deep);display:flex;align-items:center;gap:6px}
+  .bmc-cell h4 .e{font-size:13px}
+  .bmc-cell ul{margin:0;padding-left:14px;display:flex;flex-direction:column;gap:3px}
+  .bmc-cell li{font-size:11px;line-height:1.28;color:var(--ink)}
+  .bmc .kp{grid-column:1;grid-row:1/3}.bmc .ka{grid-column:2;grid-row:1}.bmc .kr{grid-column:2;grid-row:2}
+  .bmc .vp{grid-column:3;grid-row:1/3;border-color:var(--accent);background:linear-gradient(160deg,#fff0f7,#f4ecff)}
+  .bmc .cr{grid-column:4;grid-row:1}.bmc .ch{grid-column:4;grid-row:2}.bmc .cs{grid-column:5;grid-row:1/3}
+  .bmc .cost{grid-column:1/3;grid-row:3}.bmc .rev{grid-column:3/6;grid-row:3;border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+  .bmc .cost ul,.bmc .rev ul{padding-left:0;list-style:none;flex-direction:row;flex-wrap:wrap;gap:5px 16px}
+  .bmc .cost li,.bmc .rev li{position:relative;padding-left:13px}
+  .bmc .cost li::before,.bmc .rev li::before{content:'▪';position:absolute;left:0;color:var(--accent)}
   @media print{ body{background:#fff} .slide{box-shadow:none;break-after:page} .deck{gap:0;padding:0} }
 </style>
 </head>
@@ -87,7 +99,7 @@
   <section class="slide">
     <div class="top">
       <div class="brand">Mentor<em>Minds</em></div>
-      <span class="pill">DIGITEX 2026 · EDTECH · IHL/OPEN</span>
+      <span class="pill">DIGITEX 2026 · EDTECH</span>
     </div>
     <p class="eyebrow" style="margin-top:30px">The self-hosted AI learning platform ↘</p>
     <h1>Learn the<br><span class="hl">future</span> way.</h1>
@@ -96,7 +108,7 @@
       <div class="points">
         <div class="pt"><span class="ic">🔒</span><div><b>Your data never leaves your server</b><span>LoRA fine-tune of Qwen2.5-0.5B runs in-process — no OpenAI, no vendor cloud.</span></div></div>
         <div class="pt"><span class="ic">📚</span><div><b>Answers you can trust</b><span>Retrieval over 68k+ aligned questions returns the official mark scheme, attributed.</span></div></div>
-        <div class="pt"><span class="ic">📷</span><div><b>Snap &amp; Solve vision</b><span>Photograph a diagram — the moondream2 VLM actually sees it, OCR fallback included.</span></div></div>
+        <div class="pt"><span class="ic">📷</span><div><b>Snap &amp; Solve vision</b><span>Photograph a diagram — the moondream2 VLM sees it, OCR fallback included.</span></div></div>
       </div>
       <div class="panel">
         <h3>By the numbers</h3>
@@ -108,51 +120,34 @@
         </div>
       </div>
     </div>
-    <div class="foot">
-      <span>Live demo · <b>mentorminds.duckdns.org</b> · student@mentormind.dev / 12345678</span>
-      <span>Scored against the DIGITEX 2026 rubric →</span>
-    </div>
+    <div class="foot"><span>Live · <b>mentorminds.duckdns.org</b> · student@mentormind.dev / 12345678</span><span>MentorMinds · 2026</span></div>
   </section>
 
-  <!-- 2 — CRITERION 1: INNOVATION -->
+  <!-- 2 — INNOVATION -->
   <section class="slide">
-    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill pill--ghost">RUBRIC · IHL/OPEN</span></div>
-    <div class="crit">
-      <div class="num">1</div>
-      <div>
-        <div class="marks">Criterion 1 · 20 marks</div>
-        <h2>Innovation,<br>Novelty &amp; Originality</h2>
-      </div>
-      <div class="score"><span class="dot"></span>Excellent · 90–100%</div>
-    </div>
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill--soft pill">The edge</span></div>
+    <p class="eyebrow" style="margin-top:24px">What makes it different ↘</p>
+    <h2 class="head2">Not a GPT<br><span class="hl">wrapper.</span></h2>
     <div class="body">
       <div class="points">
-        <div class="pt"><span class="ic">🧠</span><div><b>Self-hosted, fine-tuned tutor — not a GPT wrapper</b><span>A LoRA fine-tune of Qwen2.5-0.5B on aligned Cambridge papers. Most edtech resells a vendor API; we own the model.</span></div></div>
-        <div class="pt"><span class="ic">📚</span><div><b>Mark-scheme-grounded answers</b><span>Retrieval returns the <i>official</i> Cambridge mark scheme, attributed — not a hallucinated guess.</span></div></div>
-        <div class="pt"><span class="ic">📷</span><div><b>Snap &amp; Solve VLM</b><span>moondream2 reads photographed diagrams/handwriting; clean text MCQs become auto-marked questions.</span></div></div>
-        <div class="pt"><span class="ic">🎯</span><div><b>Adaptive learning loop</b><span>Weak-topic detection, spaced-repetition revision, and a dropout-risk model close the loop.</span></div></div>
+        <div class="pt"><span class="ic">🧠</span><div><b>Self-hosted, fine-tuned tutor</b><span>A LoRA fine-tune of Qwen2.5-0.5B on aligned Cambridge papers. Most edtech resells a vendor API — we own the model.</span></div></div>
+        <div class="pt"><span class="ic">📚</span><div><b>Mark-scheme-grounded answers</b><span>Retrieval returns the official Cambridge mark scheme, attributed — not a hallucinated guess.</span></div></div>
+        <div class="pt"><span class="ic">📷</span><div><b>Snap &amp; Solve VLM</b><span>moondream2 reads photographed diagrams &amp; handwriting; clean MCQs become auto-marked questions.</span></div></div>
+        <div class="pt"><span class="ic">🎯</span><div><b>Adaptive learning loop</b><span>Weak-topic detection, spaced repetition, and a dropout-risk model close the loop.</span></div></div>
       </div>
-      <div class="shot"><img src="screenshots/02-tutor.png" alt="AI tutor grounded in mark schemes" /><div class="cap">AI tutor · grounded in official mark schemes</div></div>
+      <div class="shot"><img src="screenshots/02-tutor.png" alt="AI tutor" /><div class="cap">AI tutor · grounded in official mark schemes</div></div>
     </div>
-    <div class="foot"><span>Verify live: <b>AI Tutor</b> tab → ask a past-paper question → attributed mark scheme</span><span>01 / Innovation</span></div>
+    <div class="foot"><span>Try it: <b>AI Tutor</b> → ask a past-paper question → attributed mark scheme</span><span>mentorminds.duckdns.org</span></div>
   </section>
 
-  <!-- 3 — CRITERION 2: TECHNICAL DEPTH + ARCHITECTURE -->
+  <!-- 3 — TECHNICAL -->
   <section class="slide">
-    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill pill--ghost">RUBRIC · IHL/OPEN</span></div>
-    <div class="crit">
-      <div class="num">2</div>
-      <div>
-        <div class="marks">Criterion 2 · 20 marks</div>
-        <h2>Technical Depth,<br>Feasibility &amp; Status</h2>
-      </div>
-      <div class="score"><span class="dot"></span>Excellent · near production</div>
-    </div>
-    <div class="body body--wide" style="margin-top:14px">
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill--soft pill">Under the hood</span></div>
+    <p class="eyebrow" style="margin-top:24px">One stack, fully self-hosted ↘</p>
+    <h2 class="head2" style="font-size:54px">Engineered, not<br><span class="hl">assembled.</span></h2>
+    <div class="body body--wide" style="margin-top:16px">
       <div class="arch">
-        <div class="arch-row">
-          <div class="node node--edge"><b>3 Angular SPAs</b><span>student · studio · admin</span></div>
-        </div>
+        <div class="arch-row"><div class="node node--edge"><b>3 Angular SPAs</b><span>student · studio · admin</span></div></div>
         <div class="arrow">▼ HTTPS · Caddy (auto-TLS) · Docker Compose · VPS</div>
         <div class="arch-row">
           <div class="node"><b>Django + DRF API</b><span>auth · courses · planner</span></div>
@@ -169,107 +164,108 @@
       </div>
     </div>
     <div class="tags">
-      <span class="tag"><b>Status:</b> live on VPS + HF Space</span>
-      <span class="tag"><b>CI:</b> tests + builds green</span>
-      <span class="tag"><b>Dynamic-first:</b> feature flags, live site settings</span>
-      <span class="tag"><b>Sovereign:</b> no third-party AI APIs</span>
-      <span class="tag"><b>$0</b> marginal inference cost</span>
+      <span class="tag"><b>Live</b> on VPS + HF Space</span>
+      <span class="tag"><b>CI</b> green — tests + builds</span>
+      <span class="tag"><b>Dynamic-first</b> — live feature flags</span>
+      <span class="tag"><b>Sovereign</b> — no third-party AI APIs</span>
+      <span class="tag"><b>$0</b> marginal inference</span>
     </div>
-    <div class="foot"><span>Working prototype, not a mockup — every feature has a deterministic fallback</span><span>02 / Technical depth</span></div>
+    <div class="foot"><span>A working product, not a mockup — every feature has a deterministic fallback</span><span>github.com/Arnobrizwan/mentormind</span></div>
   </section>
 
-  <!-- 4 — CRITERION 3: IMPACT -->
+  <!-- 4 — IMPACT -->
   <section class="slide">
-    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill pill--ghost">RUBRIC · IHL/OPEN</span></div>
-    <div class="crit">
-      <div class="num">3</div>
-      <div>
-        <div class="marks">Criterion 3 · 20 marks</div>
-        <h2>Impact, Contribution<br>&amp; Social Value</h2>
-      </div>
-      <div class="score"><span class="dot"></span>Excellent · SDG-aligned</div>
-    </div>
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill--soft pill">Why it matters</span></div>
+    <p class="eyebrow" style="margin-top:24px">Real students, real outcomes ↘</p>
+    <h2 class="head2" style="font-size:56px">Exam-grade tutoring,<br><span class="hl">for everyone.</span></h2>
     <div class="body">
       <div class="points">
-        <div class="pt"><span class="ic">🎓</span><div><b>SDG 4 — Quality Education</b><span>Mark-scheme-grade tutoring for IGCSE/Cambridge students who can't afford private tutors.</span></div></div>
-        <div class="pt"><span class="ic">💸</span><div><b>$0 per-question cost</b><span>A 0.5B model on cheap CPU means schools in emerging markets can run it sustainably.</span></div></div>
-        <div class="pt"><span class="ic">🔒</span><div><b>Data sovereignty</b><span>Schools self-host; student data never leaves their server — a real privacy guarantee.</span></div></div>
-        <div class="pt"><span class="ic">📉</span><div><b>Dropout-risk early warning</b><span>An ML model surfaces at-risk students so instructors can intervene before they quit.</span></div></div>
+        <div class="pt"><span class="ic">🎓</span><div><b>SDG 4 — Quality Education</b><span>Mark-scheme-grade tutoring for students who can't afford private tutors.</span></div></div>
+        <div class="pt"><span class="ic">💸</span><div><b>$0 per-question cost</b><span>A 0.5B model on cheap CPU — schools in emerging markets can run it sustainably.</span></div></div>
+        <div class="pt"><span class="ic">🔒</span><div><b>Data sovereignty</b><span>Schools self-host; student data never leaves their server.</span></div></div>
+        <div class="pt"><span class="ic">📉</span><div><b>Dropout-risk early warning</b><span>An ML model surfaces at-risk students so instructors intervene before they quit.</span></div></div>
       </div>
-      <div class="shot"><img src="screenshots/07-student-success.png" alt="Dropout-risk queue for instructors" /><div class="cap">Instructor studio · dropout-risk early-warning queue</div></div>
+      <div class="shot"><img src="screenshots/07-student-success.png" alt="Dropout-risk queue" /><div class="cap">Instructor studio · dropout-risk early-warning queue</div></div>
     </div>
-    <div class="foot"><span>Measurable: per-topic accuracy, weekly plans, spaced-repetition retention</span><span>03 / Impact</span></div>
+    <div class="foot"><span>Measurable: per-topic accuracy · weekly plans · spaced-repetition retention</span><span>Built for Bangladesh &amp; beyond</span></div>
   </section>
 
-  <!-- 5 — CRITERION 4: PRESENTATION / VISUAL (gallery) -->
+  <!-- 5 — PRODUCT / PRESENTATION -->
   <section class="slide">
-    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill pill--ghost">RUBRIC · IHL/OPEN</span></div>
-    <div class="crit">
-      <div class="num">4</div>
-      <div>
-        <div class="marks">Criterion 4 · 20 marks</div>
-        <h2>Presentation,<br>Communication &amp; Visual</h2>
-      </div>
-      <div class="score"><span class="dot"></span>Excellent · clickable demo</div>
-    </div>
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill--soft pill">The product</span></div>
+    <p class="eyebrow" style="margin-top:24px">One bold design system ↘</p>
+    <h2 class="head2" style="font-size:54px">Three portals,<br><span class="hl">one stack.</span></h2>
     <div class="body" style="grid-template-columns:.8fr 1.2fr">
       <div class="points">
-        <div class="pt"><span class="ic">🎨</span><div><b>Cohesive EduNova design system</b><span>One bold, accessible visual language across all three portals.</span></div></div>
-        <div class="pt"><span class="ic">🖱️</span><div><b>Judges can click the real thing</b><span>Not slideware — a live, seeded demo with login. QR + credentials on the next slide.</span></div></div>
-        <div class="pt"><span class="ic">📱</span><div><b>Responsive + Android build</b><span>Capacitor wrapper ships the student portal as a native app.</span></div></div>
+        <div class="pt"><span class="ic">🎨</span><div><b>Cohesive EduNova design</b><span>One bold, accessible visual language across all three portals.</span></div></div>
+        <div class="pt"><span class="ic">🖱️</span><div><b>Judges click the real thing</b><span>Not slideware — a live, seeded demo with login. URLs on the last slide.</span></div></div>
+        <div class="pt"><span class="ic">📱</span><div><b>Responsive + Android</b><span>A Capacitor wrapper ships the student portal as a native app.</span></div></div>
       </div>
       <div class="gallery">
-        <div class="shot"><img src="screenshots/01-dashboard.png" alt="Student dashboard" /><div class="cap">Student portal</div></div>
+        <div class="shot"><img src="screenshots/01-dashboard.png" alt="Student portal" /><div class="cap">Student portal</div></div>
         <div class="shot"><img src="screenshots/06-studio-workbench.png" alt="Instructor studio" /><div class="cap">Instructor studio</div></div>
         <div class="shot"><img src="screenshots/09-admin-console.png" alt="Admin ops console" /><div class="cap">Admin ops console</div></div>
-        <div class="shot"><img src="screenshots/04-planner.png" alt="Weekly study planner" /><div class="cap">AI study planner</div></div>
+        <div class="shot"><img src="screenshots/04-planner.png" alt="AI planner" /><div class="cap">AI study planner</div></div>
       </div>
     </div>
-    <div class="foot"><span>9 product screenshots + a recorded demo GIF in <b>docs/screenshots/</b></span><span>04 / Presentation</span></div>
+    <div class="foot"><span>Student · Instructor studio · Admin console — same design language, one codebase</span><span>mentorminds.duckdns.org</span></div>
   </section>
 
-  <!-- 6 — CRITERION 5: COMMERCIALISATION -->
+  <!-- 6 — COMMERCIALISATION -->
   <section class="slide">
-    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill pill--ghost">RUBRIC · IHL/OPEN</span></div>
-    <div class="crit">
-      <div class="num">5</div>
-      <div>
-        <div class="marks">Criterion 5 · 20 marks</div>
-        <h2>Commercialisation<br>&amp; Business Model</h2>
-      </div>
-      <div class="score"><span class="dot"></span>Excellent · model built-in</div>
-    </div>
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill--soft pill">The business</span></div>
+    <p class="eyebrow" style="margin-top:24px">A model that pays for itself ↘</p>
+    <h2 class="head2" style="font-size:54px">Built to <span class="hl">scale</span><br>in Bangladesh.</h2>
     <div class="body">
       <div class="points">
-        <div class="pt"><span class="ic">🏫</span><div><b>Target market</b><span>Schools &amp; tutoring centres running Cambridge/IGCSE prep in price-sensitive regions.</span></div></div>
-        <div class="pt"><span class="ic">💼</span><div><b>Dual revenue model</b><span>Per-school self-host license (B2B) + premium student subscription (B2C) — the payments + premium flow is already in the product.</span></div></div>
-        <div class="pt"><span class="ic">📈</span><div><b>High-margin &amp; scalable</b><span>$0 marginal AI cost + one multi-tenant-ready stack = margin grows with each school added.</span></div></div>
-        <div class="pt"><span class="ic">🛡️</span><div><b>Defensible moat</b><span>Proprietary 68k+ aligned-paper corpus + a fine-tuned model competitors can't simply API-call.</span></div></div>
+        <div class="pt"><span class="ic">🏫</span><div><b>Target market</b><span>O/A-Level &amp; IGCSE students and coaching centres across Bangladesh.</span></div></div>
+        <div class="pt"><span class="ic">💼</span><div><b>Dual revenue</b><span>Per-school self-host licence (B2B) + premium student subscription (B2C, already live), paid via bKash/Nagad.</span></div></div>
+        <div class="pt"><span class="ic">📈</span><div><b>High-margin &amp; scalable</b><span>$0 marginal AI cost + one multi-tenant stack = margin grows per school.</span></div></div>
+        <div class="pt"><span class="ic">🛡️</span><div><b>Defensible moat</b><span>Proprietary 68k+ aligned-paper corpus + a fine-tuned model rivals can't API-call.</span></div></div>
       </div>
       <div class="panel">
         <h3>Unit economics</h3>
         <div class="stats">
           <div class="stat"><div class="n"><em>$0</em></div><div class="l">cost per AI answer</div></div>
-          <div class="stat"><div class="n">1</div><div class="l">stack, many tenants</div></div>
+          <div class="stat"><div class="n">1</div><div class="l">stack, many schools</div></div>
           <div class="stat"><div class="n">B2B<em>+</em>B2C</div><div class="l">revenue streams</div></div>
           <div class="stat"><div class="n">68k<em>+</em></div><div class="l">corpus moat</div></div>
         </div>
       </div>
     </div>
-    <div class="foot"><span>Premium tier &amp; daily quota are live in the demo — flip the <b>payments</b> flag in the admin console</span><span>05 / Commercialisation</span></div>
+    <div class="foot"><span>Premium tier &amp; daily quota are live in the demo today</span><span>mentorminds.duckdns.org</span></div>
   </section>
 
-  <!-- 7 — HOW JUDGES VERIFY -->
+  <!-- 7 — BUSINESS MODEL CANVAS -->
   <section class="slide">
-    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill">VERIFY IT YOURSELF</span></div>
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill">Business Model Canvas</span></div>
+    <p class="eyebrow" style="margin-top:22px">How the business fits together ↘</p>
+    <h2 class="head2" style="font-size:40px;margin-top:6px">Business model canvas</h2>
+    <div class="bmc">
+      <div class="bmc-cell kp"><h4><span class="e">🤝</span>Key Partners</h4><ul><li>BD schools &amp; O/A-Level coaching centres — reach students</li><li>bKash · Nagad · SSLCommerz — payment rails</li><li>Hugging Face — hosts the AI inference</li><li>Open-model makers: Qwen2.5, moondream2</li></ul></div>
+      <div class="bmc-cell ka"><h4><span class="e">⚙️</span>Key Activities</h4><ul><li>LoRA fine-tuning on past papers</li><li>Curating the 68k+ aligned corpus</li><li>Platform dev &amp; self-host support</li></ul></div>
+      <div class="bmc-cell kr"><h4><span class="e">🧱</span>Key Resources</h4><ul><li>Proprietary 68k+ Q/A corpus (moat)</li><li>Fine-tuned Qwen2.5 + LoRA model</li><li>3-portal full-stack platform</li></ul></div>
+      <div class="bmc-cell vp"><h4><span class="e">💡</span>Value Propositions</h4><ul><li><b>Mark-scheme-grounded</b> AI tutoring — answers you can trust</li><li><b>$0 per-question</b> AI cost — self-hosted &amp; affordable</li><li><b>Data sovereignty</b> — runs on the school's own server</li><li>All-in-one: tutor · past papers · mocks · revision · planner · proctoring</li></ul></div>
+      <div class="bmc-cell cr"><h4><span class="e">💬</span>Customer Relationships</h4><ul><li>Self-serve, gamified student portal</li><li>Instructor dashboards + dropout-risk alerts</li><li>Per-school onboarding</li></ul></div>
+      <div class="bmc-cell ch"><h4><span class="e">📣</span>Channels</h4><ul><li>Direct B2B sales to schools</li><li>Self-host licence + web SaaS</li><li>In-app premium · Android app</li></ul></div>
+      <div class="bmc-cell cs"><h4><span class="e">🎯</span>Customer Segments</h4><ul><li>O / A-Level &amp; IGCSE students in Bangladesh (B2C)</li><li>English-medium &amp; coaching-centre learners</li><li>Schools &amp; coaching centres (B2B)</li></ul></div>
+      <div class="bmc-cell cost"><h4><span class="e">🧾</span>Cost Structure</h4><ul><li>Low fixed infra (VPS + HF Space)</li><li>Occasional model training</li><li>Engineering / product</li><li>~$0 marginal inference cost</li></ul></div>
+      <div class="bmc-cell rev"><h4><span class="e">💰</span>Revenue Streams</h4><ul><li>B2B: per-school self-host licence / SaaS tiers</li><li>B2C: premium student subscription (live)</li><li>Add-on: institutional analytics</li><li>High margin — AI cost ≈ $0</li></ul></div>
+    </div>
+    <div class="foot"><span>Defensible: proprietary corpus + fine-tuned model rivals can't simply API-call</span><span>MentorMinds · business model</span></div>
+  </section>
+
+  <!-- 8 — VERIFY -->
+  <section class="slide">
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill">Verify it yourself</span></div>
     <p class="eyebrow" style="margin-top:26px">Don't take our word for it ↘</p>
-    <h2 style="font-size:60px">Check every claim, live.</h2>
+    <h2 class="head2" style="font-size:64px">Check every<br><span class="hl">claim, live.</span></h2>
     <div class="body" style="grid-template-columns:1.15fr .85fr;margin-top:22px">
       <div class="points">
         <div class="pt"><span class="ic">🌐</span><div><b>mentorminds.duckdns.org</b><span>Student portal · login student@mentormind.dev / 12345678</span></div></div>
-        <div class="pt"><span class="ic">🧑‍🏫</span><div><b>/studio &amp; /console</b><span>Instructor studio &amp; admin ops console on the same domain.</span></div></div>
-        <div class="pt"><span class="ic">🧠</span><div><b>ml-service API</b><span>arnob666666-mentormind-ml.hf.space — tutor, vision, grading endpoints.</span></div></div>
-        <div class="pt"><span class="ic">💻</span><div><b>Source + CI</b><span>github.com/Arnobrizwan/mentormind — green builds, tests, this deck.</span></div></div>
+        <div class="pt"><span class="ic">🧑‍🏫</span><div><b>/studio &amp; /console</b><span>Instructor studio &amp; admin ops console, same domain.</span></div></div>
+        <div class="pt"><span class="ic">🧠</span><div><b>ml-service API</b><span>arnob666666-mentormind-ml.hf.space/docs — every ML endpoint, live.</span></div></div>
+        <div class="pt"><span class="ic">💻</span><div><b>Source + CI</b><span>github.com/Arnobrizwan/mentormind — green builds &amp; tests.</span></div></div>
       </div>
       <div class="shot"><img src="poster/qr.png" alt="QR to live demo" style="padding:18px;background:#fff" /><div class="cap">Scan → live demo</div></div>
     </div>
