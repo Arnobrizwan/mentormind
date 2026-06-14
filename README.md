@@ -189,7 +189,7 @@ heuristic fallback, so nothing 503s when no model is loaded.
 | Feature | How it works |
 |---|---|
 | 🤖 **AI tutor** | Retrieval-first over 68k+ aligned past-paper questions (strong match returns the *official mark scheme*, attributed); weak/no match falls to the fine-tuned local LLM with retrieved grounding. Daily quota, premium unlimited, thumbs feedback. |
-| 📷 **Multimodal tutoring** | Photograph a textbook question — OCR'd by the ml-service, answered like typed text. |
+| 📷 **Snap & Solve (vision)** | Photograph a textbook question or diagram — the ml-service's moondream2 VLM (`VISION_VLM=1`) actually *sees* it via `/v1/vision/ask`, with OCR fallback when the model is off, then the tutor answers like typed text. |
 | 🎤 **Voice tutoring** | Dictate questions (SpeechRecognition) and have answers read aloud (speechSynthesis); feature-detected. |
 | 📝 **Short-answer grading** | Free-text answers graded against instructor mark schemes — LLM emits a structured criteria breakdown (met ✓ / missing ✗ + feedback); criterion-recall heuristic fallback. Attempt caps, mark scheme never exposed to students. |
 | 🃏 **Spaced repetition** | SM-2 flashcard queue. AI drafts cards from lesson content; drafts are unpublished until the instructor approves. Reviews feed the points/streak system (farming-proof: only due cards grade). |
