@@ -22,6 +22,15 @@ import { SiteConfig } from '../core/site-config';
       <p class="hero__sub">{{ locale.t('catalog.hero.sub') }}</p>
     </section>
 
+    <section class="vision section-dark rise">
+      <p class="mono-label">Our vision</p>
+      <h2>Learn the basics in a <em>modern</em> way</h2>
+      <p class="vision__sub">
+        MentorMind puts an AI tutor, real past papers and spaced repetition in one
+        place — grounded in official mark schemes, running on your own server.
+      </p>
+    </section>
+
     @if (loading()) {
       <div class="grid" role="status" aria-label="Loading the catalog">
         @for (s of skeletonSlots; track s) {
@@ -57,36 +66,40 @@ import { SiteConfig } from '../core/site-config';
         </section>
       }
 
-      <div class="ledger-row">
-        <span class="mono-label">{{ courses().length }} {{ locale.t('catalog.record') }}</span>
-        <hr class="hairline" style="flex:1" />
-      </div>
-      <div class="grid">
-        @for (course of courses(); track course.id; let i = $index) {
-          <a
-            class="card rise"
-            [routerLink]="['/courses', course.slug]"
-            [style.animation-delay.ms]="stagger(i)"
-          >
-            <div class="card__top">
-              <span class="mono-label">No. {{ serial(i) }}</span>
-              @if (enrolledIn(course)) {
-                <span class="stamp">{{ locale.t('catalog.enrolled') }}</span>
-              }
-            </div>
-            <h2 class="card__title">{{ course.title }}</h2>
-            <p class="card__byline">
-              {{ locale.t('catalog.taughtBy') }} <strong>{{ course.instructor_name || locale.t('catalog.aMentor') }}</strong>
-            </p>
-            <p class="card__desc">{{ course.description }}</p>
-            <div class="card__meta">
-              <span class="mono-label">{{ course.lessons.length }} {{ locale.t('catalog.lessonsCount') }}</span>
-              <span class="mono-label">{{ course.quizzes.length }} {{ locale.t('catalog.quizzesCount') }}</span>
-              <span class="card__arrow" aria-hidden="true">→</span>
-            </div>
-          </a>
-        }
-      </div>
+      <section class="path">
+        <div class="path__head">
+          <p class="mono-label">Catalog</p>
+          <h2>Choose your <em>path</em></h2>
+          <p class="path__note">
+            {{ courses().length }} {{ locale.t('catalog.record') }} — each course bundles
+            video lessons, quizzes and a mentor.
+          </p>
+        </div>
+        <div class="path__list">
+          @for (course of courses(); track course.id; let i = $index) {
+            <a
+              class="path-row rise"
+              [routerLink]="['/courses', course.slug]"
+              [style.animation-delay.ms]="stagger(i)"
+            >
+              <span class="path-row__cat">{{ subjectLabel(course) }}</span>
+              <div class="path-row__main">
+                <h3 class="path-row__title">
+                  {{ course.title }}
+                  @if (enrolledIn(course)) {
+                    <span class="stamp">{{ locale.t('catalog.enrolled') }}</span>
+                  }
+                </h3>
+                <p class="path-row__desc">{{ course.description }}</p>
+              </div>
+              <span class="path-row__meta">
+                {{ course.lessons.length }} {{ locale.t('catalog.lessonsCount') }}
+                <span class="path-row__arrow" aria-hidden="true">↘</span>
+              </span>
+            </a>
+          }
+        </div>
+      </section>
     }
   `,
   styles: `
@@ -246,6 +259,135 @@ import { SiteConfig } from '../core/site-config';
       border-color: color-mix(in srgb, var(--accent) 35%, var(--line-strong));
       background: color-mix(in srgb, var(--chip-pink) 35%, var(--card));
     }
+
+    /* ---- dark vision section (EduNova) ---- */
+    .vision {
+      margin: 0 0 2.6rem;
+    }
+
+    .vision .mono-label::after {
+      content: ' ↘';
+      color: var(--accent);
+    }
+
+    .vision h2 {
+      font-size: clamp(1.9rem, 4.5vw, 3.4rem);
+      line-height: 0.94;
+      margin: 0.7rem 0 0.9rem;
+      max-width: 22ch;
+
+      em { font-style: normal; color: var(--accent); }
+    }
+
+    .vision__sub {
+      max-width: 56ch;
+      font-size: 1.02rem;
+    }
+
+    /* ---- "Choose your path" list (EduNova) ---- */
+    .path__head {
+      margin-bottom: 1.4rem;
+    }
+
+    .path__head .mono-label::after {
+      content: ' ↘';
+      color: var(--accent);
+    }
+
+    .path__head h2 {
+      font-size: clamp(2.2rem, 5.5vw, 4rem);
+      margin: 0.5rem 0 0.6rem;
+
+      em { font-style: normal; color: var(--accent); }
+    }
+
+    .path__note {
+      color: var(--ink-soft);
+      max-width: 60ch;
+    }
+
+    .path__list {
+      border-top: 2px solid var(--ink);
+    }
+
+    .path-row {
+      display: grid;
+      grid-template-columns: 180px 1fr auto;
+      gap: 1.5rem;
+      align-items: start;
+      padding: 1.6rem 0.5rem;
+      border-bottom: 1px solid var(--line-strong);
+      text-decoration: none;
+      color: var(--ink);
+      transition: background 0.15s ease, padding 0.15s ease;
+
+      &:hover {
+        background: color-mix(in srgb, var(--accent) 6%, transparent);
+        padding-left: 1.1rem;
+        padding-right: 1.1rem;
+
+        .path-row__arrow { transform: translate(3px, 3px); color: var(--accent); }
+        .path-row__title { color: var(--accent-deep); }
+      }
+    }
+
+    .path-row__cat {
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      font-size: 1.05rem;
+      letter-spacing: 0.01em;
+      color: var(--ink);
+      padding-top: 0.1rem;
+    }
+
+    .path-row__title {
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      font-size: 1.5rem;
+      line-height: 1;
+      margin: 0 0 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      transition: color 0.15s ease;
+    }
+
+    .path-row__desc {
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+      max-width: 64ch;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .path-row__meta {
+      white-space: nowrap;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding-top: 0.35rem;
+    }
+
+    .path-row__arrow {
+      font-size: 1.1rem;
+      color: var(--ink);
+      transition: transform 0.18s ease, color 0.18s ease;
+    }
+
+    @media (max-width: 640px) {
+      .path-row {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+      .path-row__meta { padding-top: 0; }
+    }
   `,
 })
 export class CatalogPage {
@@ -290,6 +432,13 @@ export class CatalogPage {
 
   protected serial(index: number): string {
     return String(index + 1).padStart(3, '0');
+  }
+
+  /** EduNova-style category label — the subject, e.g. "Physics" from
+   * "IGCSE Physics (0625)"; falls back to the first word of the title. */
+  protected subjectLabel(course: Course): string {
+    const m = course.title.match(/IGCSE\s+([A-Za-z][A-Za-z ]*?)(?:\s*\(|$)/);
+    return (m ? m[1] : course.title.split(' ')[0] || 'Course').trim();
   }
 
   /** Per-card entrance delay — 55ms steps, capped after 8 items. */
