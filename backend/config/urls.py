@@ -1,7 +1,7 @@
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.static import serve as serve_media
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
@@ -21,5 +21,15 @@ urlpatterns = [
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve user-uploaded media (avatars, course covers) in every environment.
+# django.conf.urls.static.static() is a no-op when DEBUG=False, so production
+# would 404 on /media/* — Caddy already routes /media/* here, and on this
+# single-VPS demo (local FileSystemStorage) Django must serve it. For heavier
+# deployments, front this with object storage (R2_*) or a Caddy file_server.
+urlpatterns += [
+    re_path(
+        r"^%s(?P<path>.*)$" % settings.MEDIA_URL.lstrip("/"),
+        serve_media,
+        {"document_root": settings.MEDIA_ROOT},
+    ),
+]
