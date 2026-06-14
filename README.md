@@ -12,11 +12,12 @@ spaced repetition, adaptive practice, exam proctoring and dropout prediction —
 [![Python](https://img.shields.io/badge/python-3.13%20%7C%203.14-blue.svg)](#-try-it-in-2-minutes)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-**[🎓 Live demo (student)](https://mentormind-demo.vercel.app) ·
-[🧑‍🏫 Live demo (instructor studio)](https://mentormind-studio.vercel.app) ·
+**[🎓 Student](https://mentorminds.duckdns.org) ·
+[🧑‍🏫 Instructor studio](https://mentorminds.duckdns.org/studio) ·
+[⚙️ Admin console](https://mentorminds.duckdns.org/console) ·
 [📱 Android APK](https://github.com/Arnobrizwan/mentormind/releases/latest)**
 
-**$0 stack:** Vercel + Render + Hugging Face Spaces — no paid AI APIs. See [docs/FREE-DEMO-STACK.md](docs/FREE-DEMO-STACK.md).
+All three portals run **always-warm on a single self-hosted VPS** (one domain, no cold starts). Login `student@mentormind.dev` / `mentormind123` (also `instructor@…`, `admin@…`).
 
 <samp>
 <a href="#-try-it-in-2-minutes">Quick start</a> ·
@@ -59,9 +60,12 @@ The demo resets itself periodically, and **the AI tutor is live**
 
 ## ✨ See it
 
-> ✅ **Live-verified 2026-06-13** — every core student flow was driven end-to-end against the
-> [live demo](https://mentormind-demo.vercel.app) (catalog → sign-in → AI tutor → revision → planner → profile),
-> and the AI tutor returned a real, attributed **mark-scheme** answer. The student screenshots below are from that run.
+> ✅ **Live-verified 2026-06-14** — every core student flow was driven end-to-end against the
+> [live demo](https://mentorminds.duckdns.org) (catalog → sign-in → AI tutor → revision → planner → profile),
+> and the AI tutor returned a real, attributed **mark-scheme** answer. Screenshots below are from that run,
+> on the current bold **EduNova-inspired** UI (heavy display type, high-contrast, pink/magenta accent).
+
+[![Course catalog](docs/screenshots/00-catalog.png)](https://mentorminds.duckdns.org)
 
 | Student dashboard | AI tutor (grounded in mark schemes) |
 |---|---|
@@ -71,7 +75,7 @@ The demo resets itself periodically, and **the AI tutor is live**
 |---|---|
 | ![Revision](docs/screenshots/03-revision.png) | ![Planner](docs/screenshots/04-planner.png) |
 
-And the **[Instructor Studio](https://mentormind-studio.vercel.app)** — author courses and triage at-risk students:
+And the **[Instructor Studio](https://mentorminds.duckdns.org/studio)** — author courses and triage at-risk students:
 
 | Course workbench | Dropout-risk queue |
 |---|---|
