@@ -40,8 +40,6 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "email",
             "avatar",
-            # Set only by the avatar upload endpoint — not client-writable
-            "avatar_url",
             "roles",
             "is_staff",
             "is_premium",
@@ -51,6 +49,23 @@ class UserSerializer(serializers.ModelSerializer):
 
     is_premium = serializers.BooleanField(read_only=True)
     subscription = serializers.SerializerMethodField()
+    # Computed (not the raw DB column) so it's always a working, absolute URL —
+    # this also repairs rows saved before MEDIA_URL gained its leading slash.
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, obj):
+        if getattr(obj, "avatar", None):
+            url = obj.avatar.url
+        elif obj.avatar_url:
+            url = obj.avatar_url
+        else:
+            return ""
+        # Normalize a legacy relative media path (no leading slash) so the
+        # browser doesn't resolve it against the current SPA route.
+        if not url.startswith(("http://", "https://", "/")):
+            url = "/" + url
+        request = self.context.get("request")
+        return request.build_absolute_uri(url) if request is not None else url
 
     def get_subscription(self, obj):
         subscription = getattr(obj, "subscription", None)
