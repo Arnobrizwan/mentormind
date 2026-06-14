@@ -6,6 +6,11 @@ import { apiErrorMessage } from '../core/errors';
 import { LocaleService } from '../core/locale';
 import { PlanItem, PlanItemKind, PlannerApi, WeekPlan } from '../core/planner';
 
+/** Shown when the insight endpoint is unreachable — keeps the card useful offline. */
+const INSIGHT_FALLBACK =
+  'Tackle your due flashcards first, then spend a focused block on your ' +
+  'weakest topic before trying a timed mock. Small, steady sessions beat cramming.';
+
 const KIND_ICONS: Record<PlanItemKind, string> = {
   revision: '🃏',
   practice: '🎯',
@@ -71,6 +76,15 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
       @if (loading()) {
         <p class="mono-label">{{ locale.t('planner.loading') }}</p>
       } @else if (plan(); as p) {
+        @if (insight(); as tip) {
+          <aside class="insight" aria-label="AI study insight">
+            <span class="insight__icon" aria-hidden="true">🧠</span>
+            <div class="insight__body">
+              <p class="insight__label mono-label">AI insight</p>
+              <p class="insight__text">{{ tip }}</p>
+            </div>
+          </aside>
+        }
         <ul class="items">
           @for (item of p.items; track item.id) {
             <li class="item" [class.item--done]="item.done">
@@ -146,6 +160,25 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
       transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
+    .insight {
+      display: flex;
+      gap: 0.9rem;
+      align-items: flex-start;
+      margin-bottom: 1.1rem;
+      padding: 1rem 1.2rem;
+      border: 1.5px solid color-mix(in srgb, var(--accent) 35%, var(--line-strong));
+      border-radius: 14px;
+      background: linear-gradient(
+        120deg,
+        color-mix(in srgb, var(--accent) 9%, transparent),
+        color-mix(in srgb, #a855f7 8%, transparent)
+      );
+    }
+    .insight__icon { font-size: 1.4rem; line-height: 1.3; flex-shrink: 0; }
+    .insight__body { display: flex; flex-direction: column; gap: 0.2rem; }
+    .insight__label { color: var(--accent); margin: 0; }
+    .insight__text { margin: 0; line-height: 1.55; }
+
     .items {
       list-style: none;
       margin: 0;
@@ -218,6 +251,7 @@ export class PlannerPage {
   protected readonly locale = inject(LocaleService);
 
   protected readonly plan = signal<WeekPlan | null>(null);
+  protected readonly insight = signal<string | null>(null);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly exporting = signal(false);
@@ -251,10 +285,21 @@ export class PlannerPage {
     this.error.set(null);
     try {
       this.plan.set(await this.api.week());
+      void this.loadInsight();
     } catch (err) {
       this.error.set(apiErrorMessage(err, this.locale.t('planner.error.load')));
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /** Best-effort: the card always shows something (deterministic fallback on error). */
+  private async loadInsight(): Promise<void> {
+    try {
+      const { insight } = await this.api.insight();
+      this.insight.set(insight?.trim() || INSIGHT_FALLBACK);
+    } catch {
+      this.insight.set(INSIGHT_FALLBACK);
     }
   }
 

@@ -31,6 +31,13 @@ export interface WeekPlan {
   generated_at: string;
 }
 
+export interface StudyInsight {
+  insight: string;
+  weak_topics: { topic: string; accuracy: number; samples: number }[];
+  due_cards: number;
+  source: 'model' | 'fallback';
+}
+
 @Injectable({ providedIn: 'root' })
 export class PlannerApi {
   private readonly http = inject(HttpClient);
@@ -43,6 +50,13 @@ export class PlannerApi {
 
   rebuild(): Promise<WeekPlan> {
     return firstValueFrom(this.http.post<WeekPlan>('/api/v1/planner/week/', {}));
+  }
+
+  /** One-paragraph "what to focus on this week" suggestion. */
+  insight(): Promise<StudyInsight> {
+    return firstValueFrom(
+      this.http.get<StudyInsight>('/api/v1/planner/insight/').pipe(retry(GET_RETRY)),
+    );
   }
 
   toggle(itemId: number): Promise<WeekPlan> {

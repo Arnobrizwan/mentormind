@@ -94,6 +94,19 @@ class WeekPlanIcsView(APIView):
         return response
 
 
+class StudyInsightView(APIView):
+    """One-paragraph 'AI insight' for the planner: what to focus on this week,
+    from the student's weak topics + due cards (model-written, with a
+    deterministic fallback)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .insight import study_insight
+
+        return Response(study_insight(request.user))
+
+
 class GlobalPlannerRebuildView(APIView):
     """Trigger the Monday-morning sweep for all active students' plans."""
     from apps.core.permissions import IsCronOrInstructor
