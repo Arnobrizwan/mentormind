@@ -63,12 +63,6 @@ The demo resets itself periodically, and **the AI tutor is live**
 > [live demo](https://mentormind-demo.vercel.app) (catalog → sign-in → AI tutor → revision → planner → profile),
 > and the AI tutor returned a real, attributed **mark-scheme** answer. The student screenshots below are from that run.
 
-<div align="center">
-
-![MentorMind demo — login, dashboard, AI tutor, spaced repetition, study plan](docs/screenshots/demo.gif)
-
-</div>
-
 | Student dashboard | AI tutor (grounded in mark schemes) |
 |---|---|
 | ![Dashboard](docs/screenshots/01-dashboard.png) | ![AI tutor](docs/screenshots/02-tutor.png) |
@@ -77,13 +71,8 @@ The demo resets itself periodically, and **the AI tutor is live**
 |---|---|
 | ![Revision](docs/screenshots/03-revision.png) | ![Planner](docs/screenshots/04-planner.png) |
 
-| AI short-answer grading | Proctoring timeline (instructor) |
-|---|---|
-| ![Practice](docs/screenshots/05-practice.png) | ![Proctoring](docs/screenshots/06-studio-workbench.png) |
-
-| Student Success (dropout remediation) | Flashcard review queue (instructor) |
-|---|---|
-| ![Student Success](docs/screenshots/07-student-success.png) | ![Flashcards](docs/screenshots/08-flashcards.png) |
+> _Instructor Studio & admin screenshots are being refreshed to the current
+> magenta theme (the live student demo is already on it)._
 
 ## 🚀 Try it in 2 minutes
 
