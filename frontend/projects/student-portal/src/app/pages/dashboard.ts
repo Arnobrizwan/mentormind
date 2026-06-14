@@ -94,14 +94,23 @@ interface ContinueHero {
 
     <div class="stats">
       <div class="stat">
+        <span class="stat__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </span>
         <span class="stat__number">{{ api.enrollments().length }}</span>
         <span class="mono-label">{{ locale.t('dash.enrolled') }}</span>
       </div>
       <div class="stat">
+        <span class="stat__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        </span>
         <span class="stat__number">{{ averageProgress() }}<small>%</small></span>
         <span class="mono-label">{{ locale.t('dash.avgProgress') }}</span>
       </div>
       <div class="stat">
+        <span class="stat__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </span>
         <span class="stat__number">{{ attempts().length }}</span>
         <span class="mono-label">{{ locale.t('dash.attempts') }}</span>
       </div>
@@ -708,6 +717,15 @@ interface ContinueHero {
       border-top: 2px solid var(--line-strong);
       border-bottom: 2px solid var(--line-strong);
     }
+
+    .stat__icon {
+      width: 1.55rem;
+      height: 1.55rem;
+      color: var(--accent);
+      margin-bottom: 0.35rem;
+    }
+
+    .stat__icon svg { width: 100%; height: 100%; }
 
     .stat {
       flex: 1;
