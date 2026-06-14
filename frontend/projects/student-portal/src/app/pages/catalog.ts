@@ -348,8 +348,8 @@ import { SiteConfig } from '../core/site-config';
 
     .feature {
       position: relative;
-      min-height: 250px;
-      padding: 1.5rem;
+      min-height: 380px;
+      padding: 1.7rem;
       border-radius: var(--r-lg);
       display: flex;
       flex-direction: column;
@@ -358,27 +358,46 @@ import { SiteConfig } from '../core/site-config';
       text-decoration: none;
       color: #fff;
       overflow: hidden;
-      background: linear-gradient(160deg, #232228, var(--dark));
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      background-color: var(--dark);
+      background-size: cover;
+      background-position: center;
+      box-shadow: var(--shadow-card);
+      transition: transform 0.25s var(--ease), box-shadow 0.25s ease;
     }
 
+    /* dark overlay keeps the tags / title / cta legible over the photo */
+    .feature::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(8, 8, 12, 0.92) 0%, rgba(8, 8, 12, 0.5) 55%, rgba(8, 8, 12, 0.3) 100%);
+      transition: background 0.25s ease;
+    }
+
+    .feature > *:not(.feature__icon) { position: relative; z-index: 1; }
+
     .feature:hover {
-      transform: translateY(-5px);
+      transform: translateY(-6px);
       box-shadow: var(--shadow-lift);
     }
 
-    .feature--a { background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 42%, #1a1018), var(--dark)); }
-    .feature--b { background: linear-gradient(160deg, color-mix(in srgb, var(--accent-2) 42%, #15131f), var(--dark)); }
-    .feature--c { background: linear-gradient(160deg, #2a2930, var(--dark)); }
+    /* a touch of brand tint per card on hover */
+    .feature--a:hover::before { background: linear-gradient(to top, rgba(8, 8, 12, 0.92) 0%, color-mix(in srgb, var(--accent) 30%, rgba(8, 8, 12, 0.5)) 60%, transparent 100%); }
+    .feature--b:hover::before { background: linear-gradient(to top, rgba(8, 8, 12, 0.92) 0%, color-mix(in srgb, var(--accent-2) 30%, rgba(8, 8, 12, 0.5)) 60%, transparent 100%); }
+
+    .feature--a { background-image: url('/img/feature-tutor.jpg'); }
+    .feature--b { background-image: url('/img/feature-practice.jpg'); }
+    .feature--c { background-image: url('/img/feature-anywhere.jpg'); }
 
     .feature__icon {
       position: absolute;
       top: 1.3rem;
       right: 1.3rem;
+      z-index: 2;
       width: 2.5rem;
       height: 2.5rem;
       color: #fff;
-      opacity: 0.85;
+      opacity: 0.9;
       animation: float-soft 3.6s var(--ease) infinite;
     }
 
