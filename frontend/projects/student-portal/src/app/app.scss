@@ -272,9 +272,30 @@
   border-top-color: rgba(255, 255, 255, 0.14);
 }
 
+.colophon__cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0 1.6rem;
+}
+
+.colophon__cta-title {
+  font-size: clamp(1.6rem, 3.5vw, 2.8rem);
+  color: #fff;
+  margin-top: 0.4rem;
+
+  em { font-style: normal; color: var(--accent); }
+}
+
+.colophon__cta-btn {
+  flex-shrink: 0;
+}
+
 .colophon__grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr;
+  grid-template-columns: 1.8fr 1fr 1fr 1fr;
   gap: 2.5rem;
   padding: 1.8rem 0;
 }
@@ -346,9 +367,18 @@
 }
 
 .colophon__bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem 1.5rem;
+  flex-wrap: wrap;
   padding-top: 1rem;
-  text-align: center;
   color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 920px) {
+  .colophon__grid { grid-template-columns: 1.4fr 1fr 1fr; }
+  .colophon__brand { grid-column: 1 / -1; }
 }
 
 /* ---- banners (unchanged) --------------------------------------- */

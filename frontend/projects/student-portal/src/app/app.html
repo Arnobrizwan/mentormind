@@ -120,7 +120,20 @@
   </main>
 
   <footer class="colophon">
+    <div class="colophon__cta">
+      <div>
+        <p class="mono-label">Join the portal</p>
+        <h2 class="colophon__cta-title">Ready to learn the <em>future</em> way?</h2>
+      </div>
+      @if (auth.isLoggedIn()) {
+        <a routerLink="/dashboard" class="btn btn--accent colophon__cta-btn">Open your desk <span aria-hidden="true">↘</span></a>
+      } @else {
+        <a routerLink="/auth" class="btn btn--accent colophon__cta-btn">Try for free <span aria-hidden="true">↘</span></a>
+      }
+    </div>
+
     <hr class="hairline" />
+
     <div class="colophon__grid">
       <div class="colophon__col colophon__brand">
         <a routerLink="/" class="wordmark wordmark--footer">
@@ -140,21 +153,37 @@
       <nav class="colophon__col" aria-label="Learn">
         <p class="mono-label colophon__heading">Learn</p>
         <a routerLink="/" class="colophon__link">Catalog</a>
+        <a routerLink="/dashboard" class="colophon__link">My Desk</a>
+        <a routerLink="/tutor" class="colophon__link">AI Tutor</a>
+        <a routerLink="/revision" class="colophon__link">Revision</a>
+        <a routerLink="/planner" class="colophon__link">Planner</a>
+      </nav>
+
+      <nav class="colophon__col" aria-label="Practice">
+        <p class="mono-label colophon__heading">Practice</p>
+        <a routerLink="/past-papers" class="colophon__link">Past Papers</a>
+        <a routerLink="/mock-exam" class="colophon__link">Mock Exam</a>
+        <a routerLink="/profile" class="colophon__link">Profile</a>
+        <a routerLink="/notifications" class="colophon__link">Alerts</a>
+      </nav>
+
+      <nav class="colophon__col" aria-label="More">
+        <p class="mono-label colophon__heading">More</p>
+        <a href="https://github.com/Arnobrizwan/mentormind" target="_blank" rel="noopener" class="colophon__link">Source ↗</a>
+        <a href="https://github.com/Arnobrizwan/mentormind/releases/latest" target="_blank" rel="noopener" class="colophon__link">Android app ↗</a>
         @if (auth.isLoggedIn()) {
-          <a routerLink="/dashboard" class="colophon__link">My Desk</a>
-          @if (config.flagEnabled('ai_tutor')) {
-            <a routerLink="/tutor" class="colophon__link">AI Tutor</a>
-          }
-          <a routerLink="/revision" class="colophon__link">Revision</a>
-          <a routerLink="/planner" class="colophon__link">Planner</a>
+          <a routerLink="/notifications" class="colophon__link">Notifications</a>
         } @else {
           <a routerLink="/auth" class="colophon__link">Sign in</a>
         }
       </nav>
     </div>
+
     <hr class="hairline" />
-    <p class="colophon__bottom mono-label">
-      © {{ year }} {{ config.siteName() }} · open source · made for the endlessly curious.
-    </p>
+
+    <div class="colophon__bottom">
+      <p class="mono-label">© {{ year }} {{ config.siteName() }} · open source</p>
+      <p class="mono-label">Made for the endlessly curious</p>
+    </div>
   </footer>
 </div>
