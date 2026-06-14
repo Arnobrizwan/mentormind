@@ -150,6 +150,46 @@ class Command(BaseCommand):
                 },
             )
 
+        # Richer showcase: the demo account (students[0]) is enrolled in every
+        # course with ~2/3 of lessons complete and a quiz attempt per quiz, so
+        # the dashboard reads as an active learner instead of a near-empty page.
+        demo = students[0]
+        for course in courses:
+            enr, _ = Enrollment.objects.get_or_create(student=demo, course=course)
+            lessons = list(course.lessons.order_by("order"))
+            done = lessons[: max(1, (len(lessons) * 2) // 3)]
+            enr.completed_lessons.set(done)
+            for lesson in done:
+                PointsEvent.objects.get_or_create(
+                    user=demo, action=f"lesson:{lesson.id}", defaults={"points": 10}
+                )
+            for quiz in course.quizzes.order_by("id"):
+                if QuizAttempt.objects.filter(enrollment=enr, quiz=quiz).exists():
+                    continue
+                questions = list(quiz.questions.all())
+                total = len(questions)
+                if not total:
+                    continue
+                correct = max(1, total - 1)
+                detail = {
+                    str(q.id): {
+                        "selected": q.correct_option_index
+                        if pos < correct
+                        else (q.correct_option_index + 1) % len(q.options),
+                        "correct": pos < correct,
+                        "topic": q.topic,
+                    }
+                    for pos, q in enumerate(questions)
+                }
+                QuizAttempt.objects.create(
+                    enrollment=enr,
+                    quiz=quiz,
+                    score=round(100.0 * correct / total, 1),
+                    total_questions=total,
+                    correct_answers=correct,
+                    answers=detail,
+                )
+
         first_course = courses[0]
         if not ChatMessage.objects.filter(course=first_course).exists():
             chat_lines = [
