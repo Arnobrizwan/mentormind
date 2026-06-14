@@ -511,3 +511,6 @@ button:active:not(:disabled),
     }
   }
 }
+
+/* ---- Playful ed-tech design system (overrides legacy tokens/components) ---- */
+@import '../../shared/src/styles/design-system';

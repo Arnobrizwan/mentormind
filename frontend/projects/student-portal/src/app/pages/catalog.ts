@@ -12,6 +12,8 @@ import { SiteConfig } from '../core/site-config';
   imports: [RouterLink],
   template: `
     <section class="hero rise">
+      <span class="hero__sticker hero__sticker--1" aria-hidden="true">✦</span>
+      <span class="hero__sticker hero__sticker--2" aria-hidden="true">✏️</span>
       <p class="mono-label">{{ locale.t('catalog.hero.label') }}</p>
       <h1>
         {{ locale.t('catalog.hero.line1') }}<br />
@@ -89,25 +91,63 @@ import { SiteConfig } from '../core/site-config';
   `,
   styles: `
     .hero {
-      padding: clamp(0.5rem, 3vw, 2rem) 0 2.5rem;
-      max-width: 720px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 2.5rem;
+      padding: clamp(2rem, 5vw, 3.4rem) clamp(1.5rem, 4vw, 3rem);
+      border-radius: var(--r-xl);
+      background: var(--grad-hero);
+      color: #fff;
+      box-shadow: var(--shadow-lift);
+    }
+
+    .hero .mono-label {
+      color: rgba(255, 255, 255, 0.9);
+      opacity: 1;
     }
 
     .hero h1 {
-      font-size: clamp(2.6rem, 6.5vw, 4.6rem);
+      font-size: clamp(2.4rem, 6vw, 4.3rem);
       margin: 0.9rem 0 1.2rem;
+      color: #fff;
+      max-width: 16ch;
 
       em {
         font-style: italic;
-        color: var(--accent);
-        background: linear-gradient(transparent 64%, var(--marker) 64%, var(--marker) 94%, transparent 94%);
+        color: #fff;
+        background: linear-gradient(transparent 62%, var(--marker) 62%, var(--marker) 92%, transparent 92%);
+        padding: 0 0.1em;
+        border-radius: 4px;
       }
     }
 
     .hero__sub {
-      color: var(--ink-soft);
+      color: rgba(255, 255, 255, 0.94);
       font-size: 1.08rem;
       max-width: 52ch;
+    }
+
+    .hero__sticker {
+      position: absolute;
+      pointer-events: none;
+      user-select: none;
+      line-height: 1;
+    }
+
+    .hero__sticker--1 {
+      top: -1.5rem;
+      right: 2.5rem;
+      font-size: 9rem;
+      color: rgba(255, 255, 255, 0.16);
+    }
+
+    .hero__sticker--2 {
+      bottom: 1rem;
+      right: clamp(1.5rem, 6vw, 4rem);
+      font-size: 3.2rem;
+      transform: rotate(12deg);
+      filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.18));
+      animation: float-soft 3.4s var(--ease) infinite;
     }
 
     .state-note {

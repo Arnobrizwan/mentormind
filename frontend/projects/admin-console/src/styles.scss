@@ -302,3 +302,6 @@ textarea {
   .boot-in, .stagger-rise > *, .blink { animation: none !important; }
   .bay:hover { transform: none; }
 }
+
+/* ---- Playful ed-tech design system (overrides legacy tokens/components) ---- */
+@import '../../shared/src/styles/design-system';

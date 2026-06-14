@@ -346,3 +346,6 @@ textarea,
   .sheet-in, .tab-pane, .stagger-rise > * { animation: none !important; opacity: 1 !important; transform: none !important; }
   .panel:hover { transform: none; }
 }
+
+/* ---- Playful ed-tech design system (overrides legacy tokens/components) ---- */
+@import '../../shared/src/styles/design-system';
