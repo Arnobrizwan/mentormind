@@ -14,7 +14,8 @@ type StatusFilter = RiskTicketStatus | 'all';
 @Component({
   selector: 'st-student-success',
   template: `
-    <header class="head sheet-in">
+    <header class="head hero-panel sheet-in">
+      <span class="hero-panel__sticker" aria-hidden="true">🎯</span>
       <div>
         <p class="tag">Student success</p>
         <h1>Dropout-risk queue</h1>

@@ -12,7 +12,8 @@ import {
 @Component({
   selector: 'mm-past-papers',
   template: `
-    <section class="page-head rise">
+    <section class="page-head rise hero-panel">
+      <span class="hero-panel__sticker" aria-hidden="true">📄</span>
       <p class="mono-label">Real Cambridge questions · official mark schemes</p>
       <h1>Past-paper practice</h1>
     </section>

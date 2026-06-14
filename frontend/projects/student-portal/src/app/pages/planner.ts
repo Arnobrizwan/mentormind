@@ -19,9 +19,16 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
   template: `
     <section class="plan rise">
       <header class="plan__head">
-        <p class="mono-label">{{ locale.t('planner.title') }}</p>
+        <section class="hero-panel">
+          <span class="hero-panel__sticker" aria-hidden="true">📅</span>
+          <p class="mono-label">{{ locale.t('planner.title') }}</p>
+          @if (plan(); as p) {
+            <h1>{{ locale.t('planner.weekOf') }} {{ weekLabel(p.week_start) }}</h1>
+          } @else if (loading()) {
+            <h1>{{ locale.t('planner.thisWeek') }}</h1>
+          }
+        </section>
         @if (plan(); as p) {
-          <h1>{{ locale.t('planner.weekOf') }} {{ weekLabel(p.week_start) }}</h1>
           <div class="plan__meter">
             <div
               class="progress"
@@ -51,8 +58,6 @@ const KIND_ICONS: Record<PlanItemKind, string> = {
               {{ locale.t('planner.exportCal') }}
             </button>
           </div>
-        } @else if (loading()) {
-          <h1>{{ locale.t('planner.thisWeek') }}</h1>
         }
       </header>
 

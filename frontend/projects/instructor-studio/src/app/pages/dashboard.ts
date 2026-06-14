@@ -11,7 +11,8 @@ import { Course } from '../core/models';
   selector: 'st-dashboard',
   imports: [RouterLink, CountUp],
   template: `
-    <section class="head sheet-in">
+    <section class="head hero-panel sheet-in">
+      <span class="hero-panel__sticker" aria-hidden="true">📊</span>
       <p class="tag">Course drawer</p>
       <h1>Your courses</h1>
     </section>

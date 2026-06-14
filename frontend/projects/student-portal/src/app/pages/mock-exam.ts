@@ -16,7 +16,8 @@ const SECONDS_PER_QUESTION = 90;
   selector: 'mm-mock-exam',
   imports: [ConfettiComponent],
   template: `
-    <section class="page-head rise">
+    <section class="page-head rise hero-panel">
+      <span class="hero-panel__sticker" aria-hidden="true">⏱️</span>
       <p class="mono-label">Timed · real past-paper questions · self-marked</p>
       <h1>Mock exam</h1>
     </section>

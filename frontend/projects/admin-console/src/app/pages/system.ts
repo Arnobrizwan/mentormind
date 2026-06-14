@@ -22,19 +22,22 @@ const POLL_MS = 5000;
   imports: [RouterLink],
   template: `
     <p class="label"><a routerLink="/" class="crumb">← console</a></p>
-    <h1 class="screen-title">
-      $ system --watch
+    <section class="hero-panel">
+      <span class="hero-panel__sticker" aria-hidden="true">🩺</span>
+      <h1 class="screen-title">
+        $ system --watch
+        @if (status(); as s) {
+          <span class="verdict" [class.verdict--down]="!s.healthy">
+            [{{ s.healthy ? 'ALL CLEAR' : 'DEGRADED' }}]
+          </span>
+        } @else {
+          <span class="verdict">[LISTENING…]</span>
+        }
+      </h1>
       @if (status(); as s) {
-        <span class="verdict" [class.verdict--down]="!s.healthy">
-          [{{ s.healthy ? 'ALL CLEAR' : 'DEGRADED' }}]
-        </span>
-      } @else {
-        <span class="verdict">[LISTENING…]</span>
+        <p class="label">answered by {{ s.instance }} · poll #{{ polls() }} · refreshes every 5s</p>
       }
-    </h1>
-    @if (status(); as s) {
-      <p class="label">answered by {{ s.instance }} · poll #{{ polls() }} · refreshes every 5s</p>
-    }
+    </section>
 
     @if (error(); as message) {
       <p class="error-note" role="alert">{{ message }}</p>

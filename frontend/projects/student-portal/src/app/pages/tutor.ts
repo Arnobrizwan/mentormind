@@ -76,7 +76,8 @@ const STARTERS = [
       <!-- chat column -->
       <section class="chat">
         <header class="chat__head">
-          <div class="chat__title-row">
+          <div class="chat__title-row hero-panel">
+            <span class="hero-panel__sticker" aria-hidden="true">🤖</span>
             <h1>AI Tutor</h1>
             @if (speechSupported && ttsSupported) {
               <span class="voice-badge mono-label">{{ locale.t('tutor.voiceMode') }}</span>

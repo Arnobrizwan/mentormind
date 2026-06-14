@@ -281,6 +281,77 @@ h1, h2, h3 {
   letter-spacing: 0.08em;
 }
 
+/* ============================================================
+   Reusable playful page hero — gradient panel, white text,
+   floating emoji sticker. Add class="hero-panel" to a page's
+   title/intro block (NOT to form controls). Visual props use
+   !important so it wins past Angular view-encapsulation even
+   when a page keeps its own legacy hero class.
+   ============================================================ */
+.hero-panel {
+  position: relative !important;
+  overflow: hidden !important;
+  margin-bottom: 2rem !important;
+  padding: clamp(1.7rem, 4vw, 2.9rem) clamp(1.4rem, 4vw, 2.6rem) !important;
+  border-radius: var(--r-xl) !important;
+  background: var(--grad-hero) !important;
+  color: #fff !important;
+  box-shadow: var(--shadow-lift) !important;
+  max-width: none !important;
+}
+
+.hero-panel .mono-label {
+  color: rgba(255, 255, 255, 0.9) !important;
+  opacity: 1 !important;
+}
+
+.hero-panel h1,
+.hero-panel h2 {
+  color: #fff !important;
+}
+
+.hero-panel h1 em,
+.hero-panel h2 em {
+  font-style: italic;
+  color: #fff !important;
+  background: linear-gradient(transparent 62%, var(--marker) 62%, var(--marker) 92%, transparent 92%);
+  padding: 0 0.1em;
+  border-radius: 4px;
+}
+
+.hero-panel p,
+.hero-panel .hero__sub,
+.hero-panel__sub,
+.hero-panel .label,
+.hero-panel .tag {
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+/* links inside a hero panel (breadcrumbs, inline anchors) stay readable */
+.hero-panel a:not(.btn) {
+  color: #fff !important;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+
+/* keep ghost/secondary buttons legible on the gradient */
+.hero-panel .btn--ghost {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #fff !important;
+  --btn-lip: rgba(0, 0, 0, 0.22);
+}
+
+.hero-panel__sticker {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+  top: -0.6rem;
+  right: clamp(1rem, 5vw, 3rem);
+  font-size: clamp(3.2rem, 8vw, 6.5rem);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.18));
+  animation: float-soft 3.6s var(--ease) infinite;
+}
+
 /* Focus ring + skeleton corners follow the new rounding. */
 :focus-visible {
   outline: 2.5px solid var(--accent);

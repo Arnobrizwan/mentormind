@@ -39,7 +39,8 @@ type Tab =
     } @else if (course(); as c) {
       <a routerLink="/" class="tag crumb">← Course drawer</a>
 
-      <header class="head sheet-in">
+      <header class="head hero-panel sheet-in">
+        <span class="hero-panel__sticker" aria-hidden="true">📚</span>
         <div class="head__main">
           <h1>{{ c.title }}</h1>
           <span class="tag">/{{ c.slug }} · {{ c.is_published ? 'LIVE' : 'DRAFT' }}</span>

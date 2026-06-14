@@ -32,7 +32,8 @@ interface ContinueHero {
   selector: 'mm-dashboard',
   imports: [RouterLink, ConfettiBurst, CountUpDirective],
   template: `
-    <section class="desk rise">
+    <section class="desk rise hero-panel">
+      <span class="hero-panel__sticker" aria-hidden="true">👋</span>
       <p class="mono-label">{{ locale.t('nav.desk') }}</p>
       <h1>{{ locale.id() === 'ms' ? 'Selamat kembali' : 'Welcome back' }}, {{ auth.user()?.display_name || 'student' }}</h1>
 

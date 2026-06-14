@@ -21,7 +21,8 @@ const KIND_ICONS: Record<string, string> = {
   template: `
     <section class="head rise">
       <div class="head__row">
-        <div>
+        <div class="hero-panel">
+          <span class="hero-panel__sticker" aria-hidden="true">🔔</span>
           <p class="mono-label">Inbox</p>
           <h1>Notifications</h1>
         </div>

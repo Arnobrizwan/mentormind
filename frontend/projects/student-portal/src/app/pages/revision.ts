@@ -22,13 +22,18 @@ const GRADES = [
   template: `
     <section class="rev rise">
       <header class="rev__head">
-        <p class="mono-label">{{ locale.t('rev.spacedRep') }}</p>
-        <h1>{{ locale.t('nav.revision') }}</h1>
+        <section class="hero-panel">
+          <span class="hero-panel__sticker" aria-hidden="true">🃏</span>
+          <p class="mono-label">{{ locale.t('rev.spacedRep') }}</p>
+          <h1>{{ locale.t('nav.revision') }}</h1>
+          @if (!loading()) {
+            <p class="mono-label rev__due" aria-live="polite">
+              {{ dueCount() }} {{ dueCount() === 1 ? locale.t('rev.card') : locale.t('rev.cards') }} {{ locale.t('rev.dueAnd') }}
+              {{ queue().length }} {{ locale.t('rev.inSession') }}
+            </p>
+          }
+        </section>
         @if (!loading()) {
-          <p class="mono-label rev__due" aria-live="polite">
-            {{ dueCount() }} {{ dueCount() === 1 ? locale.t('rev.card') : locale.t('rev.cards') }} {{ locale.t('rev.dueAnd') }}
-            {{ queue().length }} {{ locale.t('rev.inSession') }}
-          </p>
           <button
             type="button"
             class="btn btn--ghost rev__export"

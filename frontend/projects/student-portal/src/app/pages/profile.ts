@@ -41,7 +41,8 @@ function isoLocal(date: Date): string {
   selector: 'mm-profile',
   imports: [RouterLink],
   template: `
-    <section class="head rise">
+    <section class="head rise hero-panel">
+      <span class="hero-panel__sticker" aria-hidden="true">👤</span>
       <p class="mono-label">{{ locale.t('profile.title') }}</p>
       <h1>{{ locale.t('profile.details') }}</h1>
     </section>
