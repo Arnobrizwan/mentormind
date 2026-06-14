@@ -11,7 +11,8 @@ import { apiErrorMessage } from '../core/errors';
 @Component({
   selector: 'st-tutor-feedback',
   template: `
-    <header class="head sheet-in">
+    <header class="head hero-panel sheet-in">
+      <span class="hero-panel__sticker" aria-hidden="true">🚩</span>
       <div>
         <p class="tag">AI tutor</p>
         <h1>Flagged answers</h1>

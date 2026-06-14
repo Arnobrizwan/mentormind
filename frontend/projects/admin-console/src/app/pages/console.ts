@@ -28,7 +28,8 @@ const POLL_MS = 5000;
     } @else {
       <!-- system board -->
       <section class="boot-in">
-        <div class="strip">
+        <div class="strip hero-panel">
+          <span class="hero-panel__sticker" aria-hidden="true">📊</span>
           <h1>
             system
             @if (system(); as s) {
