@@ -34,10 +34,13 @@ The demo resets itself periodically, and **the AI tutor is live**
 </div>
 
 <details>
-<summary><b>🚀 What's new in DIGITEX v2</b> — 17 updates (click to expand)</summary>
+<summary><b>🚀 What's new in DIGITEX v2</b> — 20 updates (click to expand)</summary>
 
 | | Update |
 |---|---|
+| 🎨 | **EduNova-inspired redesign** — bold display type, high-contrast, photo feature cards + animations, across all three portals |
+| 🌐 | **All three portals on one self-hosted domain** — student `/`, instructor `/studio`, admin `/console` (always-warm, no cold starts) |
+| 📱 | **Android app** — bundled, offline-capable APK on every release ([latest](https://github.com/Arnobrizwan/mentormind/releases/latest)) |
 | 🌐 | **Full student-portal i18n** — English + Bahasa Malaysia across every student page |
 | 📲 | **PWA install** — adds to the home screen at booth displays |
 | 🔎 | **Smart Vector RAG tutor** — MiniLM embeddings + cosine match, token-overlap fallback |
