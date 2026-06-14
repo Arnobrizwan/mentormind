@@ -87,8 +87,8 @@ export class ProfileApi {
    */
   uploadAvatar(file: File): Promise<ProfileUser> {
     const form = new FormData();
-    form.append('avatar', file, file.name);
-    return firstValueFrom(this.http.post<ProfileUser>('/api/v1/auth/me/avatar/', form));
+    form.append('file', file, file.name);
+    return firstValueFrom(this.http.put<ProfileUser>('/api/v1/auth/me/avatar/', form));
   }
 
   activity(): Promise<ActivityCalendar> {
