@@ -116,7 +116,11 @@ export class AdminApi {
   }
 
   badges(): Promise<Badge[]> {
-    return firstValueFrom(this.http.get<Badge[]>('/api/v1/engagement/badges/manage/'));
+    // Tolerate either a bare array or a DRF-paginated {results} body — a
+    // non-array here would throw inside the page's @for and blank the console.
+    return firstValueFrom(
+      this.http.get<Badge[] | { results: Badge[] }>('/api/v1/engagement/badges/manage/'),
+    ).then((b) => (Array.isArray(b) ? b : (b?.results ?? [])));
   }
 
   createBadge(data: Partial<Badge>): Promise<Badge> {
