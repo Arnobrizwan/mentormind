@@ -92,32 +92,36 @@ import { SiteConfig } from '../core/site-config';
   styles: `
     .hero {
       position: relative;
-      overflow: hidden;
+      overflow: visible;
       margin-bottom: 2.5rem;
-      padding: clamp(2rem, 5vw, 3.4rem) clamp(1.5rem, 4vw, 3rem);
-      border-radius: var(--r-xl);
-      background: var(--hero-bg);
+      padding: clamp(1rem, 3vw, 2rem) 0;
+      background: transparent;
       color: var(--ink);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow-card);
     }
 
     .hero .mono-label {
-      color: var(--accent-deep);
+      color: var(--ink);
       opacity: 1;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .hero .mono-label::after {
+      content: ' ↘';
+      color: var(--accent);
+      font-weight: 700;
     }
 
     .hero h1 {
-      font-size: clamp(2.4rem, 6vw, 4.3rem);
+      font-size: clamp(3rem, 8vw, 6.5rem);
+      line-height: 0.88;
       margin: 0.9rem 0 1.2rem;
       color: var(--ink);
 
       em {
-        font-style: italic;
-        color: var(--ink);
-        background: linear-gradient(transparent 62%, var(--marker) 62%, var(--marker) 92%, transparent 92%);
-        padding: 0 0.1em;
-        border-radius: 4px;
+        font-style: normal;
+        color: var(--accent);
+        background: none;
       }
     }
 
@@ -127,18 +131,10 @@ import { SiteConfig } from '../core/site-config';
       max-width: 52ch;
     }
 
-    .hero__sticker {
-      position: absolute;
-      pointer-events: none;
-      user-select: none;
-      line-height: 1;
-    }
+    .hero__sticker { display: none; }
 
     .hero__sticker--1 {
-      top: -1.5rem;
-      right: 2.5rem;
-      font-size: 9rem;
-      color: color-mix(in srgb, var(--accent-2) 22%, transparent);
+      display: none;
     }
 
     .hero__sticker--2 {
