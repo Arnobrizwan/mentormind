@@ -135,3 +135,54 @@ def ocr_extract(image: np.ndarray) -> dict:
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     text = pytesseract.image_to_string(binary)
     return {"text": text.strip(), "characters": len(text.strip())}
+
+
+# --- Vision-language model (moondream2) — actually "sees" the image ----------
+#
+# Open-source, small (~1.6B), permissive — answers questions about diagrams,
+# figures and photos, not just OCR. Opt-in via VISION_VLM=1 (needs torch +
+# transformers, same stack as the local tutor LLM). Lazy-loaded; callers fall
+# back to OCR if it's disabled or fails.
+
+_VLM: dict = {"model": None, "tokenizer": None, "loaded": False}
+
+
+def vqa_available() -> bool:
+    return os.getenv("VISION_VLM", "0") == "1"
+
+
+def _load_vlm():
+    if _VLM["loaded"]:
+        return _VLM["model"], _VLM["tokenizer"]
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    model_id = os.getenv("VISION_VLM_MODEL", "vikhyatk/moondream2")
+    revision = os.getenv("VISION_VLM_REVISION", "2025-06-21")
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id, revision=revision, trust_remote_code=True
+    )
+    tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
+    _VLM.update(model=model, tokenizer=tokenizer, loaded=True)
+    return model, tokenizer
+
+
+def vqa_answer(image: np.ndarray, question: str) -> dict:
+    """Answer a question about the image with moondream2 (visual understanding).
+
+    Tries the newer .query() API, falls back to encode_image/answer_question
+    for older moondream2 revisions.
+    """
+    from PIL import Image
+
+    pil = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    model, tokenizer = _load_vlm()
+    prompt = (question or "").strip() or (
+        "Describe this image in detail for a student, including any diagram, "
+        "figure, equation or handwritten work."
+    )
+    try:
+        answer = model.query(pil, prompt)["answer"]
+    except (AttributeError, TypeError):
+        enc = model.encode_image(pil)
+        answer = model.answer_question(enc, prompt, tokenizer)
+    return {"answer": str(answer).strip(), "model": "moondream2"}

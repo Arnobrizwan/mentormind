@@ -159,6 +159,33 @@ async def ocr_extract(image: UploadFile = File(...)):
     return vision.ocr_extract(page)
 
 
+@app.post("/v1/vision/ask", dependencies=[Depends(require_api_key)])
+async def vision_ask(
+    image: UploadFile = File(...),
+    question: str = Form("", description="What to ask about the image"),
+):
+    """Answer a question about an image with the moondream2 VLM (actually
+    'sees' diagrams/figures). Falls back to OCR text when the VLM is disabled
+    or errors, so the Snap-&-Solve flow always returns something useful."""
+    await require_flag("ocr")
+    frame = await _read_image(image)
+    if vision.vqa_available():
+        try:
+            return vision.vqa_answer(frame, question)
+        except Exception as exc:  # noqa: BLE001 — degrade to OCR, never 500
+            if vision.ocr_available():
+                out = vision.ocr_extract(frame)
+                return {"answer": out["text"], "model": "ocr", "fallback": str(exc)[:200]}
+            raise HTTPException(status_code=503, detail=f"Vision model error: {exc}")
+    if vision.ocr_available():
+        out = vision.ocr_extract(frame)
+        return {"answer": out["text"], "model": "ocr"}
+    raise HTTPException(
+        status_code=503,
+        detail="No vision engine available (set VISION_VLM=1 or install tesseract).",
+    )
+
+
 class ShortAnswerGradeRequest(BaseModel):
     # bounded so one giant submission can't hog the grader
     question: str = Field(..., max_length=4000)

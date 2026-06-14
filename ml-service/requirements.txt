@@ -23,3 +23,6 @@ httpx==0.28.1
 prometheus-fastapi-instrumentator==8.0.0
 sentence-transformers
 
+# Vision-language model (moondream2) for Snap-&-Solve image understanding.
+# Opt-in via VISION_VLM=1; needs torch + transformers (the local-LLM stack).
+einops==0.8.1
