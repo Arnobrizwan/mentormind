@@ -56,18 +56,28 @@ def describe_image(uploaded_file, question=""):
     raw = uploaded_file.read()
     if len(raw) > MAX_IMAGE_BYTES:
         raise TutorError("Image too large (8 MB max).")
+    filename = uploaded_file.name or "question.jpg"
     try:
         body = ml_client.post_image(
             "/v1/vision/ask",
             raw,
-            filename=uploaded_file.name or "question.jpg",
+            filename=filename,
             content_type=uploaded_file.content_type,
             fields={"question": (question or "").strip()},
         )
-    except ml_client.MLServiceError as exc:
-        raise TutorError(f"Could not read the photo: {exc}") from exc
-    # /v1/vision/ask returns {"answer": ...}; OCR-only deployments may still
-    # return {"text": ...}, so accept either.
+    except ml_client.MLServiceError:
+        # Older ml-service deployments don't have /v1/vision/ask yet (404) —
+        # fall back to plain OCR so Snap-&-Solve keeps working during rollout.
+        try:
+            body = ml_client.post_image(
+                "/v1/ocr/extract",
+                raw,
+                filename=filename,
+                content_type=uploaded_file.content_type,
+            )
+        except ml_client.MLServiceError as exc:
+            raise TutorError(f"Could not read the photo: {exc}") from exc
+    # /v1/vision/ask returns {"answer": ...}; OCR returns {"text": ...}.
     return str(body.get("answer") or body.get("text") or "").strip()
 
 
