@@ -24,17 +24,17 @@ import { apiErrorMessage } from '../core/errors';
 
     @if (review(); as r) {
       <div class="stats">
-        <div class="panel stat">
-          <span class="stat__num"><span class="stat__emoji" aria-hidden="true">👍</span> {{ r.summary.up }}</span>
-          <span class="stat__label">helpful</span>
+        <div class="stat stat--good">
+          <span class="stat__emoji" aria-hidden="true">👍</span>
+          <div class="stat__meta"><span class="stat__num">{{ r.summary.up }}</span><span class="stat__label">helpful</span></div>
         </div>
-        <div class="panel stat stat--bad">
-          <span class="stat__num"><span class="stat__emoji" aria-hidden="true">👎</span> {{ r.summary.down }}</span>
-          <span class="stat__label">not helpful</span>
+        <div class="stat stat--bad">
+          <span class="stat__emoji" aria-hidden="true">👎</span>
+          <div class="stat__meta"><span class="stat__num">{{ r.summary.down }}</span><span class="stat__label">not helpful</span></div>
         </div>
-        <div class="panel stat stat--flag">
-          <span class="stat__num"><span class="stat__emoji" aria-hidden="true">🚩</span> {{ r.summary.flagged }}</span>
-          <span class="stat__label">with a note</span>
+        <div class="stat stat--flag">
+          <span class="stat__emoji" aria-hidden="true">🚩</span>
+          <div class="stat__meta"><span class="stat__num">{{ r.summary.flagged }}</span><span class="stat__label">with a note</span></div>
         </div>
       </div>
     }
@@ -73,28 +73,41 @@ import { apiErrorMessage } from '../core/errors';
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 0.9rem;
-      margin-bottom: 1.4rem;
+      margin-bottom: 1.6rem;
     }
     @media (max-width: 560px) { .stats { grid-template-columns: 1fr; } }
     .stat {
       display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      padding: 1.1rem 1.3rem;
-      border-top: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+      align-items: center;
+      gap: 0.85rem;
+      padding: 1rem 1.2rem;
+      border: 1.5px solid var(--line);
+      border-left: 4px solid var(--c, var(--accent));
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--c, var(--accent)) 7%, var(--panel));
     }
-    .stat--bad { border-top-color: color-mix(in srgb, var(--amber, #d97706) 60%, transparent); }
-    .stat--flag { border-top-color: color-mix(in srgb, var(--danger, #e5484d) 60%, transparent); }
-    .stat__num {
+    .stat--good { --c: var(--accent); }
+    .stat--bad  { --c: var(--amber, #d97706); }
+    .stat--flag { --c: var(--danger, #e5484d); }
+    .stat__emoji {
+      flex-shrink: 0;
+      width: 2.7rem;
+      height: 2.7rem;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      justify-content: center;
+      font-size: 1.45rem;
+      line-height: 1;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--c, var(--accent)) 16%, var(--panel));
+    }
+    .stat__meta { display: flex; flex-direction: column; gap: 0.15rem; }
+    .stat__num {
       font-family: var(--font-display, inherit);
       font-size: 1.9rem;
       font-weight: 700;
       line-height: 1;
     }
-    .stat__emoji { font-size: 1.4rem; }
     .stat__label {
       font-family: var(--font-mono);
       font-size: 0.7rem;
