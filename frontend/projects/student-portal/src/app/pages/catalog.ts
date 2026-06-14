@@ -596,12 +596,26 @@ import { SiteConfig } from '../core/site-config';
       transition: transform 0.18s ease, color 0.18s ease;
     }
 
+    /* md: 2-up feature cards, a little shorter */
+    @media (max-width: 960px) {
+      .features__grid { grid-template-columns: repeat(2, 1fr); }
+      .feature { min-height: 320px; }
+    }
+
+    /* sm / mobile: single column, compact cards + tighter type */
     @media (max-width: 640px) {
       .path-row {
         grid-template-columns: 1fr;
         gap: 0.5rem;
       }
       .path-row__meta { padding-top: 0; }
+
+      .features__grid { grid-template-columns: 1fr; }
+      .feature { min-height: 230px; padding: 1.3rem; gap: 1rem; }
+      .feature__title { font-size: 1.3rem; }
+      .feature__icon { width: 2rem; height: 2rem; top: 1.1rem; right: 1.1rem; }
+      .hero h1 { font-size: clamp(2.4rem, 11vw, 3.4rem); }
+      .vision h2, .path__head h2 { font-size: clamp(1.7rem, 7vw, 2.4rem); }
     }
   `,
 })
