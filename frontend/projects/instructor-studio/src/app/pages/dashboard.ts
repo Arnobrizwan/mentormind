@@ -41,19 +41,19 @@ import { Course } from '../core/models';
         <div class="stats sheet-in">
           <div class="stat">
             <span class="stat__num" [stCountUp]="courses().length"></span>
-            <span class="tag">courses</span>
+            <span class="stat__label">courses</span>
           </div>
           <div class="stat">
             <span class="stat__num" [stCountUp]="totalLessons()"></span>
-            <span class="tag">lessons</span>
+            <span class="stat__label">lessons</span>
           </div>
           <div class="stat">
             <span class="stat__num" [stCountUp]="totalQuizzes()"></span>
-            <span class="tag">quizzes</span>
+            <span class="stat__label">quizzes</span>
           </div>
           <div class="stat">
             <span class="stat__num stat__num--live" [stCountUp]="liveCount()"></span>
-            <span class="tag">live</span>
+            <span class="stat__label">live</span>
           </div>
         </div>
       }
@@ -147,22 +147,31 @@ import { Course } from '../core/models';
 
     .stat {
       display: flex;
-      align-items: baseline;
+      flex-direction: column;
+      align-items: center;
       justify-content: center;
-      gap: 0.5rem;
-      flex: 1 1 7rem;
-      padding: 0.55rem 1rem;
-      border-radius: 10px;
-      background: color-mix(in srgb, var(--accent) 6%, transparent);
+      gap: 0.15rem;
+      flex: 1 1 6rem;
+      padding: 0.75rem 0.9rem;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--accent) 7%, transparent);
     }
 
     .stat__num {
       font-family: var(--font-display);
-      font-size: 1.5rem;
+      font-size: 1.7rem;
       font-weight: 640;
-      color: var(--amber);
+      color: var(--accent);
+      line-height: 1;
       font-variant-numeric: tabular-nums;
-      min-width: 1ch;
+    }
+
+    .stat__label {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--ink-soft, var(--text-dim));
     }
 
     .stat__num--live { color: var(--teal); }
