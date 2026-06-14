@@ -59,9 +59,10 @@ The demo resets itself periodically, and **the AI tutor is live**
 
 ## ✨ See it
 
-> ✅ **Live-verified 2026-06-13** — every core student flow was driven end-to-end against the
-> [live demo](https://mentormind-demo.vercel.app) (catalog → sign-in → AI tutor → revision → planner → profile),
-> and the AI tutor returned a real, attributed **mark-scheme** answer. The student screenshots below are from that run.
+> ✅ **Live-verified 2026-06-14** — every core student flow was driven end-to-end against the
+> [live demo](https://mentorminds.duckdns.org) (catalog → sign-in → AI tutor → revision → planner → profile),
+> and the AI tutor returned a real, attributed **mark-scheme** answer. Screenshots below are from that run,
+> on the current **playful** UI (soft pastel hero panels, rounded cards, pink/magenta brand).
 
 | Student dashboard | AI tutor (grounded in mark schemes) |
 |---|---|
