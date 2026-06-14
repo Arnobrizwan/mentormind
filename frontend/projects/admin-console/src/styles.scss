@@ -20,7 +20,10 @@
   --accent-dim: color-mix(in srgb, var(--accent) 14%, transparent);
   --phosphor: var(--accent);
   --phosphor-dim: var(--accent-dim);
-  --amber: #ffd23f;
+  /* Legacy terminal "value" colour. On the light poster background bright
+     gold (#ffd23f) is invisible, so use a deep readable amber here; the dark
+     theme below restores the glowing gold. */
+  --amber: #9a6b00;
   --alarm: #d93a52;
 
   --grad-btn: linear-gradient(120deg, #ff5ca3 0%, #e84e92 100%);
@@ -50,6 +53,7 @@
   --accent: #ff6eae;
   --accent-deep: #ff5ca3;
   --accent-2: #a78bfa;
+  --amber: #ffd23f; /* glowing gold reads well on the dark background */
   --alarm: #ff7088;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 20px -12px rgba(0, 0, 0, 0.55);

@@ -727,11 +727,14 @@ interface ContinueHero {
     }
 
     .stats {
-      display: flex;
-      gap: 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
       margin: 2rem 0 2.4rem;
-      border-top: 2px solid var(--line-strong);
-      border-bottom: 2px solid var(--line-strong);
+    }
+
+    @media (max-width: 560px) {
+      .stats { grid-template-columns: 1fr; }
     }
 
     .empty-desk {
@@ -752,31 +755,51 @@ interface ContinueHero {
     .empty-desk__btn { flex-shrink: 0; }
 
     .stat__icon {
-      width: 1.55rem;
-      height: 1.55rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.55rem;
+      border-radius: 14px;
       color: var(--accent);
-      margin-bottom: 0.35rem;
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+      margin-bottom: 0.7rem;
     }
 
     .stat__icon svg { width: 100%; height: 100%; }
 
     .stat {
-      flex: 1;
+      position: relative;
       display: flex;
       flex-direction: column;
       gap: 0.2rem;
-      padding: 1.2rem 1.4rem;
+      padding: 1.4rem 1.5rem;
+      background: var(--card);
+      border: 1.5px solid var(--line-strong);
+      border-radius: var(--r-lg, 20px);
+      overflow: hidden;
       /* staggered entrance, once per load (rise-in lives in styles.scss) */
       animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
       animation-delay: 90ms;
 
       &:nth-child(2) { animation-delay: 145ms; }
       &:nth-child(3) { animation-delay: 200ms; }
-
-      & + .stat {
-        border-left: 1px solid var(--line);
-      }
     }
+
+    /* gradient accent bar that reveals on hover — matches the hero card */
+    .stat::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent), #a855f7);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform var(--speed, 0.25s) var(--ease, ease);
+    }
+
+    .stat:hover::before { transform: scaleX(1); }
 
     @media (prefers-reduced-motion: reduce) {
       .stat { animation: none; }

@@ -38,10 +38,17 @@ class TutorError(Exception):
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 
-def extract_image_text(uploaded_file):
-    """OCR a photographed question through the ml-service, so a student can
-    snap a textbook problem instead of typing it. Returns extracted text
-    (possibly empty); raises TutorError on bad input or a dead ml-service."""
+def describe_image(uploaded_file, question=""):
+    """Understand a photographed question through the ml-service, so a student
+    can snap a textbook problem (or a diagram) instead of typing it.
+
+    Routes to /v1/vision/ask, which uses the moondream2 VLM to actually 'see'
+    figures and handwriting when VISION_VLM=1, and transparently degrades to
+    OCR text otherwise — so the Snap-&-Solve flow always returns something.
+    The student's typed text is forwarded as the question to focus the model.
+
+    Returns the description/answer (possibly empty); raises TutorError on bad
+    input or a dead ml-service."""
     from apps.core import ml_client
 
     if not (uploaded_file.content_type or "").startswith("image/"):
@@ -51,14 +58,17 @@ def extract_image_text(uploaded_file):
         raise TutorError("Image too large (8 MB max).")
     try:
         body = ml_client.post_image(
-            "/v1/ocr/extract",
+            "/v1/vision/ask",
             raw,
             filename=uploaded_file.name or "question.jpg",
             content_type=uploaded_file.content_type,
+            fields={"question": (question or "").strip()},
         )
     except ml_client.MLServiceError as exc:
         raise TutorError(f"Could not read the photo: {exc}") from exc
-    return str(body.get("text", "")).strip()
+    # /v1/vision/ask returns {"answer": ...}; OCR-only deployments may still
+    # return {"text": ...}, so accept either.
+    return str(body.get("answer") or body.get("text") or "").strip()
 
 
 def daily_limit(user):
