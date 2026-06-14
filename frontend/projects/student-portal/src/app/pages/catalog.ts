@@ -96,25 +96,25 @@ import { SiteConfig } from '../core/site-config';
       margin-bottom: 2.5rem;
       padding: clamp(2rem, 5vw, 3.4rem) clamp(1.5rem, 4vw, 3rem);
       border-radius: var(--r-xl);
-      background: var(--grad-hero);
-      color: #fff;
-      box-shadow: var(--shadow-lift);
+      background: var(--hero-bg);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-card);
     }
 
     .hero .mono-label {
-      color: rgba(255, 255, 255, 0.9);
+      color: var(--accent-deep);
       opacity: 1;
     }
 
     .hero h1 {
       font-size: clamp(2.4rem, 6vw, 4.3rem);
       margin: 0.9rem 0 1.2rem;
-      color: #fff;
-      max-width: 16ch;
+      color: var(--ink);
 
       em {
         font-style: italic;
-        color: #fff;
+        color: var(--ink);
         background: linear-gradient(transparent 62%, var(--marker) 62%, var(--marker) 92%, transparent 92%);
         padding: 0 0.1em;
         border-radius: 4px;
@@ -122,7 +122,7 @@ import { SiteConfig } from '../core/site-config';
     }
 
     .hero__sub {
-      color: rgba(255, 255, 255, 0.94);
+      color: var(--ink-soft);
       font-size: 1.08rem;
       max-width: 52ch;
     }
@@ -138,7 +138,7 @@ import { SiteConfig } from '../core/site-config';
       top: -1.5rem;
       right: 2.5rem;
       font-size: 9rem;
-      color: rgba(255, 255, 255, 0.16);
+      color: color-mix(in srgb, var(--accent-2) 22%, transparent);
     }
 
     .hero__sticker--2 {
