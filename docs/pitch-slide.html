@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MentorMinds — Pitch Slide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Spline+Sans+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#0e0e12; --paper:#ffffff; --soft:#56525e;
+    --accent:#ff4d9d; --accent-deep:#e23b86; --accent2:#8b5cf6; --dark:#141418;
+    --grad:linear-gradient(120deg,#ff5ca3,#ff4d9d 55%,#8b5cf6);
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{background:#e9e9ee;font-family:'Plus Jakarta Sans',sans-serif;color:var(--ink)}
+  .slide{
+    width:1280px;height:720px;margin:0 auto;background:var(--paper);position:relative;overflow:hidden;
+    padding:54px 64px;display:flex;flex-direction:column;
+    background-image:url("data:image/svg+xml,%3Csvg width='28' height='49' viewBox='0 0 28 49' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l11 6.35 11-6.35V17.9l-11-6.35L3 17.9z' fill='%230e0e12' fill-opacity='0.04'/%3E%3C/svg%3E");
+  }
+  .top{display:flex;justify-content:space-between;align-items:center}
+  .brand{font-family:'Anton';font-size:30px;letter-spacing:.5px}
+  .brand em{color:var(--accent);font-style:normal}
+  .eyebrow{font-family:'Spline Sans Mono';font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-deep)}
+  h1{font-family:'Anton';font-size:96px;line-height:.9;text-transform:uppercase;margin:18px 0 0}
+  h1 .hl{color:var(--accent)}
+  .sub{font-size:21px;color:var(--soft);max-width:46ch;margin-top:18px;line-height:1.45}
+  .body{display:grid;grid-template-columns:1.25fr .95fr;gap:34px;flex:1;align-items:center}
+  .points{display:flex;flex-direction:column;gap:16px}
+  .pt{display:flex;gap:14px;align-items:flex-start}
+  .pt .ic{width:38px;height:38px;border-radius:11px;background:var(--grad);flex:0 0 38px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px}
+  .pt b{font-size:18px;font-weight:800;display:block}
+  .pt span{font-size:15px;color:var(--soft)}
+  .panel{background:var(--dark);color:#fff;border-radius:26px;padding:30px;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:18px}
+  .panel h3{font-family:'Anton';font-size:21px;text-transform:uppercase;color:#fff;letter-spacing:.5px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .stat .n{font-family:'Anton';font-size:42px;line-height:1;color:#fff}
+  .stat .n em{color:var(--accent);font-style:normal}
+  .stat .l{font-family:'Spline Sans Mono';font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.6);margin-top:4px}
+  .foot{display:flex;justify-content:space-between;align-items:center;font-family:'Spline Sans Mono';font-size:13px;letter-spacing:.06em;color:var(--soft);border-top:1px solid rgba(14,14,18,.1);padding-top:14px}
+  .foot b{color:var(--ink)}
+  .pill{background:var(--grad);color:#fff;padding:6px 14px;border-radius:999px;font-weight:800;font-size:12px;letter-spacing:.08em}
+</style>
+</head>
+<body>
+  <section class="slide">
+    <div class="top">
+      <div class="brand">Mentor<em>Minds</em></div>
+      <span class="pill">DIGITEX 2026 · EDTECH</span>
+    </div>
+
+    <p class="eyebrow" style="margin-top:26px">The self-hosted AI learning platform ↘</p>
+    <h1>Learn the<br><span class="hl">future</span> way.</h1>
+    <p class="sub">An AI tutor fine-tuned on real Cambridge past papers — grounded in official mark schemes, running entirely on your own server. <b>Zero third-party AI APIs.</b></p>
+
+    <div class="body">
+      <div class="points">
+        <div class="pt"><span class="ic">🔒</span><div><b>Your data never leaves your server</b><span>LoRA fine-tune of Qwen2.5-0.5B runs in-process — no OpenAI, no vendor cloud.</span></div></div>
+        <div class="pt"><span class="ic">📚</span><div><b>Answers you can trust</b><span>Retrieval over 68k+ aligned questions returns the official mark scheme, attributed.</span></div></div>
+        <div class="pt"><span class="ic">💸</span><div><b>$0 per question, forever</b><span>Local 0.5B model on CPU / Apple-MPS / CUDA — no per-token API cost.</span></div></div>
+        <div class="pt"><span class="ic">🧑‍🏫</span><div><b>Three portals, one stack</b><span>Student · Instructor studio · Admin console — always-warm, self-hosted.</span></div></div>
+      </div>
+
+      <div class="panel">
+        <h3>By the numbers</h3>
+        <div class="stats">
+          <div class="stat"><div class="n">68k<em>+</em></div><div class="l">aligned past-paper Q/A</div></div>
+          <div class="stat"><div class="n"><em>$0</em></div><div class="l">per-question AI cost</div></div>
+          <div class="stat"><div class="n">0.5<em>B</em></div><div class="l">on-device LLM (LoRA)</div></div>
+          <div class="stat"><div class="n">3</div><div class="l">role-based portals</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <span>Live demo · <b>mentorminds.duckdns.org</b> · student@mentormind.dev / 12345678</span>
+      <span>Django · DRF · FastAPI ml-service · Angular · Postgres · Redis</span>
+    </div>
+  </section>
+</body>
+</html>
