@@ -75,8 +75,9 @@ class AvatarUploadView(APIView):
 
         user = request.user
         # Generate our own name — never trust the client filename (path
-        # traversal / overwrite). Storage keys it under the user id.
-        safe_name = f"avatars/{user.id}-{uuid.uuid4().hex}.{ext}"
+        # traversal / overwrite). The model's upload_to already prepends
+        # "avatars/", so don't repeat it here (that produced avatars/avatars/…).
+        safe_name = f"{user.id}-{uuid.uuid4().hex}.{ext}"
         user.avatar.save(safe_name, file, save=False)
         user.avatar_url = user.avatar.url
         user.save(update_fields=["avatar", "avatar_url"])
