@@ -71,8 +71,11 @@ The demo resets itself periodically, and **the AI tutor is live**
 |---|---|
 | ![Revision](docs/screenshots/03-revision.png) | ![Planner](docs/screenshots/04-planner.png) |
 
-> _Instructor Studio & admin screenshots are being refreshed to the current
-> magenta theme (the live student demo is already on it)._
+And the **[Instructor Studio](https://mentormind-studio.vercel.app)** — author courses and triage at-risk students:
+
+| Course workbench | Dropout-risk queue |
+|---|---|
+| ![Studio workbench](docs/screenshots/06-studio-workbench.png) | ![Student success](docs/screenshots/07-student-success.png) |
 
 ## 🚀 Try it in 2 minutes
 
