@@ -64,6 +64,11 @@ class BadgeViewSet(viewsets.ModelViewSet):
     queryset = Badge.objects.all()
     serializer_class = BadgeSerializer
     permission_classes = [IsAdminUser]
+    # Return a bare array (like the flags/settings manage endpoints). Without
+    # this, DRF's default pagination wraps the list in {count, results}, which
+    # the admin console's @for can't iterate — and that thrown error aborts the
+    # whole page's change detection (blank flags/settings/stats).
+    pagination_class = None
 
 
 class PointsHistoryView(APIView):
