@@ -4,9 +4,9 @@
 }
 
 .frame {
-  max-width: 1320px;
+  max-width: min(1600px, 94vw);
   margin: 0 auto;
-  padding: 0 clamp(1rem, 4vw, 2.5rem);
+  padding: 0 clamp(1rem, 3vw, 2rem);
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
