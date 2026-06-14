@@ -22,6 +22,48 @@ import { SiteConfig } from '../core/site-config';
       <p class="hero__sub">{{ locale.t('catalog.hero.sub') }}</p>
     </section>
 
+    <section class="features rise">
+      <div class="features__head">
+        <p class="mono-label">Why MentorMind</p>
+        <h2>Built to <em>teach</em>, not just test</h2>
+      </div>
+      <div class="features__grid">
+        <a class="feature feature--a" routerLink="/tutor">
+          <div class="feature__tags">
+            <span class="ftag">Mark schemes</span>
+            <span class="ftag">Grounded</span>
+            <span class="ftag">24/7</span>
+          </div>
+          <div class="feature__bottom">
+            <h3 class="feature__title">AI tutor that never sleeps</h3>
+            <span class="feature__cta">Start learning <span aria-hidden="true">↘</span></span>
+          </div>
+        </a>
+        <a class="feature feature--b" routerLink="/revision">
+          <div class="feature__tags">
+            <span class="ftag">Quizzes</span>
+            <span class="ftag">Flashcards</span>
+            <span class="ftag">Spaced repetition</span>
+          </div>
+          <div class="feature__bottom">
+            <h3 class="feature__title">Practice that adapts to you</h3>
+            <span class="feature__cta">Start practising <span aria-hidden="true">↘</span></span>
+          </div>
+        </a>
+        <a class="feature feature--c" routerLink="/dashboard">
+          <div class="feature__tags">
+            <span class="ftag">Web</span>
+            <span class="ftag">Android</span>
+            <span class="ftag">Offline PWA</span>
+          </div>
+          <div class="feature__bottom">
+            <h3 class="feature__title">Learn anytime, anywhere</h3>
+            <span class="feature__cta">Open your desk <span aria-hidden="true">↘</span></span>
+          </div>
+        </a>
+      </div>
+    </section>
+
     <section class="vision section-dark rise">
       <p class="mono-label">Our vision</p>
       <h2>Learn the basics in a <em>modern</em> way</h2>
@@ -259,6 +301,92 @@ import { SiteConfig } from '../core/site-config';
       border-color: color-mix(in srgb, var(--accent) 35%, var(--line-strong));
       background: color-mix(in srgb, var(--chip-pink) 35%, var(--card));
     }
+
+    /* ---- feature cards (EduNova dark pill-tag cards) ---- */
+    .features { margin: 0 0 2.6rem; }
+
+    .features__head { margin-bottom: 1.4rem; }
+
+    .features__head .mono-label::after {
+      content: ' ↘';
+      color: var(--accent);
+    }
+
+    .features__head h2 {
+      font-size: clamp(1.9rem, 4.5vw, 3.2rem);
+      margin-top: 0.5rem;
+
+      em { font-style: normal; color: var(--accent); }
+    }
+
+    .features__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .feature {
+      position: relative;
+      min-height: 250px;
+      padding: 1.5rem;
+      border-radius: var(--r-lg);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 1.5rem;
+      text-decoration: none;
+      color: #fff;
+      overflow: hidden;
+      background: linear-gradient(160deg, #232228, var(--dark));
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .feature:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lift);
+    }
+
+    .feature--a { background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 42%, #1a1018), var(--dark)); }
+    .feature--b { background: linear-gradient(160deg, color-mix(in srgb, var(--accent-2) 42%, #15131f), var(--dark)); }
+    .feature--c { background: linear-gradient(160deg, #2a2930, var(--dark)); }
+
+    .feature__tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .ftag {
+      background: rgba(255, 255, 255, 0.94);
+      color: #141418;
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 0.3rem 0.72rem;
+      border-radius: var(--r-pill);
+    }
+
+    .feature__title {
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      font-size: 1.5rem;
+      line-height: 1;
+      color: #fff;
+      margin: 0 0 0.7rem;
+    }
+
+    .feature__cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fff;
+      transition: color 0.18s ease;
+    }
+
+    .feature:hover .feature__cta { color: #fff; opacity: 0.85; }
 
     /* ---- dark vision section (EduNova) ---- */
     .vision {
