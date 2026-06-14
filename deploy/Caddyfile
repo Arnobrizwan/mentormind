@@ -11,10 +11,14 @@
 		max_size 12MB
 	}
 
-	reverse_proxy backend:8000 {
+	# Backend handles the API, Django admin/static/media, metrics and the
+	# Channels websocket; everything else is the student-portal SPA.
+	@backend path /api/* /admin/* /static/* /media/* /metrics /ws/*
+	reverse_proxy @backend backend:8000 {
 		# Long-lived upgrade for the websocket chat.
 		flush_interval -1
 	}
+	reverse_proxy frontend:80
 
 	log {
 		output stdout
