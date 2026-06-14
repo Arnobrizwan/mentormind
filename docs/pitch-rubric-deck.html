@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MentorMinds — DIGITEX 2026 Rubric Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Spline+Sans+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#0e0e12; --paper:#ffffff; --soft:#56525e;
+    --accent:#ff4d9d; --accent-deep:#e23b86; --accent2:#8b5cf6; --dark:#141418;
+    --grad:linear-gradient(120deg,#ff5ca3,#ff4d9d 55%,#8b5cf6);
+    --line:rgba(14,14,18,.12); --excellent:#16a34a;
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{background:#e9e9ee;font-family:'Plus Jakarta Sans',sans-serif;color:var(--ink)}
+  .deck{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px 0}
+  .slide{
+    width:1280px;height:720px;background:var(--paper);position:relative;overflow:hidden;
+    padding:48px 60px;display:flex;flex-direction:column;
+    box-shadow:0 18px 50px -20px rgba(14,14,18,.4);
+    background-image:url("data:image/svg+xml,%3Csvg width='28' height='49' viewBox='0 0 28 49' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l11 6.35 11-6.35V17.9l-11-6.35L3 17.9z' fill='%230e0e12' fill-opacity='0.04'/%3E%3C/svg%3E");
+  }
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .brand{font-family:'Anton';font-size:26px;letter-spacing:.5px}
+  .brand em{color:var(--accent);font-style:normal}
+  .pill{background:var(--grad);color:#fff;padding:6px 14px;border-radius:999px;font-weight:800;font-size:12px;letter-spacing:.08em}
+  .pill--ghost{background:#141418}
+  .eyebrow{font-family:'Spline Sans Mono';font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-deep)}
+  h1{font-family:'Anton';font-size:88px;line-height:.9;text-transform:uppercase;margin:14px 0 0}
+  h1 .hl{color:var(--accent)}
+  h2{font-family:'Anton';font-size:46px;line-height:.95;text-transform:uppercase;margin:6px 0 0}
+  .sub{font-size:20px;color:var(--soft);max-width:60ch;margin-top:16px;line-height:1.45}
+
+  /* criterion header */
+  .crit{display:flex;align-items:center;gap:18px;margin-top:6px}
+  .crit .num{font-family:'Anton';font-size:54px;color:#fff;background:var(--grad);width:84px;height:84px;border-radius:20px;display:flex;align-items:center;justify-content:center;flex:0 0 84px}
+  .crit .marks{font-family:'Spline Sans Mono';font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--accent-deep);text-transform:uppercase}
+  .score{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:'Spline Sans Mono';font-size:13px;font-weight:700;color:var(--excellent);border:1.5px solid var(--excellent);border-radius:999px;padding:7px 14px;text-transform:uppercase;letter-spacing:.06em}
+  .score .dot{width:9px;height:9px;border-radius:50%;background:var(--excellent)}
+
+  .body{display:grid;grid-template-columns:1.05fr .95fr;gap:34px;flex:1;align-items:center;margin-top:18px}
+  .body--wide{grid-template-columns:1fr}
+  .points{display:flex;flex-direction:column;gap:15px}
+  .pt{display:flex;gap:14px;align-items:flex-start}
+  .pt .ic{width:36px;height:36px;border-radius:11px;background:var(--grad);flex:0 0 36px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
+  .pt b{font-size:17px;font-weight:800;display:block}
+  .pt span{font-size:14px;color:var(--soft);line-height:1.4}
+
+  .shot{border-radius:18px;border:1px solid var(--line);overflow:hidden;box-shadow:0 14px 36px -18px rgba(14,14,18,.5);background:#fff}
+  .shot img{width:100%;display:block}
+  .gallery{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .gallery .shot img{height:215px;object-fit:cover;object-position:top}
+  .cap{font-family:'Spline Sans Mono';font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);padding:8px 12px;border-top:1px solid var(--line)}
+
+  .panel{background:var(--dark);color:#fff;border-radius:24px;padding:28px;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:16px}
+  .panel h3{font-family:'Anton';font-size:20px;text-transform:uppercase;color:#fff;letter-spacing:.5px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .stat .n{font-family:'Anton';font-size:40px;line-height:1;color:#fff}
+  .stat .n em{color:var(--accent);font-style:normal}
+  .stat .l{font-family:'Spline Sans Mono';font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6);margin-top:4px}
+
+  .foot{display:flex;justify-content:space-between;align-items:center;font-family:'Spline Sans Mono';font-size:12.5px;letter-spacing:.05em;color:var(--soft);border-top:1px solid var(--line);padding-top:12px;margin-top:14px}
+  .foot b{color:var(--ink)}
+
+  /* architecture diagram */
+  .arch{display:flex;flex-direction:column;gap:14px;width:100%}
+  .arch-row{display:flex;gap:14px;justify-content:center}
+  .node{border:1.5px solid var(--line);border-radius:14px;padding:12px 16px;background:#fff;min-width:150px;text-align:center}
+  .node b{display:block;font-size:14px;font-weight:800}
+  .node span{font-family:'Spline Sans Mono';font-size:10.5px;letter-spacing:.04em;color:var(--soft);text-transform:uppercase}
+  .node--edge{background:var(--dark);color:#fff;border-color:var(--dark)}
+  .node--edge span{color:rgba(255,255,255,.6)}
+  .node--ml{background:linear-gradient(120deg,#fff0f7,#f3ecff);border-color:var(--accent)}
+  .arrow{font-family:'Spline Sans Mono';font-size:11px;color:var(--accent-deep);text-align:center;letter-spacing:.1em}
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .tag{font-family:'Spline Sans Mono';font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--soft)}
+  .tag b{color:var(--ink)}
+  @media print{ body{background:#fff} .slide{box-shadow:none;break-after:page} .deck{gap:0;padding:0} }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- 1 — TITLE -->
+  <section class="slide">
+    <div class="top">
+      <div class="brand">Mentor<em>Minds</em></div>
+      <span class="pill">DIGITEX 2026 · EDTECH · IHL/OPEN</span>
+    </div>
+    <p class="eyebrow" style="margin-top:30px">The self-hosted AI learning platform ↘</p>
+    <h1>Learn the<br><span class="hl">future</span> way.</h1>
+    <p class="sub">An AI tutor fine-tuned on real Cambridge past papers — grounded in <b>official mark schemes</b>, running entirely on your own server. Zero third-party AI APIs. <b>Live and deployed today.</b></p>
+    <div class="body" style="align-items:end">
+      <div class="points">
+        <div class="pt"><span class="ic">🔒</span><div><b>Your data never leaves your server</b><span>LoRA fine-tune of Qwen2.5-0.5B runs in-process — no OpenAI, no vendor cloud.</span></div></div>
+        <div class="pt"><span class="ic">📚</span><div><b>Answers you can trust</b><span>Retrieval over 68k+ aligned questions returns the official mark scheme, attributed.</span></div></div>
+        <div class="pt"><span class="ic">📷</span><div><b>Snap &amp; Solve vision</b><span>Photograph a diagram — the moondream2 VLM actually sees it, OCR fallback included.</span></div></div>
+      </div>
+      <div class="panel">
+        <h3>By the numbers</h3>
+        <div class="stats">
+          <div class="stat"><div class="n">68k<em>+</em></div><div class="l">aligned past-paper Q/A</div></div>
+          <div class="stat"><div class="n"><em>$0</em></div><div class="l">per-question AI cost</div></div>
+          <div class="stat"><div class="n">3</div><div class="l">role-based portals</div></div>
+          <div class="stat"><div class="n">100<em>%</em></div><div class="l">self-hosted stack</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot">
+      <span>Live demo · <b>mentorminds.duckdns.org</b> · student@mentormind.dev / 12345678</span>
+      <span>Scored against the DIGITEX 2026 rubric →</span>
+    </div>
+  </section>
+
+  <!-- 2 — CRITERION 1: INNOVATION -->
+  <section class="slide">
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill pill--ghost">RUBRIC · IHL/OPEN</span></div>
+    <div class="crit">
+      <div class="num">1</div>
+      <div>
+        <div class="marks">Criterion 1 · 20 marks</div>
+        <h2>Innovation,<br>Novelty &amp; Originality</h2>
+      </div>
+      <div class="score"><span class="dot"></span>Excellent · 90–100%</div>
+    </div>
+    <div class="body">
+      <div class="points">
+        <div class="pt"><span class="ic">🧠</span><div><b>Self-hosted, fine-tuned tutor — not a GPT wrapper</b><span>A LoRA fine-tune of Qwen2.5-0.5B on aligned Cambridge papers. Most edtech resells a vendor API; we own the model.</span></div></div>
+        <div class="pt"><span class="ic">📚</span><div><b>Mark-scheme-grounded answers</b><span>Retrieval returns the <i>official</i> Cambridge mark scheme, attributed — not a hallucinated guess.</span></div></div>
+        <div class="pt"><span class="ic">📷</span><div><b>Snap &amp; Solve VLM</b><span>moondream2 reads photographed diagrams/handwriting; clean text MCQs become auto-marked questions.</span></div></div>
+        <div class="pt"><span class="ic">🎯</span><div><b>Adaptive learning loop</b><span>Weak-topic detection, spaced-repetition revision, and a dropout-risk model close the loop.</span></div></div>
+      </div>
+      <div class="shot"><img src="screenshots/02-tutor.png" alt="AI tutor grounded in mark schemes" /><div class="cap">AI tutor · grounded in official mark schemes</div></div>
+    </div>
+    <div class="foot"><span>Verify live: <b>AI Tutor</b> tab → ask a past-paper question → attributed mark scheme</span><span>01 / Innovation</span></div>
+  </section>
+
+  <!-- 3 — CRITERION 2: TECHNICAL DEPTH + ARCHITECTURE -->
+  <section class="slide">
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill pill--ghost">RUBRIC · IHL/OPEN</span></div>
+    <div class="crit">
+      <div class="num">2</div>
+      <div>
+        <div class="marks">Criterion 2 · 20 marks</div>
+        <h2>Technical Depth,<br>Feasibility &amp; Status</h2>
+      </div>
+      <div class="score"><span class="dot"></span>Excellent · near production</div>
+    </div>
+    <div class="body body--wide" style="margin-top:14px">
+      <div class="arch">
+        <div class="arch-row">
+          <div class="node node--edge"><b>3 Angular SPAs</b><span>student · studio · admin</span></div>
+        </div>
+        <div class="arrow">▼ HTTPS · Caddy (auto-TLS) · Docker Compose · VPS</div>
+        <div class="arch-row">
+          <div class="node"><b>Django + DRF API</b><span>auth · courses · planner</span></div>
+          <div class="node"><b>Channels WS</b><span>live chat</span></div>
+          <div class="node"><b>Celery + Redis</b><span>jobs · cache · quotas</span></div>
+          <div class="node"><b>PostgreSQL</b><span>primary + replica</span></div>
+        </div>
+        <div class="arrow">▼ X-API-Key</div>
+        <div class="arch-row">
+          <div class="node node--ml"><b>FastAPI ml-service (HF Space)</b><span>Qwen2.5-0.5B + LoRA · RAG over 68k+ Q/A</span></div>
+          <div class="node node--ml"><b>moondream2 VLM</b><span>/v1/vision/ask · OCR fallback</span></div>
+          <div class="node node--ml"><b>OpenCV</b><span>proctoring · OMR · OCR</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="tags">
+      <span class="tag"><b>Status:</b> live on VPS + HF Space</span>
+      <span class="tag"><b>CI:</b> tests + builds green</span>
+      <span class="tag"><b>Dynamic-first:</b> feature flags, live site settings</span>
+      <span class="tag"><b>Sovereign:</b> no third-party AI APIs</span>
+      <span class="tag"><b>$0</b> marginal inference cost</span>
+    </div>
+    <div class="foot"><span>Working prototype, not a mockup — every feature has a deterministic fallback</span><span>02 / Technical depth</span></div>
+  </section>
+
+  <!-- 4 — CRITERION 3: IMPACT -->
+  <section class="slide">
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill pill--ghost">RUBRIC · IHL/OPEN</span></div>
+    <div class="crit">
+      <div class="num">3</div>
+      <div>
+        <div class="marks">Criterion 3 · 20 marks</div>
+        <h2>Impact, Contribution<br>&amp; Social Value</h2>
+      </div>
+      <div class="score"><span class="dot"></span>Excellent · SDG-aligned</div>
+    </div>
+    <div class="body">
+      <div class="points">
+        <div class="pt"><span class="ic">🎓</span><div><b>SDG 4 — Quality Education</b><span>Mark-scheme-grade tutoring for IGCSE/Cambridge students who can't afford private tutors.</span></div></div>
+        <div class="pt"><span class="ic">💸</span><div><b>$0 per-question cost</b><span>A 0.5B model on cheap CPU means schools in emerging markets can run it sustainably.</span></div></div>
+        <div class="pt"><span class="ic">🔒</span><div><b>Data sovereignty</b><span>Schools self-host; student data never leaves their server — a real privacy guarantee.</span></div></div>
+        <div class="pt"><span class="ic">📉</span><div><b>Dropout-risk early warning</b><span>An ML model surfaces at-risk students so instructors can intervene before they quit.</span></div></div>
+      </div>
+      <div class="shot"><img src="screenshots/07-student-success.png" alt="Dropout-risk queue for instructors" /><div class="cap">Instructor studio · dropout-risk early-warning queue</div></div>
+    </div>
+    <div class="foot"><span>Measurable: per-topic accuracy, weekly plans, spaced-repetition retention</span><span>03 / Impact</span></div>
+  </section>
+
+  <!-- 5 — CRITERION 4: PRESENTATION / VISUAL (gallery) -->
+  <section class="slide">
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill pill--ghost">RUBRIC · IHL/OPEN</span></div>
+    <div class="crit">
+      <div class="num">4</div>
+      <div>
+        <div class="marks">Criterion 4 · 20 marks</div>
+        <h2>Presentation,<br>Communication &amp; Visual</h2>
+      </div>
+      <div class="score"><span class="dot"></span>Excellent · clickable demo</div>
+    </div>
+    <div class="body" style="grid-template-columns:.8fr 1.2fr">
+      <div class="points">
+        <div class="pt"><span class="ic">🎨</span><div><b>Cohesive EduNova design system</b><span>One bold, accessible visual language across all three portals.</span></div></div>
+        <div class="pt"><span class="ic">🖱️</span><div><b>Judges can click the real thing</b><span>Not slideware — a live, seeded demo with login. QR + credentials on the next slide.</span></div></div>
+        <div class="pt"><span class="ic">📱</span><div><b>Responsive + Android build</b><span>Capacitor wrapper ships the student portal as a native app.</span></div></div>
+      </div>
+      <div class="gallery">
+        <div class="shot"><img src="screenshots/01-dashboard.png" alt="Student dashboard" /><div class="cap">Student desk</div></div>
+        <div class="shot"><img src="screenshots/03-revision.png" alt="Spaced-repetition revision" /><div class="cap">Revision</div></div>
+        <div class="shot"><img src="screenshots/04-planner.png" alt="Weekly study planner" /><div class="cap">AI study planner</div></div>
+        <div class="shot"><img src="screenshots/06-studio-workbench.png" alt="Instructor studio" /><div class="cap">Instructor studio</div></div>
+      </div>
+    </div>
+    <div class="foot"><span>9 product screenshots + a recorded demo GIF in <b>docs/screenshots/</b></span><span>04 / Presentation</span></div>
+  </section>
+
+  <!-- 6 — CRITERION 5: COMMERCIALISATION -->
+  <section class="slide">
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill pill--ghost">RUBRIC · IHL/OPEN</span></div>
+    <div class="crit">
+      <div class="num">5</div>
+      <div>
+        <div class="marks">Criterion 5 · 20 marks</div>
+        <h2>Commercialisation<br>&amp; Business Model</h2>
+      </div>
+      <div class="score"><span class="dot"></span>Excellent · model built-in</div>
+    </div>
+    <div class="body">
+      <div class="points">
+        <div class="pt"><span class="ic">🏫</span><div><b>Target market</b><span>Schools &amp; tutoring centres running Cambridge/IGCSE prep in price-sensitive regions.</span></div></div>
+        <div class="pt"><span class="ic">💼</span><div><b>Dual revenue model</b><span>Per-school self-host license (B2B) + premium student subscription (B2C) — the payments + premium flow is already in the product.</span></div></div>
+        <div class="pt"><span class="ic">📈</span><div><b>High-margin &amp; scalable</b><span>$0 marginal AI cost + one multi-tenant-ready stack = margin grows with each school added.</span></div></div>
+        <div class="pt"><span class="ic">🛡️</span><div><b>Defensible moat</b><span>Proprietary 68k+ aligned-paper corpus + a fine-tuned model competitors can't simply API-call.</span></div></div>
+      </div>
+      <div class="panel">
+        <h3>Unit economics</h3>
+        <div class="stats">
+          <div class="stat"><div class="n"><em>$0</em></div><div class="l">cost per AI answer</div></div>
+          <div class="stat"><div class="n">1</div><div class="l">stack, many tenants</div></div>
+          <div class="stat"><div class="n">B2B<em>+</em>B2C</div><div class="l">revenue streams</div></div>
+          <div class="stat"><div class="n">68k<em>+</em></div><div class="l">corpus moat</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>Premium tier &amp; daily quota are live in the demo — flip the <b>payments</b> flag in the admin console</span><span>05 / Commercialisation</span></div>
+  </section>
+
+  <!-- 7 — HOW JUDGES VERIFY -->
+  <section class="slide">
+    <div class="top"><div class="brand">Mentor<em>Minds</em></div><span class="pill">VERIFY IT YOURSELF</span></div>
+    <p class="eyebrow" style="margin-top:26px">Don't take our word for it ↘</p>
+    <h2 style="font-size:60px">Check every claim, live.</h2>
+    <div class="body" style="grid-template-columns:1.15fr .85fr;margin-top:22px">
+      <div class="points">
+        <div class="pt"><span class="ic">🌐</span><div><b>mentorminds.duckdns.org</b><span>Student portal · login student@mentormind.dev / 12345678</span></div></div>
+        <div class="pt"><span class="ic">🧑‍🏫</span><div><b>/studio &amp; /console</b><span>Instructor studio &amp; admin ops console on the same domain.</span></div></div>
+        <div class="pt"><span class="ic">🧠</span><div><b>ml-service API</b><span>arnob666666-mentormind-ml.hf.space — tutor, vision, grading endpoints.</span></div></div>
+        <div class="pt"><span class="ic">💻</span><div><b>Source + CI</b><span>github.com/Arnobrizwan/mentormind — green builds, tests, this deck.</span></div></div>
+      </div>
+      <div class="shot"><img src="poster/qr.png" alt="QR to live demo" style="padding:18px;background:#fff" /><div class="cap">Scan → live demo</div></div>
+    </div>
+    <div class="foot"><span>Django · DRF · FastAPI · Angular · Postgres · Redis · Celery · OpenCV · moondream2</span><span>MentorMinds · DIGITEX 2026</span></div>
+  </section>
+
+</div>
+</body>
+</html>
