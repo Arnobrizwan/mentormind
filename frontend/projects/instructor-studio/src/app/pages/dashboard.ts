@@ -136,19 +136,24 @@ import { Course } from '../core/models';
 
     .stats {
       display: flex;
-      gap: 2rem;
+      gap: 0.6rem;
       flex-wrap: wrap;
       margin-top: 1.3rem;
-      padding: 0.9rem 1.2rem;
-      border: 1px dashed var(--line-strong);
-      border-radius: 10px;
+      padding: 0.55rem;
+      border: 1.5px solid var(--line-strong);
+      border-radius: 14px;
       background: var(--panel-raised);
     }
 
     .stat {
       display: flex;
       align-items: baseline;
+      justify-content: center;
       gap: 0.5rem;
+      flex: 1 1 7rem;
+      padding: 0.55rem 1rem;
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--accent) 6%, transparent);
     }
 
     .stat__num {
