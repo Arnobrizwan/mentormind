@@ -40,9 +40,11 @@ test.describe('Student portal smoke', () => {
     // 2. Redirected to dashboard
     await expect(page).toHaveURL(/.*dashboard.*/);
 
-    // 3. Go to catalog to find and enroll in a course
+    // 3. Go to catalog to find and enroll in a course. Courses render as the
+    //    "choose your path" list (and recommended cards) — both link to
+    //    /courses/:slug, so target that href directly rather than a layout class.
     await page.goto('/');
-    const courseCard = page.locator('main .card').first();
+    const courseCard = page.locator('main a[href*="/courses/"]').first();
     await expect(courseCard).toBeVisible();
     await courseCard.click();
 
