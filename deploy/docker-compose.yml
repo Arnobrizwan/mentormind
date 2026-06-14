@@ -163,6 +163,16 @@ services:
       # Generous: first boot downloads the base model + corpus.
       start_period: 180s
 
+  # Student-portal SPA served at the domain root (Caddy routes /api etc. to
+  # the backend, everything else here). Builds the Angular app in-image.
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../deploy/frontend.Dockerfile
+    restart: unless-stopped
+    expose:
+      - "80"
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -177,6 +187,7 @@ services:
       - caddy_config:/config
     depends_on:
       - backend
+      - frontend
 
 volumes:
   pg_data:
