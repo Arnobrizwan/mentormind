@@ -20,29 +20,6 @@
         {{ config.brandParts()[0] }}<em>{{ config.brandParts()[1] }}</em>
       </a>
 
-      <nav class="nav nav--desktop" aria-label="Primary">
-        <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">{{ locale.t('nav.catalog') }}</a>
-        @if (auth.isLoggedIn()) {
-          <a routerLink="/dashboard" routerLinkActive="is-active">{{ locale.t('nav.desk') }}</a>
-          @if (config.flagEnabled('ai_tutor')) {
-            <a routerLink="/tutor" routerLinkActive="is-active">{{ locale.t('nav.tutor') }}</a>
-          }
-          <a routerLink="/past-papers" routerLinkActive="is-active">{{ locale.t('nav.papers') }}</a>
-          <a routerLink="/mock-exam" routerLinkActive="is-active">{{ locale.t('nav.mock') }}</a>
-          <a routerLink="/revision" routerLinkActive="is-active" class="nav__revision">
-            {{ locale.t('nav.revision') }}
-            @if (dueCount() > 0) {
-              <span class="nav__badge" [attr.aria-label]="dueCount() + ' cards due'">{{
-                dueCount() > 99 ? '99+' : dueCount()
-              }}</span>
-            }
-          </a>
-          <a routerLink="/planner" routerLinkActive="is-active">{{ locale.t('nav.planner') }}</a>
-          <a routerLink="/profile" routerLinkActive="is-active">{{ locale.t('nav.profile') }}</a>
-          <a routerLink="/notifications" routerLinkActive="is-active">{{ locale.t('nav.alerts') }}</a>
-        }
-      </nav>
-
       <div class="masthead__tools">
         <mm-global-search class="tools__search" />
         <button
@@ -83,6 +60,29 @@
         </button>
       </div>
     </div>
+
+    <nav class="nav nav--desktop nav--row" aria-label="Primary">
+      <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }">{{ locale.t('nav.catalog') }}</a>
+      @if (auth.isLoggedIn()) {
+        <a routerLink="/dashboard" routerLinkActive="is-active">{{ locale.t('nav.desk') }}</a>
+        @if (config.flagEnabled('ai_tutor')) {
+          <a routerLink="/tutor" routerLinkActive="is-active">{{ locale.t('nav.tutor') }}</a>
+        }
+        <a routerLink="/past-papers" routerLinkActive="is-active">{{ locale.t('nav.papers') }}</a>
+        <a routerLink="/mock-exam" routerLinkActive="is-active">{{ locale.t('nav.mock') }}</a>
+        <a routerLink="/revision" routerLinkActive="is-active" class="nav__revision">
+          {{ locale.t('nav.revision') }}
+          @if (dueCount() > 0) {
+            <span class="nav__badge" [attr.aria-label]="dueCount() + ' cards due'">{{
+              dueCount() > 99 ? '99+' : dueCount()
+            }}</span>
+          }
+        </a>
+        <a routerLink="/planner" routerLinkActive="is-active">{{ locale.t('nav.planner') }}</a>
+        <a routerLink="/profile" routerLinkActive="is-active">{{ locale.t('nav.profile') }}</a>
+        <a routerLink="/notifications" routerLinkActive="is-active">{{ locale.t('nav.alerts') }}</a>
+      }
+    </nav>
 
     @if (mobileOpen()) {
       <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile">
