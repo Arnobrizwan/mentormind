@@ -71,12 +71,12 @@ class TutorSessionViewSet(viewsets.ModelViewSet):
         session = self.get_object()
         content = str(request.data.get("content", "")).strip()[:4000]
 
-        # Multimodal: a photographed question is OCR'd by the ml-service and
-        # joined with whatever the student typed.
+        # Multimodal: a photographed question is "seen" by the ml-service VLM
+        # (moondream2, OCR fallback) and joined with whatever the student typed.
         image = request.FILES.get("image")
         if image is not None:
             try:
-                extracted = services.extract_image_text(image)
+                extracted = services.describe_image(image, question=content)
             except services.TutorError as exc:
                 return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
             if extracted:
