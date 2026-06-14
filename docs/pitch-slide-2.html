@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MentorMinds — Tutor Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Spline+Sans+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#0e0e12;--paper:#fff;--soft:#56525e;--line:rgba(14,14,18,.12);
+    --accent:#ff4d9d;--accent-deep:#e23b86;--accent2:#8b5cf6;--dark:#141418;--mint:#16a34a;
+    --grad:linear-gradient(120deg,#ff5ca3,#ff4d9d 55%,#8b5cf6);
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{background:#e9e9ee;font-family:'Plus Jakarta Sans',sans-serif;color:var(--ink)}
+  .slide{width:1280px;height:720px;margin:0 auto;background:var(--paper);position:relative;overflow:hidden;padding:46px 60px;display:flex;flex-direction:column;
+    background-image:url("data:image/svg+xml,%3Csvg width='28' height='49' viewBox='0 0 28 49' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l11 6.35 11-6.35V17.9l-11-6.35L3 17.9z' fill='%230e0e12' fill-opacity='0.04'/%3E%3C/svg%3E");}
+  .top{display:flex;justify-content:space-between;align-items:baseline}
+  .brand{font-family:'Anton';font-size:24px}.brand em{color:var(--accent);font-style:normal}
+  .eyebrow{font-family:'Spline Sans Mono';font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-deep)}
+  h1{font-family:'Anton';font-size:52px;line-height:.92;text-transform:uppercase;margin:6px 0 4px}
+  h1 .hl{color:var(--accent)}
+  /* row of steps */
+  .flow{display:flex;align-items:center;gap:0;margin-top:18px}
+  .step{flex:1;border:2px solid var(--line);border-radius:18px;padding:14px 16px;background:#fff;text-align:left}
+  .step .k{font-family:'Spline Sans Mono';font-size:11px;letter-spacing:.1em;color:var(--accent-deep);font-weight:700}
+  .step b{display:block;font-family:'Anton';font-size:20px;text-transform:uppercase;margin-top:3px}
+  .step span{font-size:12.5px;color:var(--soft)}
+  .arrow{font-family:'Anton';font-size:30px;color:var(--accent);padding:0 12px;flex:0 0 auto}
+  .down{align-self:center;font-family:'Anton';font-size:26px;color:var(--accent);margin:8px 0}
+  /* trust ladder */
+  .ladder{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .tier{display:flex;align-items:center;gap:16px;border-radius:16px;padding:13px 18px;border:2px solid var(--line)}
+  .tier .badge{font-family:'Spline Sans Mono';font-size:11px;font-weight:700;letter-spacing:.08em;padding:5px 11px;border-radius:999px;white-space:nowrap}
+  .tier .cond{font-family:'Anton';font-size:17px;text-transform:uppercase;flex:0 0 220px}
+  .tier .desc{font-size:13.5px;color:var(--soft);flex:1}
+  .tier .trust{font-family:'Spline Sans Mono';font-size:11px;letter-spacing:.06em;color:var(--soft);white-space:nowrap}
+  .t1{background:linear-gradient(90deg,rgba(255,77,157,.10),transparent);border-color:rgba(255,77,157,.5)}
+  .t1 .badge{background:var(--grad);color:#fff}.t1 .cond{color:var(--accent-deep)}
+  .t2{background:linear-gradient(90deg,rgba(139,92,246,.09),transparent);border-color:rgba(139,92,246,.45)}
+  .t2 .badge{background:var(--accent2);color:#fff}
+  .t3 .badge{background:#e7e7ea;color:var(--ink)}
+  .out{display:flex;align-items:center;gap:14px;margin-top:14px;background:var(--dark);color:#fff;border-radius:18px;padding:14px 20px}
+  .out b{font-family:'Anton';font-size:20px;text-transform:uppercase}
+  .out span{font-size:13px;color:rgba(255,255,255,.7)}
+  .foot{margin-top:auto;display:flex;gap:10px;flex-wrap:wrap;padding-top:14px}
+  .chip{font-family:'Spline Sans Mono';font-size:12px;font-weight:700;letter-spacing:.05em;padding:7px 13px;border-radius:999px;background:#f1f1f4;border:1px solid var(--line)}
+  .chip.k{background:var(--grad);color:#fff;border:0}
+</style>
+</head>
+<body>
+  <section class="slide">
+    <div class="top">
+      <div class="brand">Mentor<em>Minds</em></div>
+      <span class="eyebrow">Mark-scheme-first · LLM-second ↘</span>
+    </div>
+    <h1>The <span class="hl">tutor</span> pipeline</h1>
+
+    <div class="flow">
+      <div class="step"><div class="k">INPUT</div><b>🎓 Student asks</b><span>Subject + level + question</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="k">① EMBED</div><b>MiniLM vector</b><span>Sentence embedding, on-device</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="k">② RETRIEVE</div><b>Cosine search</b><span>68k+ aligned Q/A · precomputed vectors</span></div>
+    </div>
+
+    <div class="down">▼ &nbsp; route by match confidence</div>
+
+    <div class="ladder">
+      <div class="tier t1">
+        <span class="badge">★ STRONG MATCH</span>
+        <span class="cond">Official mark scheme</span>
+        <span class="desc">Returns the real Cambridge mark scheme verbatim, <b>attributed</b> — a fact, not a guess.</span>
+        <span class="trust">trust ●●●</span>
+      </div>
+      <div class="tier t2">
+        <span class="badge">~ WEAK / NO MATCH</span>
+        <span class="cond">LoRA Qwen2.5-0.5B</span>
+        <span class="desc">Grounded generation from an in-process fine-tune (CPU · MPS · CUDA) with retrieved context.</span>
+        <span class="trust">trust ●●○</span>
+      </div>
+      <div class="tier t3">
+        <span class="badge">✕ MODEL DOWN</span>
+        <span class="cond">Deterministic heuristic</span>
+        <span class="desc">Rule-based fallback so the tutor never returns a blank error.</span>
+        <span class="trust">trust ●○○</span>
+      </div>
+    </div>
+
+    <div class="out">
+      <b>💬 Grounded answer →</b>
+      <span>attributed source · conversation memory · KaTeX math · feedback flywheel (rate / flag → instructor triage)</span>
+    </div>
+
+    <div class="foot">
+      <span class="chip k">100% self-hosted</span>
+      <span class="chip">$0 / query</span>
+      <span class="chip">Zero third-party AI APIs</span>
+      <span class="chip">Every feature has a fallback</span>
+      <span class="chip">FastAPI ml-service · X-API-Key</span>
+    </div>
+  </section>
+</body>
+</html>
