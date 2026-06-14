@@ -16,7 +16,7 @@
       </button>
       @if (auth.user(); as user) {
         <a routerLink="/system" class="label topbar__link">system</a>
-        <span class="label">{{ user.email }}</span>
+        <span class="label topbar__user">{{ user.email }}</span>
         @if (!auth.isStaff()) {
           <span class="label topbar__warn">NOT STAFF</span>
         }

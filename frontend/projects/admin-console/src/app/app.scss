@@ -17,22 +17,30 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--line);
+  padding: 1.1rem 0;
+  margin-bottom: 0.4rem;
+  border-bottom: 1.5px solid var(--line-strong);
   flex-wrap: wrap;
 }
 
 .brand {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 600;
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
+/* the terminal block becomes a tidy rounded brand chip */
 .brand__cursor {
-  color: var(--accent);
+  display: inline-flex;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 5px;
+  background: var(--grad-btn, var(--accent));
+  color: transparent;
+  overflow: hidden;
 }
 
 .brand__path {
@@ -83,9 +91,21 @@
 .topbar__link {
   color: var(--text-dim);
   text-decoration: none;
-  transition: color 160ms ease;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--line-strong);
+  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease;
 
   &:hover {
     color: var(--accent-deep);
+    border-color: var(--accent);
+    background: var(--accent-dim);
   }
+}
+
+.topbar__user {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: var(--accent-dim);
+  color: var(--text-dim);
 }
