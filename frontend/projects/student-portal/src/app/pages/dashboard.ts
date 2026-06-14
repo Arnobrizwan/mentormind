@@ -68,6 +68,20 @@ interface ContinueHero {
       }
     </section>
 
+    @if (!loading() && api.enrollments().length === 0) {
+      <section class="empty-desk rise" style="animation-delay: 60ms">
+        <span class="empty-desk__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </span>
+        <div class="empty-desk__text">
+          <p class="mono-label">Get started</p>
+          <h2>Your desk is ready</h2>
+          <p class="empty-desk__sub">Enroll in your first course to unlock lessons, the AI tutor, quizzes and spaced-repetition revision.</p>
+        </div>
+        <a class="btn btn--accent empty-desk__btn" routerLink="/">{{ locale.t('nav.catalog') }} →</a>
+      </section>
+    }
+
     @if (hero(); as h) {
       <section class="hero rise" style="animation-delay: 60ms" aria-label="Continue learning">
         <p class="mono-label hero__label">{{ locale.t('dash.continue') }}</p>
@@ -92,6 +106,7 @@ interface ContinueHero {
       </section>
     }
 
+    @if (api.enrollments().length > 0) {
     <div class="stats">
       <div class="stat">
         <span class="stat__icon" aria-hidden="true">
@@ -115,6 +130,7 @@ interface ContinueHero {
         <span class="mono-label">{{ locale.t('dash.attempts') }}</span>
       </div>
     </div>
+    }
 
     <section class="quick rise" style="animation-delay: 105ms" aria-label="Study shortcuts">
       <a routerLink="/revision" class="quick__tile">
@@ -717,6 +733,23 @@ interface ContinueHero {
       border-top: 2px solid var(--line-strong);
       border-bottom: 2px solid var(--line-strong);
     }
+
+    .empty-desk {
+      display: flex;
+      align-items: center;
+      gap: 1.4rem;
+      flex-wrap: wrap;
+      margin: 1.5rem 0 2.2rem;
+      padding: clamp(1.4rem, 3vw, 2.1rem);
+      border: 2px dashed var(--line-strong);
+      border-radius: var(--r-lg, 28px);
+    }
+    .empty-desk__icon { width: 3rem; height: 3rem; color: var(--accent); flex-shrink: 0; }
+    .empty-desk__icon svg { width: 100%; height: 100%; }
+    .empty-desk__text { flex: 1; min-width: 16rem; }
+    .empty-desk__text h2 { font-size: clamp(1.5rem, 3.5vw, 2.2rem); margin: 0.3rem 0; }
+    .empty-desk__sub { color: var(--ink-soft); max-width: 52ch; }
+    .empty-desk__btn { flex-shrink: 0; }
 
     .stat__icon {
       width: 1.55rem;
