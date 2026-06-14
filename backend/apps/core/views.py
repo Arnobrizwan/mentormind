@@ -1039,7 +1039,10 @@ class SystemStatusView(APIView):
                 req = urllib.request.Request(
                     f"{ml_url.rstrip('/')}/healthz", headers=headers
                 )
-                with urllib.request.urlopen(req, timeout=2) as res:
+                # The ml-service is a free-tier cross-cloud Space; a 2s budget
+                # flags it as 'error' on a slow-but-alive round-trip. Give it
+                # room so the console only shows degraded when it's truly down.
+                with urllib.request.urlopen(req, timeout=6) as res:
                     assert res.status == 200
 
             probe("ml_service", check_ml)
