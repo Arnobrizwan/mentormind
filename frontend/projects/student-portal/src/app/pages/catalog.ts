@@ -29,6 +29,9 @@ import { SiteConfig } from '../core/site-config';
       </div>
       <div class="features__grid">
         <a class="feature feature--a" routerLink="/tutor">
+          <span class="feature__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 13l.9 2.1 2.1.9-2.1.9L19 19l-.9-2.1-2.1-.9 2.1-.9z"/></svg>
+          </span>
           <div class="feature__tags">
             <span class="ftag">Mark schemes</span>
             <span class="ftag">Grounded</span>
@@ -40,6 +43,9 @@ import { SiteConfig } from '../core/site-config';
           </div>
         </a>
         <a class="feature feature--b" routerLink="/revision">
+          <span class="feature__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+          </span>
           <div class="feature__tags">
             <span class="ftag">Quizzes</span>
             <span class="ftag">Flashcards</span>
@@ -51,6 +57,9 @@ import { SiteConfig } from '../core/site-config';
           </div>
         </a>
         <a class="feature feature--c" routerLink="/dashboard">
+          <span class="feature__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/></svg>
+          </span>
           <div class="feature__tags">
             <span class="ftag">Web</span>
             <span class="ftag">Android</span>
@@ -65,12 +74,24 @@ import { SiteConfig } from '../core/site-config';
     </section>
 
     <section class="vision section-dark rise">
-      <p class="mono-label">Our vision</p>
-      <h2>Learn the basics in a <em>modern</em> way</h2>
-      <p class="vision__sub">
-        MentorMind puts an AI tutor, real past papers and spaced repetition in one
-        place — grounded in official mark schemes, running on your own server.
-      </p>
+      <div class="vision__text">
+        <p class="mono-label">Our vision</p>
+        <h2>Learn the basics in a <em>modern</em> way</h2>
+        <p class="vision__sub">
+          MentorMind puts an AI tutor, real past papers and spaced repetition in one
+          place — grounded in official mark schemes, running on your own server.
+        </p>
+      </div>
+      <div class="vision__art" aria-hidden="true">
+        <svg viewBox="0 0 200 200">
+          <polygon class="hexa hexa--1" points="180,100 140,169.3 60,169.3 20,100 60,30.7 140,30.7" />
+          <polygon class="hexa hexa--2" points="155,100 127.5,147.6 72.5,147.6 45,100 72.5,52.4 127.5,52.4" />
+          <polygon class="hexa hexa--3" points="130,100 115,126 85,126 70,100 85,74 115,74" />
+          <circle class="spark spark--1" cx="168" cy="48" r="4" />
+          <circle class="spark spark--2" cx="36" cy="150" r="3" />
+          <circle class="spark spark--3" cx="150" cy="160" r="2.5" />
+        </svg>
+      </div>
     </section>
 
     @if (loading()) {
@@ -350,10 +371,26 @@ import { SiteConfig } from '../core/site-config';
     .feature--b { background: linear-gradient(160deg, color-mix(in srgb, var(--accent-2) 42%, #15131f), var(--dark)); }
     .feature--c { background: linear-gradient(160deg, #2a2930, var(--dark)); }
 
+    .feature__icon {
+      position: absolute;
+      top: 1.3rem;
+      right: 1.3rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      color: #fff;
+      opacity: 0.85;
+      animation: float-soft 3.6s var(--ease) infinite;
+    }
+
+    .feature__icon svg { width: 100%; height: 100%; }
+
+    .feature:hover .feature__icon { opacity: 1; }
+
     .feature__tags {
       display: flex;
       flex-wrap: wrap;
       gap: 0.45rem;
+      padding-right: 3rem;
     }
 
     .ftag {
@@ -391,6 +428,10 @@ import { SiteConfig } from '../core/site-config';
     /* ---- dark vision section (EduNova) ---- */
     .vision {
       margin: 0 0 2.6rem;
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 2rem;
+      align-items: center;
     }
 
     .vision .mono-label::after {
@@ -410,6 +451,33 @@ import { SiteConfig } from '../core/site-config';
     .vision__sub {
       max-width: 56ch;
       font-size: 1.02rem;
+    }
+
+    .vision__art {
+      display: flex;
+      justify-content: center;
+    }
+
+    .vision__art svg {
+      width: 100%;
+      max-width: 240px;
+      overflow: visible;
+    }
+
+    .hexa { fill: none; transform-origin: center; }
+    .hexa--1 { stroke: rgba(255, 255, 255, 0.16); stroke-width: 1.5; animation: hexa-spin 34s linear infinite; }
+    .hexa--2 { stroke: var(--accent); stroke-width: 2; animation: hexa-spin 24s linear infinite reverse; }
+    .hexa--3 { fill: color-mix(in srgb, var(--accent) 34%, transparent); stroke: none; animation: float-soft 4.2s var(--ease) infinite; transform-origin: center; }
+    .spark { fill: #fff; animation: spark-pulse 2.8s ease-in-out infinite; }
+    .spark--2 { fill: var(--accent); animation-delay: 0.6s; }
+    .spark--3 { animation-delay: 1.2s; }
+
+    @keyframes hexa-spin { to { transform: rotate(360deg); } }
+    @keyframes spark-pulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+
+    @media (max-width: 720px) {
+      .vision { grid-template-columns: 1fr; }
+      .vision__art { display: none; }
     }
 
     /* ---- "Choose your path" list (EduNova) ---- */
